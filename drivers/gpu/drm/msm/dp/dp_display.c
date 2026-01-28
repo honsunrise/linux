@@ -330,6 +330,7 @@ static void msm_dp_display_unbind(struct device *dev, struct device *master,
 
 	of_dp_aux_depopulate_bus(dp->aux);
 
+	drm_dp_cec_unregister_connector(dp->aux);
 	msm_dp_aux_unregister(dp->aux);
 	dp->drm_dev = NULL;
 	dp->aux->drm_dev = NULL;
@@ -648,6 +649,7 @@ static int msm_dp_hpd_unplug_handle(struct msm_dp_display_private *dp)
 	u32 state;
 	struct platform_device *pdev = dp->msm_dp_display.pdev;
 
+	drm_dp_cec_unset_edid(dp->aux);
 	msm_dp_aux_enable_xfers(dp->aux, false);
 
 	mutex_lock(&dp->event_mutex);
@@ -720,6 +722,7 @@ static int msm_dp_irq_hpd_handle(struct msm_dp_display_private *dp)
 		mutex_unlock(&dp->event_mutex);
 		return 0;
 	}
+	drm_dp_cec_irq(dp->aux);
 
 	if (state == ST_MAINLINK_READY || state == ST_DISCONNECT_PENDING) {
 		/* wait until ST_CONNECTED */
@@ -1673,6 +1676,7 @@ int msm_dp_modeset_init(struct msm_dp *msm_dp_display, struct drm_device *dev,
 	}
 
 	msm_dp_priv->panel->connector = msm_dp_display->connector;
+	drm_dp_cec_register_connector(msm_dp_priv->aux, msm_dp_display->connector);
 
 	return 0;
 }
