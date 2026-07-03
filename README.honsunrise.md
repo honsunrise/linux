@@ -1,15 +1,15 @@
 This repository is an UNOFFICIAL fork of the Linux kernel.
 
-  Upstream base : Linux stable v7.1  (commit 8cd9520d35a6)
-  Vendor source : https://github.com/radxa/kernel  branch linux-7.0.11  (commit 6e8b6eed39ab)
-  Forwarded to  : v7.1  (in branch honsunrise/v7.1)
+  Upstream base : Linux stable v7.1.2  (commit 03e2778d1f11)
+  Vendor source : https://github.com/radxa/kernel  branch linux-7.0.11  (commit 922ecc5644d9)
+  Forwarded to  : v7.1.y  (in branch honsunrise/v7.1)
 
-  Pipeline      : Radxa  (300 vendor commits on stable v7.0.11)
-                  → drop noise   (-3 wip, -2 PKGBUILD)
-                  → rebase --signoff onto stable v7.1, --empty=drop
-                  → 247 commits auto-rebased (12 detected empty, 36 conflict-skipped)
-                  → manual cherry-pick of 11 high-value Radxa-own commits
-                  → 258 vendor commits (this branch)
+  Pipeline      : Radxa  (309 vendor commits on stable v7.0.11)
+                  → drop noise   (-3 historical wip, -1 pmic-glink HACK, -2 PKGBUILD)
+                  → rebase --signoff onto stable v7.1.2, --empty=drop
+                  → keep the existing v7.1 forward-port and refresh the stable base
+                  → sync Radxa 7.0.11-2 delta: 7 ported, 1 already upstream, 1 HACK omitted
+                  → 263 vendor commits (this branch)
 
   Every commit carries DCO Signed-off-by:
       - original author (preserved verbatim)
@@ -34,7 +34,7 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
     lines are preserved unchanged. Additions made under honsunrise's own name
     are released under GPL-2.0 unless a per-file SPDX header states otherwise.
 
-  Manually ported across v7.0.11 → v7.1 (11 commits)
+  Manually ported / synced across v7.0.11 → v7.1.y
     Group A: Radxa CM-Q64 board support
       - arm64: dts: qcom: add Radxa CM-Q64 on RPi CM5 IO carrier board
       - arm64: dts: qcom: radxa-cm-q64-rpi-cm5-io: move fan PWM
@@ -50,6 +50,18 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       - drm/msm/dp: add DisplayPort CEC-Tunneling-over-AUX support
       - (fixup) drm/msm/dp: Add DisplayPort CEC tunneling over AUX support
       - drm/msm/dp: Keep branch sink count in sync
+    Group E: Radxa 7.0.11-2 sync
+      - arm64: dts: qcom: Mark eeprom read-only for Dragon Q8B
+      - arm64: dts: qcom: qcs6490-radxa-cm-q64: Switch to use Iris HFI Gen2 firmware
+      - fixup! arm64: dts: qcom: sc8280xp: add missing QUP pinctrl states
+      - arm64: dts: qcom: sc8280xp: move UART2 pinctrl to SoC dtsi
+      - arm64: dts: qcom: sc8280xp: Add missing QUP UART nodes
+      - arm64: dts: qcom: sc8280xp: Fix DWC3 core register size
+      - wip: drm/msm/dpu: Prevent unnecessary hardware block migration during hot-unplug
+
+    Already upstream in v7.1.2
+      - spi: qcom-geni: Fix cs_change handling on the last transfer
+
 
   Needs-rewrite for v7.1 (15 commits, NOT in this branch)
     The drm/msm/dp subsystem and qcom q6apm were substantially reworked in
@@ -82,8 +94,10 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       Revert "ASoC: qcom: q6apm: Add support for early buffer mapping on DSP"
 
   Not redistributed in this fork (intentionally dropped from Radxa branch)
-    - 3 work-in-progress commits: "wip: q8b: flattened usb",
+    - 3 historical work-in-progress commits: "wip: q8b: flattened usb",
       "Revert \"wip: q8b: flattened usb\"", "wip: firmware: qcom: tzmem"
+    - 1 Radxa 7.0.11-2 downstream HACK not reauthored for v7.1.y:
+      "HACK: disable fake battery device on pmic-glink"
     - 2 packaging commits: "scripts: Add PKGBUILD ...",
       "scripts: PKGBUILD-radxa: Build separate dtbs package"
 
