@@ -8,21 +8,21 @@ choice
 	default  AW_PCIE_NONE
 
 config AW_PCIE_RC
-	tristate "RC controller - Host mode"
+	bool "RC controller - Host mode"
 	select PCI
 	depends on AW_BSP
 	help
 	  Enables support for the PCIe RC controller in the Allwinner SoC.
 
 config AW_PCIE_EP
-	tristate "EP controller - Endpoint mode"
+	bool "EP controller - Endpoint mode"
 	select PCI_ENDPOINT
 	depends on AW_BSP
 	help
 	  Enables support for the PCIe EP controller in the Allwinner SoC.
 
 config AW_PCIE_NONE
-	tristate "None"
+	bool "None"
 	depends on AW_BSP
 	help
 	  Disable support for the PCIe controller in the Allwinner SoC.

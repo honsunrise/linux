@@ -106,7 +106,7 @@ choice
         optional
 
 	config AW_MTD_SPI_NOR_5_15
-		tristate "SPI NOR device support(5.15)"
+		bool "SPI NOR device support(5.15)"
 		depends on AW_MTD && SPI_MASTER
 		select SPI_MEM
 		help
@@ -114,7 +114,7 @@ choice
 		  device drivers and the SPI NOR device driver.
 
 	config AW_MTD_SPI_NOR_6_1
-		tristate "SPI NOR device support(6.1)"
+		bool "SPI NOR device support(6.1)"
 		depends on AW_MTD && SPI_MASTER
 		select SPI_MEM
 		help
