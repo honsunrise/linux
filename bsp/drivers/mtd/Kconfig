@@ -103,7 +103,6 @@ endmenu
 
 choice
 	prompt "SPI NOR Driver Select"
-        optional
 
 	config AW_MTD_SPI_NOR_5_15
 		bool "SPI NOR device support(5.15)"

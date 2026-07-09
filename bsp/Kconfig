@@ -5,7 +5,6 @@ menu "Allwinner BSP"
 source "$(BSP_TOP)platform/Kconfig"
 source "$(BSP_TOP)platform/Kconfig.debug"
 source "$(BSP_TOP)drivers/Kconfig"
-source "$(BSP_TOP)modules/nand/Kconfig"
 source "$(BSP_TOP)modules/gpu/Kconfig"
 
 endmenu
