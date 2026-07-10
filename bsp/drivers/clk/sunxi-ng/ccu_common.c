@@ -202,7 +202,7 @@ static struct ccu_reg_dump *ccu_alloc_reg_dump(struct ccu_common **rdump,
 	return rd;
 }
 
-static int ccu_suspend(void)
+static int ccu_suspend(void *data)
 {
 	struct sunxi_clock_reg_cache *reg_cache;
 
@@ -212,7 +212,7 @@ static int ccu_suspend(void)
 	return 0;
 }
 
-static void ccu_resume(void)
+static void ccu_resume(void *data)
 {
 	struct sunxi_clock_reg_cache *reg_cache;
 
@@ -227,6 +227,9 @@ static void ccu_resume(void)
 static struct syscore_ops sunxi_clk_syscore_ops = {
 	.suspend = ccu_suspend,
 	.resume = ccu_resume,
+};
+static struct syscore sunxi_clk_syscore = {
+	.ops = &sunxi_clk_syscore_ops,
 };
 #endif
 
@@ -250,7 +253,7 @@ void sunxi_ccu_sleep_init(void __iomem *reg_base,
 
 	mutex_lock(&ccu_reg_cache_lock);
 	if (list_empty(&ccu_reg_cache_list))
-		register_syscore_ops(&sunxi_clk_syscore_ops);
+		register_syscore(&sunxi_clk_syscore);
 
 	reg_cache->reg_base = reg_base;
 	reg_cache->rd_num = nr_rdump;
