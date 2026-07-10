@@ -24,8 +24,8 @@ TRACE_EVENT(sunxi_gmac_skb_dump,
 	),
 
 	TP_fast_assign(
-		__assign_str(devname, ndev_name);
-		__assign_str(data, skb->data);
+		__assign_str(devname);
+		__assign_str(data);
 		__entry->headlen = skb_headlen(skb); /* Linear data len */
 		__entry->len = skb->len; /* Linear and non-linear len */
 		__entry->nr_frags = skb_shinfo(skb)->nr_frags; /* Non-linear fragments count */
@@ -54,7 +54,7 @@ TRACE_EVENT(sunxi_gmac_tx_desc,
 		__entry->tx_clean = tx_clean;
 		__entry->tx_dirty = tx_dirty;
 		__entry->desc_dma = dma_addr,
-		__assign_str(devname, ndev_name);
+		__assign_str(devname);
 	),
 
 	TP_printk(
@@ -78,7 +78,7 @@ TRACE_EVENT(sunxi_gmac_rx_desc,
 		__entry->rx_clean = rx_clean;
 		__entry->rx_dirty = rx_dirty;
 		__entry->desc_dma = dma_addr,
-		__assign_str(devname, ndev_name);
+		__assign_str(devname);
 	),
 
 	TP_printk(

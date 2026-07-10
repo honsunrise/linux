@@ -38,7 +38,7 @@ TRACE_EVENT(dec_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->trace_begin = trace_begin;
 		),
 
@@ -62,7 +62,7 @@ TRACE_EVENT(mux_tracing,
 		__field(unsigned int, vsyncnt)
 		),
 	TP_fast_assign(
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->y = y;
 		__entry->c = c;
 		__entry->field	 = field;
@@ -84,7 +84,7 @@ TRACE_EVENT(frame_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->fnumber = fnumber;
 		),
 
@@ -105,7 +105,7 @@ TRACE_EVENT(hwreg_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->id = id;
 		__entry->fnumber = fnumber;
 		),
@@ -126,7 +126,7 @@ TRACE_EVENT(vsync_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->timestamp = timestamp;
 		),
 
@@ -148,7 +148,7 @@ TRACE_EVENT(vinfo_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->id = id;
 		__entry->buf = buf;
 		__entry->vinfo_addr = vinfo_addr;
@@ -171,7 +171,7 @@ TRACE_EVENT(address_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->address = address;
 		),
 
@@ -191,7 +191,7 @@ TRACE_EVENT(dec_trace_counter,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(counter_name, name);
+		__assign_str(counter_name);
 		__entry->value = value;
 		),
 	TP_printk("C|%d|%s|%d",

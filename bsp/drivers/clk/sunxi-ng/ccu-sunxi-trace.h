@@ -33,7 +33,7 @@ DECLARE_EVENT_CLASS(clk_set_rate,
 	),
 
 	TP_fast_assign(
-		__assign_str(name, clk_hw_get_name(hw));
+		__assign_str(name);
 		__entry->_rate = _rate;
 		__entry->parent_rate = parent_rate;
 		__entry->reg = reg;
@@ -76,7 +76,7 @@ DECLARE_EVENT_CLASS(clk_round_rate,
 	),
 
 	TP_fast_assign(
-		__assign_str(name, clk_hw_get_name(hw));
+		__assign_str(name);
 		__entry->_rate = _rate;
 		__entry->rate = rate;
 	),
@@ -100,7 +100,7 @@ TRACE_EVENT(clk_ng_enable,
 	),
 
 	TP_fast_assign(
-		__assign_str(name, clk_hw_get_name(hw));
+		__assign_str(name);
 	),
 
 	TP_printk("clk_enable: %s", __get_str(name))
@@ -117,7 +117,7 @@ TRACE_EVENT(clk_ng_set_parent,
 	),
 
 	TP_fast_assign(
-		__assign_str(name, clk_hw_get_name(hw));
+		__assign_str(name);
 		__entry->index = index;
 	),
 

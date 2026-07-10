@@ -47,7 +47,7 @@ do {												\
 			__entry->vif_type = sdata->vif.type;	\
 			__entry->sdata = sdata;					\
 			__entry->p2p = sdata->vif.p2p;			\
-			__assign_str(vif_name, sdata->dev ? sdata->dev->name : "<nodev>");\
+			__assign_str(vif_name);\
 } while (0)
 #define VIF_PR_FMT	" vif:%s(%d%s)"
 #define VIF_PR_ARG	__get_str(vif_name), __entry->vif_type, __entry->p2p ? "/p2p" : ""

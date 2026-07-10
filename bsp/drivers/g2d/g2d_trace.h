@@ -29,7 +29,7 @@ TRACE_EVENT(g2d_tracing,
 		),
 	TP_fast_assign(
 		__entry->pid = pid;
-		__assign_str(trace_name, name);
+		__assign_str(trace_name);
 		__entry->trace_begin = trace_begin;
 		),
 
