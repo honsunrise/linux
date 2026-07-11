@@ -11,6 +11,7 @@
  */
 #include <linux/version.h>
 #include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include <linux/hrtimer.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
@@ -1550,8 +1551,12 @@ static int sunxi_de_probe(struct platform_device *pdev)
 		display_out = &engine->display_out[i];
 		display_out->id = i;
 		display_out->dev = &pdev->dev;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+		hrtimer_setup(&display_out->rcq_timer, timer_handler_rcq_update, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+#else
 		hrtimer_init(&display_out->rcq_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		display_out->rcq_timer.function = timer_handler_rcq_update;
+#endif
 		display_out->port = of_graph_get_port_by_id(pdev->dev.of_node, i);
 		if (of_property_read_u32(display_out->port, "reg", &display_out->port_id))
 			DRM_INFO("[SUNXI-DE] port reg not found\n");
