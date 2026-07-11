@@ -2612,7 +2612,7 @@ freedev:
 	return ret;
 }
 
-static int vin_remove(struct platform_device *pdev)
+static void vin_remove(struct platform_device *pdev)
 {
 	struct vin_md *vind = (struct vin_md *)dev_get_drvdata(&pdev->dev);
 
@@ -2643,7 +2643,6 @@ static int vin_remove(struct platform_device *pdev)
 
 	devm_kfree(&pdev->dev, vind);
 	vin_log(VIN_LOG_MD, "%s ok!\n", __func__);
-	return 0;
 }
 
 static void vin_shutdown(struct platform_device *pdev)

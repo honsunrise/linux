@@ -579,7 +579,7 @@ err:
 	return ret;
 }
 
-static int axp517_usb_remove(struct platform_device *pdev)
+static void axp517_usb_remove(struct platform_device *pdev)
 {
 	struct axp517_usb_power *usb_power = platform_get_drvdata(pdev);
 
@@ -590,8 +590,6 @@ static int axp517_usb_remove(struct platform_device *pdev)
 		power_supply_unregister(usb_power->usb_supply);
 	sunxi_power_debugfs_exit(usb_power->debug);
 	PMIC_DEV_DEBUG(&pdev->dev, "axp517 teardown usb dev\n");
-
-	return 0;
 }
 
 static inline void axp517_usb_irq_set(unsigned int irq, bool enable)

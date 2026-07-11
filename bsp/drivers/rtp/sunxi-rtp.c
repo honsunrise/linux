@@ -534,15 +534,13 @@ err0:
 	return err;
 }
 
-static int sunxi_rtp_remove(struct platform_device *pdev)
+static void sunxi_rtp_remove(struct platform_device *pdev)
 {
 	struct sunxi_rtp *chip = platform_get_drvdata(pdev);
 
 	sunxi_rtp_hw_exit(chip);
 	sunxi_rtp_inputdev_unregister(chip);
 	sunxi_rtp_resource_put(chip);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM

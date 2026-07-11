@@ -363,7 +363,7 @@ err:
 	return ret;
 }
 
-static int axp2202_acin_remove(struct platform_device *pdev)
+static void axp2202_acin_remove(struct platform_device *pdev)
 {
 	struct axp2202_acin_power *acin_power = platform_get_drvdata(pdev);
 
@@ -374,8 +374,6 @@ static int axp2202_acin_remove(struct platform_device *pdev)
 	if (acin_power->acin_supply)
 		power_supply_unregister(acin_power->acin_supply);
 	PMIC_DEV_DEBUG(&pdev->dev, "axp2202 teardown acin dev\n");
-
-	return 0;
 }
 
 static inline void axp2202_acin_irq_set(unsigned int irq, bool enable)

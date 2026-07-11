@@ -222,7 +222,7 @@ static int sunxi_codec_dev_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_codec_dev_remove(struct platform_device *pdev)
+static void sunxi_codec_dev_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_codec *codec = dev_get_drvdata(dev);
@@ -234,8 +234,6 @@ static int sunxi_codec_dev_remove(struct platform_device *pdev)
 	devm_kfree(dev, codec);
 
 	SND_LOG_DEBUG("unregister codec-hdmi success\n");
-
-	return 0;
 }
 
 static struct platform_driver sunxi_codec_driver = {

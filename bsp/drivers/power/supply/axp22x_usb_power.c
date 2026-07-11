@@ -388,14 +388,12 @@ static int axp22x_usb_power_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int axp22x_usb_power_remove(struct platform_device *pdev)
+static void axp22x_usb_power_remove(struct platform_device *pdev)
 {
 	struct axp22x_usb_power *usb_power = platform_get_drvdata(pdev);
 
 	cancel_delayed_work_sync(&usb_power->usb_supply_mon);
 	cancel_delayed_work_sync(&usb_power->usb_chg_state);
-
-	return 0;
 }
 
 static inline void axp_irq_set(unsigned int irq, bool enable)

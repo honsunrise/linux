@@ -2714,7 +2714,7 @@ static int rt_media_probe(struct platform_device *pdev)
 
 	return 0;
 }
-static int rt_media_remove(struct platform_device *pdev)
+static void rt_media_remove(struct platform_device *pdev)
 {
 	dev_t dev;
 
@@ -2736,7 +2736,6 @@ static int rt_media_remove(struct platform_device *pdev)
 	unregister_chrdev_region(dev, 1);
 
 	kfree(rt_media_devp);
-	return 0;
 }
 
 static struct platform_driver rt_media_driver = {

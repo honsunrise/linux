@@ -2305,7 +2305,7 @@ static int sw_uart_probe(struct platform_device *pdev)
 	return uart_add_one_port(&sw_uart_driver, port);
 }
 
-static int sw_uart_remove(struct platform_device *pdev)
+static void sw_uart_remove(struct platform_device *pdev)
 {
 	struct sw_uart_port *sw_uport = platform_get_drvdata(pdev);
 
@@ -2315,7 +2315,6 @@ static int sw_uart_remove(struct platform_device *pdev)
 	sw_uart_release_dma_rx(sw_uport);
 #endif
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
-	return 0;
 }
 
 /* UART power management code */

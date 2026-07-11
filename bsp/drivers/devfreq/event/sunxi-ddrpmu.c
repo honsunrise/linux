@@ -212,9 +212,8 @@ static int sunxi_ddrpmu_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_ddrpmu_remove(struct platform_device *pdev)
+static void sunxi_ddrpmu_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 static __maybe_unused int sunxi_ddrpmu_suspend(struct device *dev)
 {

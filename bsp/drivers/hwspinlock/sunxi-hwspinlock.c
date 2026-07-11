@@ -185,7 +185,7 @@ iounmap_base:
 	return ret;
 }
 
-static int sunxi_hwspinlock_remove(struct platform_device *pdev)
+static void sunxi_hwspinlock_remove(struct platform_device *pdev)
 {
 	struct sunxi_hwspinlock_device *private = platform_get_drvdata(pdev);
 	struct hwspinlock_device *bank = private->bank;
@@ -204,8 +204,6 @@ static int sunxi_hwspinlock_remove(struct platform_device *pdev)
 	iounmap(iobase);
 	kfree(bank);
 	kfree(private);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_hwspinlock_of_match[] = {

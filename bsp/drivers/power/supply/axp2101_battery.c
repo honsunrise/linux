@@ -1918,7 +1918,7 @@ err:
 	return ret;
 }
 
-static int axp2101_battery_remove(struct platform_device *pdev)
+static void axp2101_battery_remove(struct platform_device *pdev)
 {
 	struct axp2101_bat_power *bat_power = platform_get_drvdata(pdev);
 	axp210x_alway("==============AXP2101 unegister==============\n");
@@ -1927,8 +1927,6 @@ static int axp2101_battery_remove(struct platform_device *pdev)
 #endif
 	axp2101_teardown_battery(bat_power);
 	axp210x_debug("axp210x teardown battery dev\n");
-
-	return 0;
 }
 
 static inline void axp2101_irq_set(unsigned int irq, bool enable)

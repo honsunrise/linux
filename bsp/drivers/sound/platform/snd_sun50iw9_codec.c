@@ -1250,7 +1250,7 @@ err_devm_kzalloc:
 	return ret;
 }
 
-static int sunxi_internal_codec_dev_remove(struct platform_device *pdev)
+static void sunxi_internal_codec_dev_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_codec *codec = dev_get_drvdata(dev);
@@ -1281,8 +1281,6 @@ static int sunxi_internal_codec_dev_remove(struct platform_device *pdev)
 	of_node_put(pdev->dev.of_node);
 
 	SND_LOG_DEBUG("unregister internal-codec codec success\n");
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_internal_codec_of_match[] = {

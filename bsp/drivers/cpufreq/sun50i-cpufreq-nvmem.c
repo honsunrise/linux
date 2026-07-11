@@ -915,7 +915,7 @@ free_opp:
 	return ret;
 }
 
-static int sun50i_cpufreq_nvmem_remove(struct platform_device *pdev)
+static void sun50i_cpufreq_nvmem_remove(struct platform_device *pdev)
 {
 	struct opp_table **opp_tables = platform_get_drvdata(pdev);
 	unsigned int cpu;
@@ -933,8 +933,6 @@ static int sun50i_cpufreq_nvmem_remove(struct platform_device *pdev)
 			dev_pm_opp_put_supported_hw(opp_tables[cpu]);
 	}
 	kfree(opp_tables);
-
-	return 0;
 }
 #else
 static int sun50i_cpufreq_nvmem_probe(struct platform_device *pdev)

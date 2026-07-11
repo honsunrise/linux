@@ -53,7 +53,7 @@ static int axp20x_i2c_probe(struct i2c_client *i2c)
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-static int axp20x_i2c_remove(struct i2c_client *i2c)
+static void axp20x_i2c_remove(struct i2c_client *i2c)
 {
 	struct sunxi_power_dev *axp20x = i2c_get_clientdata(i2c);
 	return axp20x_device_remove(axp20x);

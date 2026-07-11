@@ -1281,7 +1281,7 @@ err:
 	return ret;
 }
 
-static int eta6973_charger_remove(struct platform_device *pdev)
+static void eta6973_charger_remove(struct platform_device *pdev)
 {
 	struct eta6973_power *charger_power = platform_get_drvdata(pdev);
 
@@ -1291,8 +1291,6 @@ static int eta6973_charger_remove(struct platform_device *pdev)
 	if (charger_power->charger_supply)
 		power_supply_unregister(charger_power->charger_supply);
 	PMIC_DEV_DEBUG(&pdev->dev, "eta6973 teardown charger dev\n");
-
-	return 0;
 }
 
 static void eta6973_charger_shutdown(struct platform_device *pdev)

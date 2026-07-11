@@ -2025,7 +2025,7 @@ err:
 	return ret;
 }
 
-static int axp2202_battery_remove(struct platform_device *pdev)
+static void axp2202_battery_remove(struct platform_device *pdev)
 {
 	struct axp2202_bat_power *bat_power = platform_get_drvdata(pdev);
 
@@ -2036,8 +2036,6 @@ static int axp2202_battery_remove(struct platform_device *pdev)
 	}
 	sunxi_power_debugfs_exit(bat_power->debug);
 	PMIC_DEV_DEBUG(&pdev->dev, "axp2202 teardown battery dev\n");
-
-	return 0;
 }
 
 static void axp2202_charger_ichg_set(struct axp2202_bat_power *bat_power, int mA)

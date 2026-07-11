@@ -1087,12 +1087,10 @@ out_err:
 	return ret;
 }
 
-static int mbus_pmu_remove(struct platform_device *pdev)
+static void mbus_pmu_remove(struct platform_device *pdev)
 {
 	devm_hwmon_device_unregister(hw_mbus_pmu.hwmon_dev);
 	sysfs_remove_group(&pdev->dev.kobj, &mbus_group);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

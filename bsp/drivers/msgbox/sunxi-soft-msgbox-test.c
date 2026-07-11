@@ -142,7 +142,7 @@ static int sunxi_mbox_test_probe(struct platform_device *pdev)
 }
 
 
-static int sunxi_mbox_test_remove(struct platform_device *pdev)
+static void sunxi_mbox_test_remove(struct platform_device *pdev)
 {
 	int i;
 	struct sunxi_mbox_test *mbox_test = platform_get_drvdata(pdev);
@@ -151,7 +151,6 @@ static int sunxi_mbox_test_remove(struct platform_device *pdev)
 		class_destroy(mbox_test->class);
 		mbox_test->class = NULL;
 	}
-	return 0;
 }
 
 static const struct of_device_id sunxi_mbox_test_of_match[] = {

@@ -925,7 +925,7 @@ err_startup:
 	return ret;
 }
 
-static int sunxi_irtx_remove(struct platform_device *pdev)
+static void sunxi_irtx_remove(struct platform_device *pdev)
 {
 	struct sunxi_irtx *chip = platform_get_drvdata(pdev);
 
@@ -933,8 +933,6 @@ static int sunxi_irtx_remove(struct platform_device *pdev)
 	sunxi_irtx_hw_exit(chip);
 	rc_unregister_device(chip->rcdev);
 	sunxi_irtx_regulator_release(chip);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_irtx_of_match[] = {

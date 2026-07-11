@@ -221,10 +221,9 @@ static int nand_probe(struct platform_device *plat_dev)
 *Return       :
 *Note         :
 *****************************************************************************/
-static int nand_remove(struct platform_device *plat_dev)
+static void nand_remove(struct platform_device *plat_dev)
 {
 	nand_dbg_inf("nand_remove\n");
-	return 0;
 }
 
 /*****************************************************************************

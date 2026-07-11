@@ -826,7 +826,7 @@ static void  mtty_shutdown(struct platform_device *pdev)
 }
 #endif
 
-static int  mtty_remove(struct platform_device *pdev)
+static void mtty_remove(struct platform_device *pdev)
 {
 	struct mtty_device *mtty = platform_get_drvdata(pdev);
 
@@ -844,8 +844,6 @@ static int  mtty_remove(struct platform_device *pdev)
 	sysfs_remove_group(&pdev->dev.kobj, &bluetooth_group);
 //#endif
 	bluesleep_exit();
-
-	return 0;
 }
 
 static const struct of_device_id mtty_match_table[] = {

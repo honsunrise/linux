@@ -239,14 +239,12 @@ err_devm_kzalloc:
 	return ret;
 }
 
-static int sunxi_aaudio_dev_remove(struct platform_device *pdev)
+static void sunxi_aaudio_dev_remove(struct platform_device *pdev)
 {
 	snd_sunxi_dma_platform_unregister(&pdev->dev);
 	snd_soc_unregister_component(&pdev->dev);
 
 	SND_LOG_DEBUG("unregister aaudio platform success\n");
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_aaudio_of_match[] = {

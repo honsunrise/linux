@@ -2474,7 +2474,7 @@ err0:
 	return ret;
 }
 
-static int sunxi_pwm_remove(struct platform_device *pdev)
+static void sunxi_pwm_remove(struct platform_device *pdev)
 {
 	struct sunxi_pwm_chip *chip;
 #ifdef CONFIG_AW_AMP_SYS_RSC_MANAGER
@@ -2495,8 +2495,6 @@ static int sunxi_pwm_remove(struct platform_device *pdev)
 
 	sunxi_pwm_resource_put(chip);
 	sunxi_pwm_regulator_release(chip);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

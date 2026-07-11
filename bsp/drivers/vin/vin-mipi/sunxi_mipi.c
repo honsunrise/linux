@@ -1515,7 +1515,7 @@ ekzalloc:
 	return ret;
 }
 
-static int mipi_remove(struct platform_device *pdev)
+static void mipi_remove(struct platform_device *pdev)
 {
 	struct mipi_dev *mipi = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &mipi->subdev;
@@ -1532,7 +1532,6 @@ static int mipi_remove(struct platform_device *pdev)
 		iounmap(mipi->base);
 	media_entity_cleanup(&mipi->subdev.entity);
 	kfree(mipi);
-	return 0;
 }
 
 static size_t phy_common_status_dump(char *buf, size_t size)

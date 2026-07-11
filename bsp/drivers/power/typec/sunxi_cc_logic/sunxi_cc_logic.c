@@ -1000,7 +1000,7 @@ static void sunxi_pmic_cc_logic_virq_dts_set(struct sunxi_pmic_cc_logic *port, b
 	}
 }
 
-static int sunxi_pmic_cc_logic_remove(struct platform_device *pdev)
+static void sunxi_pmic_cc_logic_remove(struct platform_device *pdev)
 {
 	struct sunxi_pmic_cc_logic *port = platform_get_drvdata(pdev);
 
@@ -1013,8 +1013,6 @@ static int sunxi_pmic_cc_logic_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&port->vbus_online_mon);
 	power_supply_unregister(port->cc_logic_psy);
 	sunxi_power_debugfs_exit(port->debug);
-
-	return 0;
 }
 
 static void sunxi_pmic_cc_logic_shutdown(struct platform_device *pdev)

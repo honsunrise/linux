@@ -1365,7 +1365,7 @@ ekzalloc:
 	return ret;
 }
 
-static int scaler_remove(struct platform_device *pdev)
+static void scaler_remove(struct platform_device *pdev)
 {
 	struct scaler_dev *scaler = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &scaler->subdev;
@@ -1398,7 +1398,6 @@ static int scaler_remove(struct platform_device *pdev)
 #endif
 	}
 	kfree(scaler);
-	return 0;
 }
 
 static const struct of_device_id sunxi_scaler_match[] = {

@@ -2577,7 +2577,7 @@ err_devm_kzalloc:
 	return ret;
 }
 
-static int sunxi_i2s_dev_remove(struct platform_device *pdev)
+static void sunxi_i2s_dev_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
@@ -2616,8 +2616,6 @@ static int sunxi_i2s_dev_remove(struct platform_device *pdev)
 	of_node_put(np);
 
 	SND_LOG_DEBUG("unregister i2s platform success\n");
-
-	return 0;
 }
 
 static const struct sunxi_i2s_quirks sunxi_i2s_quirks = {

@@ -1636,7 +1636,7 @@ OUT:
 	return ret;
 }
 
-static int sunxi_de_remove(struct platform_device *pdev)
+static void sunxi_de_remove(struct platform_device *pdev)
 {
 	struct sunxi_display_engine *engine;
 	engine = dev_get_drvdata(&pdev->dev);
@@ -1645,7 +1645,6 @@ static int sunxi_de_remove(struct platform_device *pdev)
 	component_del(&pdev->dev, &sunxi_de_component_ops);
 	sunxi_de_reg_mem_deinit(engine);
 	sunxi_display_engine_exit(&pdev->dev);
-	return 0;
 }
 
 static const struct de_match_data de350_data = {

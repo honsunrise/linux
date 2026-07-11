@@ -454,10 +454,9 @@ static void act_i2c_remove(struct i2c_client *client)
 	cci_dev_remove_helper(client, &cci_act_drv);
 }
 #else
-static int act_i2c_remove(struct i2c_client *client)
+static void act_i2c_remove(struct i2c_client *client)
 {
 	cci_dev_remove_helper(client, &cci_act_drv);
-	return 0;
 }
 #endif
 static struct i2c_driver act_i2c_driver = {

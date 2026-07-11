@@ -1413,11 +1413,10 @@ static int hdmi_probe(struct platform_device *pdev)
 }
 
 
-static int hdmi_remove(struct platform_device *pdev)
+static void hdmi_remove(struct platform_device *pdev)
 {
 	hdmi_inf("hdmi_remove call\n");
 	hdmi_exit();
-	return 0;
 }
 
 static struct platform_driver hdmi_driver = {

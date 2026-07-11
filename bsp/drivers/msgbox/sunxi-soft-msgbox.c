@@ -503,13 +503,11 @@ ioremap_err:
 	return ret;
 }
 
-static int sunxi_irq_mbox_remove(struct platform_device *pdev)
+static void sunxi_irq_mbox_remove(struct platform_device *pdev)
 {
 	struct sunxi_irq_mbox *mbox = platform_get_drvdata(pdev);
 
 	mbox_controller_unregister(&mbox->controller);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_irq_mbox_of_match[] = {

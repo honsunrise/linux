@@ -124,15 +124,13 @@ remove_file:
 	return ret;
 }
 
-static int sunxi_pdtest_remove(struct platform_device *pdev)
+static void sunxi_pdtest_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	device_remove_file(dev, &dev_attr_status);
-
-	return 0;
 }
 
 static int sunxi_pdtest_runtime_suspend(struct device *dev)

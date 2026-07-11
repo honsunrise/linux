@@ -397,12 +397,10 @@ static int vir_src_probe(struct platform_device *pdev)
 }
 
 
-static int vir_src_remove(struct platform_device *pdev)
+static void vir_src_remove(struct platform_device *pdev)
 {
 
 	car_reverse_video_source_unregister(&video_source_virtual);
-
-	return 0;
 }
 
 

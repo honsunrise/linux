@@ -1054,7 +1054,7 @@ static int sunxi_uio_probe(struct platform_device *pdev)
  * sunxi_uio_remove() - UIO platform driver release
  * routine - unregister uio devices
  */
-static int sunxi_uio_remove(struct platform_device *pdev)
+static void sunxi_uio_remove(struct platform_device *pdev)
 {
 	struct sunxi_uio *chip = platform_get_drvdata(pdev);
 	struct net_device *netdev;
@@ -1079,8 +1079,6 @@ static int sunxi_uio_remove(struct platform_device *pdev)
 		dev_open(netdev, NULL);
 		rtnl_unlock();
 	}
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_uio_of_match[] = {

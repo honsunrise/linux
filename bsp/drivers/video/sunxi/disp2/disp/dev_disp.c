@@ -3681,7 +3681,7 @@ err_iomap:
 	return ret;
 }
 
-static int disp_remove(struct platform_device *pdev)
+static void disp_remove(struct platform_device *pdev)
 {
 	int i;
 
@@ -3712,8 +3712,6 @@ static int disp_remove(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, NULL);
-
-	return 0;
 }
 
 static int disp_blank(bool blank)

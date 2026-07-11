@@ -922,7 +922,7 @@ err_module_put:
 	goto err_unlock;
 }
 
-static int DC_FBDEV_Remove(struct platform_device *psDev)
+static void DC_FBDEV_Remove(struct platform_device *psDev)
 {
 	DC_FBDEV_DEVICE *psDeviceData = gpsDeviceData;
 	struct fb_info *psLINFBInfo = psDeviceData->psLINFBInfo;
@@ -940,8 +940,6 @@ static int DC_FBDEV_Remove(struct platform_device *psDev)
 
 	DCUnregisterDevice(psDeviceData->hSrvHandle);
 	kfree(psDeviceData);
-
-	return 0;
 }
 
 static void DC_FBDEV_Shutdown(struct platform_device *psDev)

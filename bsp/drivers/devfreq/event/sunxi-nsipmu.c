@@ -177,9 +177,8 @@ static int sunxi_nsipmu_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_nsipmu_remove(struct platform_device *pdev)
+static void sunxi_nsipmu_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static struct platform_driver sunxi_nsipmu_driver = {

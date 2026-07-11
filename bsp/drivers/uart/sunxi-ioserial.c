@@ -243,14 +243,12 @@ static int sunxi_ioserial_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_ioserial_remove(struct platform_device *pdev)
+static void sunxi_ioserial_remove(struct platform_device *pdev)
 {
 	misc_deregister(&mdev);
 
 	if (tx_gpio)
 		gpiod_put(tx_gpio);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_ioserial_match[] = {

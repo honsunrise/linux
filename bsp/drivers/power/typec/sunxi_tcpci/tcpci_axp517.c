@@ -637,7 +637,7 @@ static void axp517_tcpci_delayed_work_set(struct axp517_tcpci_chip *chip, bool e
 	}
 }
 
-static int axp517_tcpci_remove(struct platform_device *pdev)
+static void axp517_tcpci_remove(struct platform_device *pdev)
 {
 	struct axp517_tcpci_chip *chip = platform_get_drvdata(pdev);
 
@@ -647,8 +647,6 @@ static int axp517_tcpci_remove(struct platform_device *pdev)
 	axp517_tcpci_delayed_work_set(chip, false);
 	usb_role_switch_put(chip->role_sw);
 	axp517_tcpci_unregister_port_overrides(chip->tcpci);
-
-	return 0;
 }
 
 /*

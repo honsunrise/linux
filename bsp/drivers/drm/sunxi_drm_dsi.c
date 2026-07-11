@@ -1998,10 +1998,9 @@ static int sunxi_drm_dsi_probe(struct platform_device *pdev)
 	/* return component_add(&pdev->dev, &sunxi_drm_dsi_component_ops); */
 }
 
-static int sunxi_drm_dsi_remove(struct platform_device *pdev)
+static void sunxi_drm_dsi_remove(struct platform_device *pdev)
 {
 	component_del(&pdev->dev, &sunxi_drm_dsi_component_ops);
-	return 0;
 }
 
 struct platform_driver sunxi_dsi_platform_driver = {

@@ -130,10 +130,9 @@ static int sunxi_tcon_top_probe(struct platform_device *pdev)
 	return component_add(&pdev->dev, &sunxi_tcon_top_component_ops);
 }
 
-static int sunxi_tcon_top_remove(struct platform_device *pdev)
+static void sunxi_tcon_top_remove(struct platform_device *pdev)
 {
 	component_del(&pdev->dev, &sunxi_tcon_top_component_ops);
-	return 0;
 }
 
 /* Note: sunxi-lcd is represented of sunxi tcon,

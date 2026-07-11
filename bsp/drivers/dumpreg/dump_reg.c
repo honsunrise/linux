@@ -1132,7 +1132,7 @@ error:
 	return -1;
 }
 
-static int sunxi_dump_reg_remove(struct platform_device *pdev)
+static void sunxi_dump_reg_remove(struct platform_device *pdev)
 {
 	int i;
 
@@ -1141,7 +1141,6 @@ static int sunxi_dump_reg_remove(struct platform_device *pdev)
 	}
 
 	class_destroy(dump_class);
-	return 0;
 }
 
 static struct platform_driver sunxi_dump_reg_driver = {

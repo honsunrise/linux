@@ -371,13 +371,11 @@ static int sunxi_soft_jtag_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_soft_jtag_remove(struct platform_device *pdev)
+static void sunxi_soft_jtag_remove(struct platform_device *pdev)
 {
 	struct sunxi_soft_jtag *chip = platform_get_drvdata(pdev);
 
 	sunxi_soft_jtag_class_exit(chip);
-
-	return 0;
 }
 
 static struct platform_driver sunxi_soft_jtag_driver = {

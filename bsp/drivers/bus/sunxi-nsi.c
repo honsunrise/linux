@@ -1966,7 +1966,7 @@ out_err:
 	return ret;
 }
 
-static int nsi_pmu_remove(struct platform_device *pdev)
+static void nsi_pmu_remove(struct platform_device *pdev)
 {
 	sunxi_nsi_ecc_exit(pdev);
 
@@ -1975,8 +1975,6 @@ static int nsi_pmu_remove(struct platform_device *pdev)
 		device_destroy(nsi_pmu_class, MKDEV(NSI_MAJOR, 0));
 		hw_nsi_pmu.dev_nsi = NULL;
 	}
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

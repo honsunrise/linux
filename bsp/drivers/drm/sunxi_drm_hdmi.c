@@ -3637,7 +3637,7 @@ static int sunxi_hdmi_probe(struct platform_device *pdev)
 	return component_add(dev, &sunxi_hdmi_compoent_ops);
 }
 
-static int sunxi_hdmi_remove(struct platform_device *pdev)
+static void sunxi_hdmi_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
@@ -3645,7 +3645,6 @@ static int sunxi_hdmi_remove(struct platform_device *pdev)
 
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	return 0;
 }
 
 struct platform_driver sunxi_hdmi_platform_driver = {

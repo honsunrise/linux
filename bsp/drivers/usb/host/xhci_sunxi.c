@@ -530,7 +530,7 @@ static int sunxi_xhci_hcd_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_xhci_hcd_remove(struct platform_device *pdev)
+static void sunxi_xhci_hcd_remove(struct platform_device *pdev)
 {
 	struct sunxi_hci_hcd *sunxi_xhci = NULL;
 	struct sunxi_hci_hcd *dev_data = NULL;
@@ -553,8 +553,6 @@ static int sunxi_xhci_hcd_remove(struct platform_device *pdev)
 	sunxi_stop_xhci(dev_data);
 
 	dev_data->probe = 0;
-
-	return 0;
 }
 
 static void sunxi_xhci_hcd_shutdown(struct platform_device *pdev)

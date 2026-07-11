@@ -449,7 +449,7 @@ static void eink_shutdown(struct platform_device *pdev)
 	return;
 }
 
-static int eink_remove(struct platform_device *pdev)
+static void eink_remove(struct platform_device *pdev)
 {
 	struct eink_driver_info *drvdata;
 
@@ -469,8 +469,6 @@ static int eink_remove(struct platform_device *pdev)
 		sunxi_err(NULL, "%s:drvdata is NULL!\n", __func__);
 
 	sunxi_info(NULL, "%s finish!\n", __func__);
-
-	return 0;
 }
 
 static int eink_runtime_suspend(struct device *dev)

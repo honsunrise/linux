@@ -719,11 +719,10 @@ err_init:
 	return ret;
 }
 
-static int sunxi_dwmac_remove(struct platform_device *pdev)
+static void sunxi_dwmac_remove(struct platform_device *pdev)
 {
 	sunxi_dwmac_sysfs_exit(&pdev->dev);
 	stmmac_pltfr_remove(pdev);
-	return 0;
 }
 
 static void sunxi_dwmac_shutdown(struct platform_device *pdev)

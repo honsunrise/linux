@@ -137,12 +137,10 @@ static int protected_mode_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int protected_mode_remove(struct platform_device *pdev)
+static void protected_mode_remove(struct platform_device *pdev)
 {
 	dev_info(&pdev->dev, "Protected mode switcher %s removed\n",
 			pdev->name);
-
-	return 0;
 }
 
 static const struct of_device_id protected_mode_dt_ids[] = {

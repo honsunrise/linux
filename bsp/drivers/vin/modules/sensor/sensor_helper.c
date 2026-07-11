@@ -1135,7 +1135,7 @@ ekzalloc:
 	return ret;
 }
 
-static int sensor_helper_remove(struct platform_device *pdev)
+static void sensor_helper_remove(struct platform_device *pdev)
 {
 	struct sensor_helper_dev *sensor_helper = platform_get_drvdata(pdev);
 
@@ -1151,7 +1151,6 @@ static int sensor_helper_remove(struct platform_device *pdev)
 	sensor_helper->pmic[DVDD] = NULL;
 #endif
 	kfree(sensor_helper);
-	return 0;
 }
 
 static const struct of_device_id sunxi_sensor_helper_match[] = {

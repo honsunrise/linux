@@ -355,13 +355,12 @@ static int fsa4480_probe(struct i2c_client *client)
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-static int fsa4480_remove(struct i2c_client *client)
+static void fsa4480_remove(struct i2c_client *client)
 {
 	struct fsa4480 *fsa = i2c_get_clientdata(client);
 
 	typec_mux_unregister(fsa->mux);
 	typec_switch_unregister(fsa->sw);
-	return 0;
 }
 #else
 static void fsa4480_remove(struct i2c_client *client)

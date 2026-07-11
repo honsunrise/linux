@@ -745,7 +745,7 @@ static int bcmdhd_wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	return dhd_wifi_platform_load();
 }
 
-static int bcmdhd_wifi_plat_dev_drv_remove(struct platform_device *pdev)
+static void bcmdhd_wifi_plat_dev_drv_remove(struct platform_device *pdev)
 {
 	int i;
 	wifi_adapter_info_t *adapter;
@@ -757,7 +757,6 @@ static int bcmdhd_wifi_plat_dev_drv_remove(struct platform_device *pdev)
 		wifi_platform_set_power(adapter, FALSE, WIFI_TURNOFF_DELAY);
 		wifi_platform_bus_enumerate(adapter, FALSE);
 	}
-	return 0;
 }
 
 static struct platform_driver dhd_wifi_platform_dev_driver = {

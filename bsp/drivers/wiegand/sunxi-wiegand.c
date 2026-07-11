@@ -446,7 +446,7 @@ err0:
 	return err;
 }
 
-static int sunxi_wiegand_remove(struct platform_device *pdev)
+static void sunxi_wiegand_remove(struct platform_device *pdev)
 {
 	struct sunxi_wiegand *chip = platform_get_drvdata(pdev);
 
@@ -455,8 +455,6 @@ static int sunxi_wiegand_remove(struct platform_device *pdev)
 	sunxi_wiegand_clk_destroy(chip);
 	sunxi_wiegand_input_destroy(chip);
 	misc_deregister(&wiegand_dev);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM

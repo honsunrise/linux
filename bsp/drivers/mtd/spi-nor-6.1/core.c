@@ -3392,7 +3392,7 @@ static int spi_nor_probe(struct spi_mem *spimem)
 	return mtd_device_parse_register(&nor->mtd, type, NULL, NULL, 0);
 }
 
-static int spi_nor_remove(struct spi_mem *spimem)
+static void spi_nor_remove(struct spi_mem *spimem)
 {
 	struct spi_nor *nor = spi_mem_get_drvdata(spimem);
 

@@ -2270,7 +2270,7 @@ ekzalloc:
 	return ret;
 }
 
-static int vin_core_remove(struct platform_device *pdev)
+static void vin_core_remove(struct platform_device *pdev)
 {
 	struct vin_core *vinc = (struct vin_core *)dev_get_drvdata(&pdev->dev);
 
@@ -2296,7 +2296,6 @@ static int vin_core_remove(struct platform_device *pdev)
 	}
 	kfree(vinc);
 	vin_log(VIN_LOG_VIDEO, "%s end\n", __func__);
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)

@@ -443,15 +443,13 @@ static void aw_spinand_cleanup(struct aw_spinand *spinand)
 	aw_spinand_chip_exit(&spinand->chip);
 }
 
-static int aw_nftl_spinand_remove(struct spi_device *spi)
+static void aw_nftl_spinand_remove(struct spi_device *spi)
 {
 	struct aw_spinand *spinand;
 
 	spinand = spi_to_spinand(spi);
 
 	aw_spinand_cleanup(spinand);
-
-	return 0;
 }
 
 static int aw_nftl_spinand_probe(struct spi_device *spi)

@@ -316,7 +316,7 @@ err:
 	return ret;
 }
 
-static int sunxi_multi_charge_remove(struct platform_device *pdev)
+static void sunxi_multi_charge_remove(struct platform_device *pdev)
 {
 	struct sunxi_multi_charge *mc_power = platform_get_drvdata(pdev);
 
@@ -327,8 +327,6 @@ static int sunxi_multi_charge_remove(struct platform_device *pdev)
 	if (mc_power->mc_supply)
 		power_supply_unregister(mc_power->mc_supply);
 	PMIC_DEV_DEBUG(&pdev->dev, "sunxi multi charge teardown dev\n");
-
-	return 0;
 }
 
 static inline void sunxi_multi_charge_irq_set(unsigned int irq, bool enable)

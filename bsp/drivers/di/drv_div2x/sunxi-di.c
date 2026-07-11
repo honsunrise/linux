@@ -1630,7 +1630,7 @@ create_work_err:
 	return ret;
 }
 
-static int sunxi_di_remove(struct platform_device *pdev)
+static void sunxi_di_remove(struct platform_device *pdev)
 {
 #ifdef DI_MULPLEX_SUPPORT
 	if (gsunxi_dev && (gsunxi_dev->count != 0)) {

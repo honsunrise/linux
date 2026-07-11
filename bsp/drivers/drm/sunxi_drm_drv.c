@@ -1342,10 +1342,9 @@ static int sunxi_drm_platform_probe(struct platform_device *pdev)
 					       match);
 }
 
-static int sunxi_drm_platform_remove(struct platform_device *pdev)
+static void sunxi_drm_platform_remove(struct platform_device *pdev)
 {
 	component_master_del(&pdev->dev, &sunxi_drm_ops);
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM_SLEEP)

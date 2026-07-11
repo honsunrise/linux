@@ -1019,11 +1019,10 @@ static int hdmi_probe(struct platform_device *pdev)
 	return component_add(&pdev->dev, &hdmi_component_ops);
 }
 
-static int hdmi_remove(struct platform_device *pdev)
+static void hdmi_remove(struct platform_device *pdev)
 {
 	HDMI_CHECKPOINT;
 	component_del(&pdev->dev, &hdmi_component_ops);
-	return 0;
 }
 
 static struct platform_device_id hdmi_platform_device_id_table[] = {

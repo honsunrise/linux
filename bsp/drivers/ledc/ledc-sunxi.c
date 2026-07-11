@@ -1812,7 +1812,7 @@ err0:
 	return ret;
 }
 
-static int sunxi_ledc_remove(struct platform_device *pdev)
+static void sunxi_ledc_remove(struct platform_device *pdev)
 {
 	struct sunxi_ledc *led = platform_get_drvdata(pdev);
 
@@ -1829,8 +1829,6 @@ static int sunxi_ledc_remove(struct platform_device *pdev)
 	sunxi_ledc_resource_put(led);
 
 	sunxi_info(led->dev, "ledc remove finish\n");
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

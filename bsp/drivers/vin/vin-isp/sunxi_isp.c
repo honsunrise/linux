@@ -3430,7 +3430,7 @@ ekzalloc:
 	return ret;
 }
 
-static int isp_remove(struct platform_device *pdev)
+static void isp_remove(struct platform_device *pdev)
 {
 	struct isp_dev *isp = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &isp->subdev;
@@ -3455,7 +3455,6 @@ static int isp_remove(struct platform_device *pdev)
 	vin_isp_h3a_cleanup(isp);
 	media_entity_cleanup(&isp->subdev.entity);
 	kfree(isp);
-	return 0;
 }
 
 static const struct of_device_id sunxi_isp_match[] = {

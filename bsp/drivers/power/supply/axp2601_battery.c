@@ -1291,7 +1291,7 @@ err:
 	return ret;
 }
 
-static int axp2601_battery_remove(struct platform_device *pdev)
+static void axp2601_battery_remove(struct platform_device *pdev)
 {
 	struct axp2601_bat_power *bat_power = platform_get_drvdata(pdev);
 
@@ -1301,8 +1301,6 @@ static int axp2601_battery_remove(struct platform_device *pdev)
 		sunxi_power_unregister_cooler(bat_power->bat_supply);
 	}
 	PMIC_DEV_DEBUG(&pdev->dev, "axp2601 teardown battery dev\n");
-
-	return 0;
 }
 
 static inline void axp2601_bat_irq_set(unsigned int irq, bool enable)

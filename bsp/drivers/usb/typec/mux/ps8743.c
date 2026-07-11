@@ -406,13 +406,12 @@ static int ps8743_probe(struct i2c_client *client)
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-static int ps8743_remove(struct i2c_client *client)
+static void ps8743_remove(struct i2c_client *client)
 {
 	struct ps8743 *pi = i2c_get_clientdata(client);
 
 	typec_mux_unregister(pi->mux);
 	typec_switch_unregister(pi->sw);
-	return 0;
 }
 #else
 static void ps8743_remove(struct i2c_client *client)

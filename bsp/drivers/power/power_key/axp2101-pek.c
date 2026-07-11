@@ -1184,7 +1184,7 @@ static int axp20x_pek_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int axp20x_pek_remove(struct platform_device *pdev)
+static void axp20x_pek_remove(struct platform_device *pdev)
 {
 	struct axp20x_pek *axp20x_pek = platform_get_drvdata(pdev);
 	struct sunxi_power_dev *axp20x = axp20x_pek->axp20x;
@@ -1194,8 +1194,6 @@ static int axp20x_pek_remove(struct platform_device *pdev)
 	}
 
 	input_unregister_device(axp20x_pek->input);
-
-	return 0;
 }
 
 static int axp2101_powerkey_suspend(struct device *dev)

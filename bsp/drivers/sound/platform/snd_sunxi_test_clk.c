@@ -464,7 +464,7 @@ err_snd_sunxi_kzalloc:
 	return ret;
 }
 
-static int sunxi_test_dev_remove(struct platform_device *pdev)
+static void sunxi_test_dev_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_test_clk *sunxi_test = dev_get_drvdata(dev);
@@ -479,8 +479,6 @@ static int sunxi_test_dev_remove(struct platform_device *pdev)
 	quirks->snd_sunxi_clk_exit(clk);
 	snd_sunxi_mem_exit(pdev, mem);
 	kfree(sunxi_test);
-
-	return 0;
 }
 
 static const struct sunxi_test_clk_quirks sunxi_test_clk_quirks_sun55iw3 = {

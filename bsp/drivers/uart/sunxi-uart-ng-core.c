@@ -1962,7 +1962,7 @@ static int sunxi_uart_probe(struct platform_device *pdev)
 	return uart_add_one_port(&sunxi_uart_driver, port);
 }
 
-static int sunxi_uart_remove(struct platform_device *pdev)
+static void sunxi_uart_remove(struct platform_device *pdev)
 {
 #ifdef CONFIG_AW_AMP_SYS_RSC_MANAGER
 	int err;
@@ -1988,7 +1988,6 @@ static int sunxi_uart_remove(struct platform_device *pdev)
 	sunxi_uart_release_resource(uart_port, pdev->dev.platform_data);
 
 	uart_remove_one_port(&sunxi_uart_driver, port);
-	return 0;
 }
 
 /* UART power management code */

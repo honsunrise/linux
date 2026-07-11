@@ -2037,7 +2037,7 @@ err0:
 	return err;
 }
 
-static int sunxi_spif_remove(struct platform_device *pdev)
+static void sunxi_spif_remove(struct platform_device *pdev)
 {
 	struct sunxi_spif *sspi = platform_get_drvdata(pdev);
 	int i;
@@ -2048,8 +2048,6 @@ static int sunxi_spif_remove(struct platform_device *pdev)
 		dma_pool_free(sspi->pool, sspi->dma_desc[i], sspi->desc_phys[i]);
 	dmam_pool_destroy(sspi->pool);
 	platform_set_drvdata(pdev, NULL);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

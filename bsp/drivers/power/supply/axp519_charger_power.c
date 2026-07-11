@@ -1062,7 +1062,7 @@ err:
 	return ret;
 }
 
-static int axp519_charger_remove(struct platform_device *pdev)
+static void axp519_charger_remove(struct platform_device *pdev)
 {
 	struct axp519_power *charger_power = platform_get_drvdata(pdev);
 
@@ -1073,8 +1073,6 @@ static int axp519_charger_remove(struct platform_device *pdev)
 	if (charger_power->charger_supply)
 		power_supply_unregister(charger_power->charger_supply);
 	PMIC_DEV_DEBUG(&pdev->dev, "axp519 teardown charger dev\n");
-
-	return 0;
 }
 
 static void axp519_charger_shutdown(struct platform_device *pdev)

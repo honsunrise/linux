@@ -863,7 +863,7 @@ static int sunxi_otg_manager_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_otg_manager_remove(struct platform_device *pdev)
+static void sunxi_otg_manager_remove(struct platform_device *pdev)
 {
 
 	int ret;

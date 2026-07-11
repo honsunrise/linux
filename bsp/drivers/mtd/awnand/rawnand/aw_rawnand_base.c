@@ -2539,7 +2539,7 @@ out:
 	return ret;
 }
 
-static int aw_rawnand_remove(struct platform_device *pdev)
+static void aw_rawnand_remove(struct platform_device *pdev)
 {
 
 	struct aw_nand_chip *chip = platform_get_drvdata(pdev);
@@ -2556,8 +2556,6 @@ static int aw_rawnand_remove(struct platform_device *pdev)
 	aw_rawnand_chip_data_destroy(mtd);
 
 	aw_rawnand_remove_cdev();
-
-	return 0;
 }
 
 static const struct of_device_id of_nand_id[] = {

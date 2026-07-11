@@ -273,7 +273,7 @@ static int sunxi_irq_nmi_probe(struct platform_device *pdev)
 	return sunxi_sc_nmi_irq_init(pdev->dev.of_node, reg_offs);
 }
 
-static int sunxi_irq_nmi_remove(struct platform_device *pdev)
+static void sunxi_irq_nmi_remove(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
 	struct resource res;
@@ -283,8 +283,6 @@ static int sunxi_irq_nmi_remove(struct platform_device *pdev)
 	of_address_to_resource(node, 0, &res);
 	release_mem_region(res.start, resource_size(&res));
 	irq_domain_remove(sys_gc->domain);
-
-	return 0;
 }
 
 static struct of_device_id sunxi_irq_nmi_match[] = {

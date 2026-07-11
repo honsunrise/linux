@@ -2572,7 +2572,7 @@ ekzalloc:
 	return ret;
 }
 
-static int tdm_remove(struct platform_device *pdev)
+static void tdm_remove(struct platform_device *pdev)
 {
 	struct tdm_dev *tdm = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd;
@@ -2593,7 +2593,6 @@ static int tdm_remove(struct platform_device *pdev)
 	}
 
 	kfree(tdm);
-	return 0;
 }
 
 static const struct of_device_id sunxi_tdm_match[] = {

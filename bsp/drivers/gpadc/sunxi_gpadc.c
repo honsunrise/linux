@@ -2072,7 +2072,7 @@ err0:
 	return err;
 }
 
-static int sunxi_gpadc_remove(struct platform_device *pdev)
+static void sunxi_gpadc_remove(struct platform_device *pdev)
 {
 	struct sunxi_gpadc *chip = platform_get_drvdata(pdev);
 	int err;
@@ -2097,8 +2097,6 @@ static int sunxi_gpadc_remove(struct platform_device *pdev)
 #endif
 
 	sunxi_gpadc_resource_put(chip);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

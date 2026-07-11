@@ -578,7 +578,7 @@ static int DCPDPProbe(struct platform_device *psPlatDev)
 	return 0;
 }
 
-static int DCPDPRemove(struct platform_device *psPlatDev)
+static void DCPDPRemove(struct platform_device *psPlatDev)
 {
 	DCPDP_DEVICE_PRIV *psDevicePriv;
 
@@ -592,8 +592,6 @@ static int DCPDPRemove(struct platform_device *psPlatDev)
 
 	DCPDPDevicePrivDestroy(psDevicePriv);
 	tc_disable(psPlatDev->dev.parent);
-
-	return 0;
 }
 
 static void DCPDPShutdown(struct platform_device *psPlatDev)

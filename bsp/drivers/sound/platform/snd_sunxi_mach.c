@@ -1016,7 +1016,7 @@ err:
 	return ret;
 }
 
-static int asoc_simple_remove(struct platform_device *pdev)
+static void asoc_simple_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 

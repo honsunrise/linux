@@ -1796,7 +1796,7 @@ static struct dev_pm_ops sunxi_rproc_pm_ops = {
 };
 #endif
 
-static int sunxi_rproc_remove(struct platform_device *pdev)
+static void sunxi_rproc_remove(struct platform_device *pdev)
 {
 	struct rproc *rproc = platform_get_drvdata(pdev);
 	struct sunxi_rproc *chip = rproc->priv;
@@ -1822,8 +1822,6 @@ static int sunxi_rproc_remove(struct platform_device *pdev)
 	sunxi_rproc_resource_put(rproc, pdev);
 
 	rproc_free(rproc);
-
-	return 0;
 }
 
 static void sunxi_rproc_shutdown(struct platform_device *pdev)

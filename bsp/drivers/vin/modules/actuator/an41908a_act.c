@@ -375,7 +375,7 @@ static int act_probe(struct spi_device *spi)
 
 	return 0;
 }
-static int act_remove(struct spi_device *spi)
+static void act_remove(struct spi_device *spi)
 {
 	struct v4l2_subdev *sd;
 
@@ -385,7 +385,6 @@ static int act_remove(struct spi_device *spi)
 	sd = spi_get_drvdata(spi);
 	v4l2_device_unregister_subdev(sd);
 	kfree(sd);
-	return 0;
 }
 
 static const struct spi_device_id act_id[] = {

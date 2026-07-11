@@ -2020,9 +2020,8 @@ static int axp2101_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int axp2101_regulator_remove(struct platform_device *pdev)
+static void axp2101_regulator_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static struct of_device_id axp_regulator_id_tab[] = {

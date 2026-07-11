@@ -520,7 +520,7 @@ err_out:
 	return error;
 }
 
-static int sunxi_pm_domain_remove(struct platform_device *pdev)
+static void sunxi_pm_domain_remove(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct sunxi_pmu *pmu = platform_get_drvdata(pdev);
@@ -532,7 +532,6 @@ static int sunxi_pm_domain_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(pmu->clk);
 	reset_control_assert(pmu->reset);
-	return 0;
 }
 
 static const struct sunxi_domain_info tv303_pm_domains[] = {

@@ -758,7 +758,7 @@ out_err:
 	return ret;
 }
 
-static int npd_remove(struct platform_device *pdev)
+static void npd_remove(struct platform_device *pdev)
 {
 	if (sunxi_npd.dev_npd) {
 		device_remove_groups(sunxi_npd.dev_npd, npd_groups);
@@ -767,8 +767,6 @@ static int npd_remove(struct platform_device *pdev)
 	}
 
 	kfree(sunxi_npd.ddr_addr);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_npd_matches[] = {

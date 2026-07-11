@@ -1623,10 +1623,9 @@ err_iomap:
 	return -EINVAL;
 }
 
-static int tv_remove(struct platform_device *pdev)
+static void tv_remove(struct platform_device *pdev)
 {
 	tv_exit();
-	return 0;
 }
 
 /* int tv_suspend(struct platform_device *pdev, pm_message_t state)

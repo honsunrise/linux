@@ -491,7 +491,7 @@ ekzalloc:
 	return ret;
 }
 
-static int sensor_power_remove(struct platform_device *pdev)
+static void sensor_power_remove(struct platform_device *pdev)
 {
 	struct sensor_power_dev *sensor_power = platform_get_drvdata(pdev);
 
@@ -507,7 +507,6 @@ static int sensor_power_remove(struct platform_device *pdev)
 	if (sensor_power->gpio[PWDN] >= 0)
 		gpio_free(sensor_power->gpio[PWDN]);
 	kfree(sensor_power);
-	return 0;
 }
 
 static const struct of_device_id sunxi_sensor_power_match[] = {

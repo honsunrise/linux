@@ -517,7 +517,7 @@ err0:
 	return err;
 }
 
-static int sunxi_dirgpio_remove(struct platform_device *pdev)
+static void sunxi_dirgpio_remove(struct platform_device *pdev)
 {
 	struct sunxi_dirgpio *chip = platform_get_drvdata(pdev);
 
@@ -528,7 +528,6 @@ static int sunxi_dirgpio_remove(struct platform_device *pdev)
 	class_destroy(chip->gpio_class);
 
 	dev_info(chip->dev, "sunxi direct gpio remove success\n");
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

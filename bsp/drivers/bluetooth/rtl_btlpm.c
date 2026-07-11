@@ -551,7 +551,7 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int bluesleep_remove(struct platform_device *pdev)
+static void bluesleep_remove(struct platform_device *pdev)
 {
 	if (test_bit(BT_PROTO, &flags)) {
 		if (disable_irq_wake(bsi->host_wake_irq))
@@ -566,8 +566,6 @@ static int bluesleep_remove(struct platform_device *pdev)
 		device_init_wakeup(&pdev->dev, false);
 		dev_pm_clear_wake_irq(&pdev->dev);
 	}
-
-	return 0;
 }
 
 static int bluesleep_resume(struct platform_device *pdev)

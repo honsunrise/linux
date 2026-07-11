@@ -837,7 +837,7 @@ static int sensor_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int sensor_remove(struct i2c_client *client)
+static void sensor_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd;
 	sensor_err("%s td104 ss CODE_VERSION:%s \n", __func__, CODE_VERSION);
@@ -846,7 +846,6 @@ static int sensor_remove(struct i2c_client *client)
 	class_unregister(&td100_class);
 	#endif
 	kfree(to_state(sd));
-	return 0;
 }
 
 static const struct i2c_device_id sensor_id[] = {

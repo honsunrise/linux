@@ -529,7 +529,7 @@ static int fsm_i2c_probe(struct i2c_client *i2c,
 	return 0;
 }
 
-static int fsm_i2c_remove(struct i2c_client *i2c)
+static void fsm_i2c_remove(struct i2c_client *i2c)
 {
 	fsm_dev_t *fsm_dev = i2c_get_clientdata(i2c);
 
@@ -564,8 +564,6 @@ static int fsm_i2c_remove(struct i2c_client *i2c)
 	}
 	devm_kfree(&i2c->dev, fsm_dev);
 	dev_info(&i2c->dev, "i2c removed");
-
-	return 0;
 }
 
 static const struct i2c_device_id fsm_i2c_id[] = {

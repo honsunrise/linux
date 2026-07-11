@@ -4302,14 +4302,12 @@ static int sunxi_cadence_phy_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_cadence_phy_remove(struct platform_device *pdev)
+static void sunxi_cadence_phy_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_cadence_phy *sunxi_cphy = dev_get_drvdata(dev);
 
 	sunxi_cadence_phy_serdes_exit(sunxi_cphy);
-
-	return 0;
 }
 
 static int __maybe_unused sunxi_cadence_phy_suspend(struct device *dev)

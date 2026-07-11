@@ -73,9 +73,8 @@ static int sunxi_virtual_ac_power_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_virtual_ac_power_remove(struct platform_device *pdev)
+static void sunxi_virtual_ac_power_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static const struct of_device_id sunxi_virtual_ac_power_match[] = {

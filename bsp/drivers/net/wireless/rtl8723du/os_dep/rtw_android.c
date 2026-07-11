@@ -683,7 +683,7 @@ static int wifi_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int wifi_remove(struct platform_device *pdev)
+static void wifi_remove(struct platform_device *pdev)
 {
 	struct wifi_platform_data *wifi_ctrl =
 		(struct wifi_platform_data *)(pdev->dev.platform_data);
@@ -695,7 +695,6 @@ static int wifi_remove(struct platform_device *pdev)
 	wifi_set_carddetect(0);	/* CardDetect (1->0) */
 
 	up(&wifi_control_sem);
-	return 0;
 }
 
 static int wifi_suspend(struct platform_device *pdev, pm_message_t state)

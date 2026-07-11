@@ -605,7 +605,7 @@ static int sunxi_dsufreq_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_dsufreq_remove(struct platform_device *pdev)
+static void sunxi_dsufreq_remove(struct platform_device *pdev)
 {
 	struct sunxi_dsufreq_dev *dsufreq_dev = platform_get_drvdata(pdev);
 	struct device __maybe_unused *dev = &pdev->dev;
@@ -625,8 +625,6 @@ static int sunxi_dsufreq_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(dsufreq_dev->clk);
 	iounmap((char __iomem *)clus_ctrl_base);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_dsufreq_of_match[] = {

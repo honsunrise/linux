@@ -3655,7 +3655,7 @@ static int tvd_release(void) /* fix */
 	return 0;
 }
 
-static int tvd_remove(struct platform_device *pdev)
+static void tvd_remove(struct platform_device *pdev)
 {
 	struct tvd_dev *dev = (struct tvd_dev *)dev_get_drvdata(&(pdev)->dev);
 	int i = 0;

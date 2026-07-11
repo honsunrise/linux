@@ -198,7 +198,7 @@ err_out:
 	return ret;
 }
 
-static int sunxi_rpbuf_controller_remove(struct platform_device *pdev)
+static void sunxi_rpbuf_controller_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct rpbuf_controller *controller = dev_get_drvdata(dev);

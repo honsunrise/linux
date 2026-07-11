@@ -301,7 +301,7 @@ alloc_fail:
 /**
  * Cleanup function that gets called when the module is unloaded.
  */
-static int soft_uart_remove(struct platform_device *pdev)
+static void soft_uart_remove(struct platform_device *pdev)
 {
 	pr_info("Finalizing the module...\n");
 
@@ -317,7 +317,6 @@ static int soft_uart_remove(struct platform_device *pdev)
 	tty_port_destroy(&port);
 
 	pr_info("Module finalized.\n");
-	return 0;
 }
 
 static const struct of_device_id soft_uart_of_match[] = {

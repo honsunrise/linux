@@ -167,7 +167,7 @@ static struct attribute_group rpmsg_heartbeat_attribute_group = {
 	.attrs = rpmsg_heartbeat_attributes
 };
 
-static int rpmsg_heartbeat_platform_remove(struct platform_device *pdev)
+static void rpmsg_heartbeat_platform_remove(struct platform_device *pdev)
 {
 	sysfs_remove_group(&rpmsg_heartbeat_dev->kobj, &rpmsg_heartbeat_attribute_group);
 	device_destroy(rpmsg_heartbeat_class, devid);
@@ -175,8 +175,6 @@ static int rpmsg_heartbeat_platform_remove(struct platform_device *pdev)
 	class_destroy(rpmsg_heartbeat_class);
 	cdev_del(rpmsg_heartbeat_cdev);
 	dev_dbg(&pdev->dev, "rpmsg heartbeat module exit\n");
-
-	return 0;
 }
 
 static int rpmsg_heartbeat_platform_probe(struct platform_device *pdev)

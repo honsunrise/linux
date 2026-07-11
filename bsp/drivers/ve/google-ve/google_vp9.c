@@ -899,10 +899,9 @@ static void googleVp9dev_exit(void)
 	kfree(google_vp9_devp);
 }
 
-static int  sunxi_google_vp9_remove(struct platform_device *pdev)
+static void sunxi_google_vp9_remove(struct platform_device *pdev)
 {
 	googleVp9dev_exit();
-	return 0;
 }
 
 static int  sunxi_google_vp9_probe(struct platform_device *pdev)

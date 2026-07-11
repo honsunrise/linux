@@ -397,7 +397,7 @@ ekzalloc:
 	return ret;
 }
 
-static int flash_remove(struct platform_device *pdev)
+static void flash_remove(struct platform_device *pdev)
 {
 	struct flash_dev *flash = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &flash->subdev;
@@ -408,7 +408,6 @@ static int flash_remove(struct platform_device *pdev)
 	list_del(&flash->flash_list);
 
 	kfree(flash);
-	return 0;
 }
 
 static const struct of_device_id sunxi_flash_match[] = {

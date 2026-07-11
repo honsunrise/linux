@@ -764,7 +764,7 @@ static void sensor_remove(struct i2c_client *client)
 	kfree(to_state(sd));
 }
 #else
-static int sensor_remove(struct i2c_client *client)
+static void sensor_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd;
 	int i;

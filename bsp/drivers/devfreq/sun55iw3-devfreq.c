@@ -1085,7 +1085,7 @@ remove_table:
 	return rc;
 }
 
-static int sunxi_dmcfreq_remove(struct platform_device *pdev)
+static void sunxi_dmcfreq_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_dmcfreq *dmcfreq = platform_get_drvdata(pdev);
@@ -1095,7 +1095,6 @@ static int sunxi_dmcfreq_remove(struct platform_device *pdev)
 
 	dev_pm_opp_of_remove_table(dev);
 	devfreq_remove_governor(&sunxi_devfreq_governor);
-	return 0;
 }
 
 static __maybe_unused int sunxi_dmcfreq_suspend(struct device *dev)

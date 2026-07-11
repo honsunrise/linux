@@ -249,13 +249,12 @@ static int led_level_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(led_level_pm, led_level_suspend, led_level_resume);
 #endif
 
-static int led_level_ctrl_remove(struct platform_device *pdev)
+static void led_level_ctrl_remove(struct platform_device *pdev)
 {
 	printk("led_level_ctrl: driver exit\n");
 	hrtimer_cancel(&led_ctrl_data.hrtimer);
 
 	misc_deregister(&led_ctrl_dev);
-	return 0;
 }
 
 static const struct of_device_id led_level_ids[] = {

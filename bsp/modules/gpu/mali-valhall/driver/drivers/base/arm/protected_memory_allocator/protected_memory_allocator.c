@@ -512,7 +512,7 @@ static int protected_memory_allocator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int protected_memory_allocator_remove(struct platform_device *pdev)
+static void protected_memory_allocator_remove(struct platform_device *pdev)
 {
 	struct protected_memory_allocator_device *pma_dev =
 		platform_get_drvdata(pdev);
@@ -536,8 +536,6 @@ static int protected_memory_allocator_remove(struct platform_device *pdev)
 
 	dev_info(&pdev->dev,
 		"Protected memory allocator removed successfully\n");
-
-	return 0;
 }
 
 static const struct of_device_id protected_memory_allocator_dt_ids[] = {

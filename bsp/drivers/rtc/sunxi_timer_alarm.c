@@ -263,7 +263,7 @@ static int alarm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int alarm_remove (struct platform_device *pdev)
+static void alarm_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	int i;
@@ -277,8 +277,6 @@ static int alarm_remove (struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(timer_alarm_attrs); i++)
 		class_remove_file(&timer_alarm_class, &timer_alarm_attrs[i]);
 	class_unregister(&timer_alarm_class);
-
-	return 0;
 }
 
 int sunxi_alarm_suspend(struct device *dev)

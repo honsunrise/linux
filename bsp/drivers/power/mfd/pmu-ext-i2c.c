@@ -61,7 +61,7 @@ static int pmu_ext_i2c_probe(struct i2c_client *client)
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-static int pmu_ext_i2c_remove(struct i2c_client *client)
+static void pmu_ext_i2c_remove(struct i2c_client *client)
 {
 	struct sunxi_power_dev *ext = i2c_get_clientdata(client);
 

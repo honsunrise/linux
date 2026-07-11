@@ -652,14 +652,12 @@ static int sunxi_phy_plat_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_phy_plat_remove(struct platform_device *pdev)
+static void sunxi_phy_plat_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_phy_plat *sunxi_phy = dev_get_drvdata(dev);
 
 	sunxi_phy_plat_exit(sunxi_phy);
-
-	return 0;
 }
 
 static int __maybe_unused sunxi_phy_plat_suspend(struct device *dev)

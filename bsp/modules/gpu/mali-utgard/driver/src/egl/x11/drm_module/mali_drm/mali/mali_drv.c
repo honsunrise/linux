@@ -21,9 +21,8 @@ static int mali_platform_drm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mali_platform_drm_remove(struct platform_device *pdev)
+static void mali_platform_drm_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static int mali_platform_drm_suspend(struct platform_device *dev, pm_message_t state)

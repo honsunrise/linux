@@ -1555,7 +1555,7 @@ err_out:
 	return err;
 }
 
-static int adf_sunxi_remove(struct platform_device *pdev)
+static void adf_sunxi_remove(struct platform_device *pdev)
 {
 	int dpy;
 	int ovl;
@@ -1583,7 +1583,6 @@ static int adf_sunxi_remove(struct platform_device *pdev)
 		adf_interface_destroy(&sunxi.interfaces[dpy].interface);
 	}
 	adf_device_destroy(&sunxi.device);
-	return 0;
 }
 
 static void adf_sunxi_device_release(struct device *dev)

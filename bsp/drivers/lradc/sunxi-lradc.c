@@ -914,14 +914,13 @@ err0:
 	return err;
 }
 
-static int sunxi_lradc_remove(struct platform_device *pdev)
+static void sunxi_lradc_remove(struct platform_device *pdev)
 {
 	struct sunxi_lradc *chip = platform_get_drvdata(pdev);
 
 	sunxi_lradc_hw_exit(chip);
 	sunxi_lradc_inputdev_unregister(chip);
 	sunxi_lradc_resource_put(chip);
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

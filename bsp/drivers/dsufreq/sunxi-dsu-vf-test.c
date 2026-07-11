@@ -96,13 +96,11 @@ static int sunxi_dsu_vf_test_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_dsu_vf_test_remove(struct platform_device *pdev)
+static void sunxi_dsu_vf_test_remove(struct platform_device *pdev)
 {
 	struct sunxi_dsu_vf_dev *dsu_vf_dev = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(dsu_vf_dev->clk);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_dsu_vf_test_of_match[] = {

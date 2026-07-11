@@ -1130,9 +1130,8 @@ out:
 }
 
 //TODO
-static int sunxi_tcon_remove(struct platform_device *pdev)
+static void sunxi_tcon_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 struct platform_driver sunxi_tcon_platform_driver = {

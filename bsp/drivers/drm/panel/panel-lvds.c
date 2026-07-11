@@ -337,7 +337,7 @@ static int panel_lvds_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int panel_lvds_remove(struct platform_device *pdev)
+static void panel_lvds_remove(struct platform_device *pdev)
 {
 	struct panel_lvds *lvds_panel = dev_get_drvdata(&pdev->dev);
 
@@ -345,8 +345,6 @@ static int panel_lvds_remove(struct platform_device *pdev)
 
 				panel_lvds_disable(&lvds_panel->panel);
 				panel_lvds_unprepare(&lvds_panel->panel);
-
-	return 0;
 }
 
 static const struct of_device_id panel_lvds_of_table[] = {

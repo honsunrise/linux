@@ -1398,7 +1398,7 @@ err0:
 	return ret;
 }
 
-static int sunxi_ss_remove(struct platform_device *pdev)
+static void sunxi_ss_remove(struct platform_device *pdev)
 {
 	sunxi_ce_cdev_t *sss = platform_get_drvdata(pdev);
 
@@ -1415,7 +1415,6 @@ static int sunxi_ss_remove(struct platform_device *pdev)
 #endif
 	platform_set_drvdata(pdev, NULL);
 	ss_dev = NULL;
-	return 0;
 }
 
 #ifdef CONFIG_PM

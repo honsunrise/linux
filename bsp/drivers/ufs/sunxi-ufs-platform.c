@@ -2053,14 +2053,12 @@ static int sunxi_ufs_pltfm_probe(struct platform_device *pdev)
  * @pdev: pointer to platform device structure
  *
  */
-static int sunxi_ufs_pltfm_remove(struct platform_device *pdev)
+static void sunxi_ufs_pltfm_remove(struct platform_device *pdev)
 {
 	struct ufs_hba *hba =  platform_get_drvdata(pdev);
 
 	pm_runtime_get_sync(&(pdev)->dev);
 	ufshcd_remove(hba);
-
-	return 0;
 }
 
 static const struct dev_pm_ops sunxi_ufs_pltfm_pm_ops = {

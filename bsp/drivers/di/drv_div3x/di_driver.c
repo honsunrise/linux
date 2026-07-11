@@ -1148,7 +1148,7 @@ probe_done:
 
 }
 
-static int di_remove(struct platform_device *pdev)
+static void di_remove(struct platform_device *pdev)
 {
 	struct di_driver_data *drvdata;
 

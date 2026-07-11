@@ -1808,7 +1808,7 @@ static void aw882xx_codec_remove(aw_snd_soc_codec_t *aw_codec)
 	aw882xx->work_queue = NULL;
 }
 #else
-static int aw882xx_codec_remove(aw_snd_soc_codec_t *aw_codec)
+static void aw882xx_codec_remove(aw_snd_soc_codec_t *aw_codec)
 {
 	struct aw882xx *aw882xx =
 		aw_componet_codec_ops.codec_get_drvdata(aw_codec);
@@ -1817,7 +1817,6 @@ static int aw882xx_codec_remove(aw_snd_soc_codec_t *aw_codec)
 	aw882xx_dev_deinit(aw882xx->aw_pa);
 	destroy_workqueue(aw882xx->work_queue);
 	aw882xx->work_queue = NULL;
-	return 0;
 }
 #endif
 

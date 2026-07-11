@@ -713,7 +713,7 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int bluesleep_remove(struct platform_device *pdev)
+static void bluesleep_remove(struct platform_device *pdev)
 {
 	/* assert bt wake */
 	gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
@@ -732,8 +732,6 @@ static int bluesleep_remove(struct platform_device *pdev)
 		device_init_wakeup(&pdev->dev, false);
 		dev_pm_clear_wake_irq(&pdev->dev);
 	}
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_btlpm_ids[] = {

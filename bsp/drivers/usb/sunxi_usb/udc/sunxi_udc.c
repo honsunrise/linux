@@ -4258,7 +4258,7 @@ static int sunxi_udc_probe(struct platform_device *pdev)
 	return sunxi_udc_probe_otg(pdev);
 }
 
-static int sunxi_udc_remove(struct platform_device *pdev)
+static void sunxi_udc_remove(struct platform_device *pdev)
 {
 	return sunxi_udc_remove_otg(pdev);
 }

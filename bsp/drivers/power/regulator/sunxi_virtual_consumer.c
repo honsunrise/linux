@@ -29,9 +29,8 @@ static int virtual_consumer_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int virtual_consumer_regulator_remove(struct platform_device *pdev)
+static void virtual_consumer_regulator_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static const struct of_device_id virtual_consumer_of_match[] = {

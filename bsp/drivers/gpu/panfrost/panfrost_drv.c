@@ -716,7 +716,7 @@ err_out0:
 	return err;
 }
 
-static int panfrost_remove(struct platform_device *pdev)
+static void panfrost_remove(struct platform_device *pdev)
 {
 	struct panfrost_device *pfdev = platform_get_drvdata(pdev);
 	struct drm_device *ddev = pfdev->ddev;
@@ -730,7 +730,6 @@ static int panfrost_remove(struct platform_device *pdev)
 	pm_runtime_set_suspended(pfdev->dev);
 
 	drm_dev_put(ddev);
-	return 0;
 }
 
 static const char * const default_supplies[] = { "mali" };

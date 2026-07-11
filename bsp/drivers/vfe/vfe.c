@@ -4864,7 +4864,7 @@ static int vfe_release(void)
 	return 0;
 }
 
-static int vfe_remove(struct platform_device *pdev)
+static void vfe_remove(struct platform_device *pdev)
 {
 	struct vfe_dev *dev = (struct vfe_dev *)dev_get_drvdata(&pdev->dev);
 	int input_num, i, video_cnt = 1;
@@ -4925,8 +4925,6 @@ static int vfe_remove(struct platform_device *pdev)
 		kfree(dev->isp_gen_set[i]);
 
 	vfe_print("vfe_remove ok!\n");
-
-	return 0;
 }
 
 static void vfe_suspend_helper(struct vfe_dev *dev)

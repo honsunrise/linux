@@ -2765,7 +2765,7 @@ power_off:
 	return ret;
 }
 
-static int sensor_remove(struct i2c_client *client)
+static void sensor_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct sensor_info *info = to_state(sd);
@@ -2808,8 +2808,6 @@ static int sensor_remove(struct i2c_client *client)
 	kfree(to_state(sd));
 
 	sensor_dbg("rk628 driver removed!\n");
-
-	return 0;
 }
 
 static const struct i2c_device_id sensor_id[] = {

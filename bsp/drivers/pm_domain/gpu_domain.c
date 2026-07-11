@@ -385,7 +385,7 @@ assert_reset:
 	return ret;
 }
 
-static int gpu_domain_remove(struct platform_device *pdev)
+static void gpu_domain_remove(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct gpu_pm_domain *pd = platform_get_drvdata(pdev);
@@ -396,7 +396,6 @@ static int gpu_domain_remove(struct platform_device *pdev)
 	}
 	clk_disable_unprepare(pd->clk);
 	reset_control_assert(pd->reset);
-	return 0;
 }
 
 static struct platform_driver gpu_domain_driver = {

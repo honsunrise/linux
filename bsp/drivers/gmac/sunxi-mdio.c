@@ -404,7 +404,7 @@ iomap_err:
 	return ret;
 }
 
-static int sunxi_mdio_remove(struct platform_device *pdev)
+static void sunxi_mdio_remove(struct platform_device *pdev)
 {
 	struct mii_bus *bus = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -415,8 +415,6 @@ static int sunxi_mdio_remove(struct platform_device *pdev)
 	mdiobus_unregister(bus);
 #endif
 	iounmap(chip->base);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_mdio_dt_ids[] = {

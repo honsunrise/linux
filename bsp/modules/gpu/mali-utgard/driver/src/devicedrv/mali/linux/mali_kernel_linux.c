@@ -650,7 +650,7 @@ clock_prepare_failed:
 	return -EFAULT;
 }
 
-static int mali_remove(struct platform_device *pdev)
+static void mali_remove(struct platform_device *pdev)
 {
 #ifdef CONFIG_MALI_DEVFREQ
 	struct mali_device *mdev = dev_get_drvdata(&pdev->dev);
@@ -688,7 +688,6 @@ static int mali_remove(struct platform_device *pdev)
 	mali_platform_device_deinit(mali_platform_device);
 #endif
 	mali_platform_device = NULL;
-	return 0;
 }
 
 static int mali_miscdevice_register(struct platform_device *pdev)

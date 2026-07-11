@@ -864,7 +864,7 @@ probe_done:
 
 }
 
-static int di_remove(struct platform_device *pdev)
+static void di_remove(struct platform_device *pdev)
 {
 	struct di_driver_data *drvdata;
 
@@ -889,8 +889,6 @@ static int di_remove(struct platform_device *pdev)
 
 		kfree(drvdata);
 	}
-
-	return 0;
 }
 
 static int di_suspend(struct device *dev)

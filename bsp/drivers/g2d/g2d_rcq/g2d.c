@@ -1567,7 +1567,7 @@ static const struct file_operations g2d_fops = {
 	.mmap = g2d_mmap,
 };
 
-static int g2d_remove(struct platform_device *pdev)
+static void g2d_remove(struct platform_device *pdev)
 {
 #if (IS_ENABLED(CONFIG_G2D_USE_HWSPINLOCK) && !IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
 	pm_runtime_put_sync(para.dev);
@@ -1591,7 +1591,6 @@ static int g2d_remove(struct platform_device *pdev)
 	sysfs_remove_group(&g2d_dev->kobj, &g2d_attribute_group);
 
 	G2D_INFO("Driver unloaded succesfully\n");
-	return 0;
 }
 
 static int g2d_suspend(struct device *dev)

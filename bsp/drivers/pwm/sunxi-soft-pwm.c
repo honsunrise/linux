@@ -373,7 +373,7 @@ err_alloc_region:
 	return ret;
 }
 
-static int sunxi_soft_pwm_remove(struct platform_device *pdev)
+static void sunxi_soft_pwm_remove(struct platform_device *pdev)
 {
 	int i;
 	struct device *dev = &pdev->dev;
@@ -395,8 +395,6 @@ static int sunxi_soft_pwm_remove(struct platform_device *pdev)
 		cdev_del(gpwm->cdev);
 		unregister_chrdev_region(gpwm->devno, 1);
 	}
-
-	return 0;
 }
 
 static struct of_device_id sunxi_soft_pwm_of_match[] = {

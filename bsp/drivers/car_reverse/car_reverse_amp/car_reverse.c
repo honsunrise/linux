@@ -471,7 +471,7 @@ _err_out:
 	return ret;
 }
 
-static int car_reverse_remove(struct platform_device *pdev)
+static void car_reverse_remove(struct platform_device *pdev)
 {
 	rpmsg_car_reverse_exit();
 	sysfs_remove_group(&cardev->kobj, &car_reverse_attribute_group);
@@ -482,7 +482,6 @@ static int car_reverse_remove(struct platform_device *pdev)
 	class_destroy(car_reverse_class);
 	cdev_del(car_reverse_cdev);
 	sunxi_info(&pdev->dev, "car reverse module exit\n");
-	return 0;
 }
 
 static int car_reverse_pm_suspend(struct device *dev)

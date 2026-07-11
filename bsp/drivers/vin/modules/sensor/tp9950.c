@@ -1054,7 +1054,7 @@ free_devno:
 	return 0;
 }
 
-static int sensor_remove(struct i2c_client *client)
+static void sensor_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd;
 
@@ -1071,7 +1071,6 @@ static int sensor_remove(struct i2c_client *client)
 #endif
 
 	kfree(to_state(sd));
-	return 0;
 }
 
 

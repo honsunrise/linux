@@ -582,9 +582,8 @@ static int pmu_ext_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int pmu_ext_regulator_remove(struct platform_device *pdev)
+static void pmu_ext_regulator_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static struct of_device_id pmu_ext_match_table[] = {

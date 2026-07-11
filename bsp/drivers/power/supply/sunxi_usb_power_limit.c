@@ -1023,7 +1023,7 @@ static void sunxi_usb_power_limit_delayed_work_set(struct sunxi_usb_power_limit_
 	}
 }
 
-static int sunxi_usb_power_limit_remove(struct platform_device *pdev)
+static void sunxi_usb_power_limit_remove(struct platform_device *pdev)
 {
 	struct sunxi_usb_power_limit_supply_data *power_limit = platform_get_drvdata(pdev);
 
@@ -1034,8 +1034,6 @@ static int sunxi_usb_power_limit_remove(struct platform_device *pdev)
 	}
 	sunxi_power_debugfs_exit(power_limit->debug);
 	PMIC_DEV_DEBUG(&pdev->dev, "teardown sunxi power limit dev\n");
-
-	return 0;
 }
 
 static void sunxi_usb_power_limit_shutdown(struct platform_device *pdev)

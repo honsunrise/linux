@@ -126,13 +126,11 @@ err_devm_kzalloc:
 	return ret;
 }
 
-static int sunxi_syscfg_dev_remove(struct platform_device *pdev)
+static void sunxi_syscfg_dev_remove(struct platform_device *pdev)
 {
 	struct sunxi_syscfg_mem *mem = dev_get_drvdata(&pdev->dev);
 
 	snd_sunxi_mem_exit(pdev, mem);
-
-	return 0;
 }
 
 static const struct of_device_id snd_syscfg_of_match[] = {

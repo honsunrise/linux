@@ -1482,7 +1482,7 @@ alloc_info_failed:
 	return -ENOMEM;
 }
 
-static int redeposit_remove(struct platform_device *pdev)
+static void redeposit_remove(struct platform_device *pdev)
 {
 	struct redeposit_info *info = platform_get_drvdata(pdev);
 
@@ -1496,8 +1496,6 @@ static int redeposit_remove(struct platform_device *pdev)
 	mmc_remove_sys_fs(info, pdev);
 
 	kfree(info);
-
-	return 0;
 }
 
 static const struct of_device_id redeposit_of_match[] = {

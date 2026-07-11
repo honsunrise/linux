@@ -367,7 +367,7 @@ ekzalloc:
 }
 
 
-static int mipi_remove(struct platform_device *pdev)
+static void mipi_remove(struct platform_device *pdev)
 {
 	struct mipi_dev *mipi = platform_get_drvdata(pdev);
 
@@ -376,7 +376,6 @@ static int mipi_remove(struct platform_device *pdev)
 		iounmap(mipi->base);
 	mipi_clk_release(mipi);
 	kfree(mipi);
-	return 0;
 }
 
 static const struct of_device_id sunxi_mipi_match[] = {

@@ -152,9 +152,8 @@ static int soc_pmu_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int soc_pmu_regulator_remove(struct platform_device *pdev)
+static void soc_pmu_regulator_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static const struct of_device_id sunxi_soc_pmu_of_match[] = {

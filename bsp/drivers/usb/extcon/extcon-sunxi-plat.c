@@ -289,13 +289,11 @@ static void __extcon_sunxi_teardown(struct extcon_sunxi_plat *extcon)
 	gpiod_set_value(extcon->bcten_gpiod, 0);
 }
 
-static int extcon_sunxi_plat_remove(struct platform_device *pdev)
+static void extcon_sunxi_plat_remove(struct platform_device *pdev)
 {
 	struct extcon_sunxi_plat	*extcon = platform_get_drvdata(pdev);
 
 	__extcon_sunxi_teardown(extcon);
-
-	return 0;
 }
 
 static void extcon_sunxi_plat_shutdown(struct platform_device *pdev)

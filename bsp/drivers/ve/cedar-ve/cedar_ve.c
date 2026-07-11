@@ -2060,7 +2060,7 @@ static void cedardev_exit(struct platform_device *pdev)
 	VE_LOGD("cedar-ve exit\n");
 }
 
-static int sunxi_cedar_remove(struct platform_device *pdev)
+static void sunxi_cedar_remove(struct platform_device *pdev)
 {
 	struct cedar_dev *cedar_devp = dev_get_drvdata(&pdev->dev);
 	const struct cedar_ve_quirks *quirks = NULL;

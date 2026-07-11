@@ -139,7 +139,7 @@ ekzalloc:
 	return ret;
 }
 
-static int cci_remove(struct platform_device *pdev)
+static void cci_remove(struct platform_device *pdev)
 {
 	struct cci_dev *cci = platform_get_drvdata(pdev);
 
@@ -151,8 +151,6 @@ static int cci_remove(struct platform_device *pdev)
 		iounmap(cci->base);
 	kfree(cci);
 	kfree(pdev->dev.platform_data);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_cci_match[] = {

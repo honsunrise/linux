@@ -224,7 +224,7 @@ err_wlan:
 	return ret;
 }
 
-static int rfkill_remove(struct platform_device *pdev)
+static void rfkill_remove(struct platform_device *pdev)
 {
 	sunxi_gnss_deinit(pdev);
 	sunxi_modem_deinit(pdev);
@@ -232,7 +232,6 @@ static int rfkill_remove(struct platform_device *pdev)
 	sunxi_wlan_deinit(pdev);
 	misc_deregister(&sunxi_rfkill_miscdev);
 	rfkill_data = NULL;
-	return 0;
 }
 
 static const struct of_device_id rfkill_ids[] = {

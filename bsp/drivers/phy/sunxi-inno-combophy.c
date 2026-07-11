@@ -1048,7 +1048,7 @@ static int sunxi_combphy_probe(struct platform_device *pdev)
 	return PTR_ERR_OR_ZERO(phy_provider);
 }
 
-static int sunxi_combphy_remove(struct platform_device *pdev)
+static void sunxi_combphy_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_combphy *combphy = platform_get_drvdata(pdev);
@@ -1066,8 +1066,6 @@ static int sunxi_combphy_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 	pm_runtime_put_noidle(dev);
 	pm_runtime_set_suspended(dev);
-
-	return 0;
 }
 
 static int __maybe_unused sunxi_combo_suspend(struct device *dev)

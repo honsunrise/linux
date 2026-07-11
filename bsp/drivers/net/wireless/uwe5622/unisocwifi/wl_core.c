@@ -704,7 +704,7 @@ err:
 	return ret;
 }
 
-static int sprdwl_remove(struct platform_device *pdev)
+static void sprdwl_remove(struct platform_device *pdev)
 {
 	struct sprdwl_intf *intf = platform_get_drvdata(pdev);
 	struct sprdwl_priv *priv = intf->priv;
@@ -723,8 +723,6 @@ static int sprdwl_remove(struct platform_device *pdev)
 	kfree(intf);
 	stop_marlin(MARLIN_WIFI);
 	wl_info("%s\n", __func__);
-
-	return 0;
 }
 
 static const struct of_device_id sprdwl_of_match[] = {

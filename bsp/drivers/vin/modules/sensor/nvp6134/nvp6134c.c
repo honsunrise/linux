@@ -399,7 +399,7 @@ static int sensor_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int sensor_remove(struct i2c_client *client)
+static void sensor_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd;
 
@@ -408,7 +408,6 @@ static int sensor_remove(struct i2c_client *client)
 #ifdef NVP6134_DUMP_EN
 	cancel_work_sync(&nvp6134_dwq);
 #endif
-	return 0;
 }
 
 static const struct i2c_device_id sensor_id[] = {

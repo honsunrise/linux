@@ -1373,7 +1373,7 @@ emloc:
 
 }
 
-static int sunxi_scr_remove(struct platform_device *pdev)
+static void sunxi_scr_remove(struct platform_device *pdev)
 {
 	struct sunxi_scr *pscr = platform_get_drvdata(pdev);
 
@@ -1390,8 +1390,6 @@ static int sunxi_scr_remove(struct platform_device *pdev)
 	del_timer(&pscr->poll_timer);
 
 	SCR_EXIT();
-
-	return 0;
 }
 
 #ifdef CONFIG_PM

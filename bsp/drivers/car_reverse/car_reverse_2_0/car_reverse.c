@@ -1738,7 +1738,7 @@ _err_out:
 	return ret;
 }
 
-static int car_reverse_remove(struct platform_device *pdev)
+static void car_reverse_remove(struct platform_device *pdev)
 {
 	struct car_reverse_private_data *priv = car_reverse;
 
@@ -1756,7 +1756,6 @@ static int car_reverse_remove(struct platform_device *pdev)
 	class_destroy(car_reverse_class);
 	cdev_del(car_reverse_cdev);
 	CAR_REVERSE_DEV_INFO(&pdev->dev, "car reverse module exit\n");
-	return 0;
 }
 
 static int car_reverse_suspend(struct device *dev)

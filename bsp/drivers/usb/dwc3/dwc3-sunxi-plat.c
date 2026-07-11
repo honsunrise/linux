@@ -1083,13 +1083,11 @@ static void __dwc3_sunxi_teardown(struct dwc3_sunxi_plat *dwc3)
 	pm_runtime_set_suspended(dwc3->dev);
 }
 
-static int dwc3_sunxi_plat_remove(struct platform_device *pdev)
+static void dwc3_sunxi_plat_remove(struct platform_device *pdev)
 {
 	struct dwc3_sunxi_plat	*dwc3 = platform_get_drvdata(pdev);
 
 	__dwc3_sunxi_teardown(dwc3);
-
-	return 0;
 }
 
 static void dwc3_sunxi_plat_shutdown(struct platform_device *pdev)

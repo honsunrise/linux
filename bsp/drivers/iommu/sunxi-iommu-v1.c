@@ -1773,7 +1773,7 @@ err_res:
 	return ret;
 }
 
-static int sunxi_iommu_remove(struct platform_device *pdev)
+static void sunxi_iommu_remove(struct platform_device *pdev)
 {
 	struct sunxi_iommu_dev *sunxi_iommu = platform_get_drvdata(pdev);
 	struct iommu_resv_region *entry, *next;
@@ -1793,8 +1793,6 @@ static int sunxi_iommu_remove(struct platform_device *pdev)
 	iommu_device_sysfs_remove(&sunxi_iommu->iommu);
 	iommu_device_unregister(&sunxi_iommu->iommu);
 	global_iommu_dev = NULL;
-
-	return 0;
 }
 
 static int sunxi_iommu_suspend(struct device *dev)

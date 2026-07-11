@@ -349,7 +349,7 @@ static int panel_rgb_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int panel_rgb_remove(struct platform_device *pdev)
+static void panel_rgb_remove(struct platform_device *pdev)
 {
 	struct panel_rgb *rgb_panel = dev_get_drvdata(&pdev->dev);
 
@@ -357,8 +357,6 @@ static int panel_rgb_remove(struct platform_device *pdev)
 
 				panel_rgb_disable(&rgb_panel->panel);
 				panel_rgb_unprepare(&rgb_panel->panel);
-
-	return 0;
 }
 
 static const struct of_device_id panel_rgb_of_table[] = {

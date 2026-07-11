@@ -89,7 +89,7 @@ static void lcd_fb_shutdown(struct platform_device *pdev)
 	lcd_fb_wrn("Finish\n");
 }
 
-static int lcd_fb_remove(struct platform_device *pdev)
+static void lcd_fb_remove(struct platform_device *pdev)
 {
 	int ret = 0;
 

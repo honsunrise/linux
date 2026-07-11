@@ -132,9 +132,8 @@ static int bmu_ext_regulator_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int bmu_ext_regulator_remove(struct platform_device *pdev)
+static void bmu_ext_regulator_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 static struct platform_driver bmu_ext_regulator_driver = {

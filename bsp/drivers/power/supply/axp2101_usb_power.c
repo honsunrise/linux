@@ -373,7 +373,7 @@ err:
 	return ret;
 }
 
-static int axp2101_usb_remove(struct platform_device *pdev)
+static void axp2101_usb_remove(struct platform_device *pdev)
 {
 	struct axp2101_usb_power *usb_power = platform_get_drvdata(pdev);
 #if ((defined DONOT_Correction) || (defined POLL_READ))
@@ -387,8 +387,6 @@ static int axp2101_usb_remove(struct platform_device *pdev)
 	if (usb_power->usb_supply)
 		power_supply_unregister(usb_power->usb_supply);
 	dev_dbg(&pdev->dev, "axp2101 teardown usb dev\n");
-
-	return 0;
 }
 
 static inline void axp2101_irq_set(unsigned int irq, bool enable)

@@ -1074,7 +1074,7 @@ err_snd_sunxi_mem_init:
 	return ret;
 }
 
-static int sunxi_ahub_dam_dev_remove(struct platform_device *pdev)
+static void sunxi_ahub_dam_dev_remove(struct platform_device *pdev)
 {
 	struct sunxi_ahub_mem *mem = &sunxi_mem;
 	struct sunxi_ahub_clk *clk = &sunxi_clk;
@@ -1094,8 +1094,6 @@ static int sunxi_ahub_dam_dev_remove(struct platform_device *pdev)
 	snd_sunxi_clk_exit(clk);
 
 	SND_LOG_DEBUG("unregister ahub_dam platform success\n");
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_ahub_dam_of_match[] = {

@@ -205,7 +205,7 @@ err:
 }
 
 
-static int sunxi_gpio_power_remove(struct platform_device *pdev)
+static void sunxi_gpio_power_remove(struct platform_device *pdev)
 {
 	struct sunxi_gpio_power *gpio_power = platform_get_drvdata(pdev);
 
@@ -215,8 +215,6 @@ static int sunxi_gpio_power_remove(struct platform_device *pdev)
 	if (gpio_power->gpio_vbus_supply)
 		power_supply_unregister(gpio_power->gpio_vbus_supply);
 	PMIC_DEV_DEBUG(&pdev->dev, "sunxi gpio power teardown dev\n");
-
-	return 0;
 }
 
 static void sunxi_gpio_power_shutdown(struct platform_device *pdev)

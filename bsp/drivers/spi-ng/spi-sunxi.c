@@ -2836,7 +2836,7 @@ err0:
 	return ret;
 }
 
-static int sunxi_spi_remove(struct platform_device *pdev)
+static void sunxi_spi_remove(struct platform_device *pdev)
 {
 	struct sunxi_spi *sspi = spi_controller_get_devdata(platform_get_drvdata(pdev));
 
@@ -2846,8 +2846,6 @@ static int sunxi_spi_remove(struct platform_device *pdev)
 #endif
 	sunxi_spi_hw_exit(sspi);
 	sunxi_spi_release_dma(sspi);
-
-	return 0;
 }
 
 static int __maybe_unused sunxi_spi_suspend(struct device *dev)

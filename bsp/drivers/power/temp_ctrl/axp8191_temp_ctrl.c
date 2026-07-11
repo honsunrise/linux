@@ -242,12 +242,10 @@ err:
 	return ret;
 }
 
-static int axp8191_temp_ctrl_remove(struct platform_device *pdev)
+static void axp8191_temp_ctrl_remove(struct platform_device *pdev)
 {
 	PMIC_DEV_DEBUG(&pdev->dev, "==============AXP8191 unegister==============\n");
 	PMIC_DEV_DEBUG(&pdev->dev, "axp8191 teardown temp_ctrl dev\n");
-
-	return 0;
 }
 
 static inline void axp8191_temp_ctrl_irq_set(unsigned int irq, bool enable)

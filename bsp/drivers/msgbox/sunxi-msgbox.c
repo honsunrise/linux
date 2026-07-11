@@ -918,14 +918,12 @@ err0:
 	return ret;
 }
 
-static int sunxi_msgbox_remove(struct platform_device *pdev)
+static void sunxi_msgbox_remove(struct platform_device *pdev)
 {
 	struct sunxi_msgbox *chip = platform_get_drvdata(pdev);
 
 	sunxi_msgbox_hw_deinit(chip);
 	sunxi_msgbox_resource_put(chip);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_PM)

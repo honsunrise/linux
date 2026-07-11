@@ -1176,13 +1176,11 @@ out_err:
 	return ret;
 }
 
-static int mbus_pmu_remove(struct platform_device *pdev)
+static void mbus_pmu_remove(struct platform_device *pdev)
 {
 	hwmon_device_unregister(hw_mbus_pmu.hwmon_dev);
 	mbus_master_manager_deinit(&pdev->dev);
 	sysfs_remove_group(&pdev->dev.kobj, mbus_master_manager.mbus_groups);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM

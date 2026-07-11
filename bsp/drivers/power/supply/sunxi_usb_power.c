@@ -453,7 +453,7 @@ static void sunxi_usb_power_delayed_work_set(struct sunxi_usb_power_supply_data 
 	}
 }
 
-static int sunxi_usb_power_remove(struct platform_device *pdev)
+static void sunxi_usb_power_remove(struct platform_device *pdev)
 {
 	struct sunxi_usb_power_supply_data *usb_power = platform_get_drvdata(pdev);
 
@@ -464,8 +464,6 @@ static int sunxi_usb_power_remove(struct platform_device *pdev)
 		power_supply_unregister(usb_power->usb_power_core_psy);
 	}
 	PMIC_DEV_DEBUG(&pdev->dev, "teardown sunxi usb power dev\n");
-
-	return 0;
 }
 
 static void sunxi_usb_power_shutdown(struct platform_device *pdev)

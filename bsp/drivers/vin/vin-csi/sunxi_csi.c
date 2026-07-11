@@ -1096,7 +1096,7 @@ ekzalloc:
 	return ret;
 }
 
-static int csi_remove(struct platform_device *pdev)
+static void csi_remove(struct platform_device *pdev)
 {
 	struct csi_dev *csi = platform_get_drvdata(pdev);
 	struct v4l2_subdev *sd = &csi->subdev;
@@ -1110,7 +1110,6 @@ static int csi_remove(struct platform_device *pdev)
 	mutex_destroy(&csi->reset_lock);
 	media_entity_cleanup(&csi->subdev.entity);
 	kfree(csi);
-	return 0;
 }
 
 static const struct of_device_id sunxi_csi_match[] = {

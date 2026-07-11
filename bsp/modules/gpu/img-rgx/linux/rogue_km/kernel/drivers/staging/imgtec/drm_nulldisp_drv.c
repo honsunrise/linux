@@ -2069,7 +2069,7 @@ err_drm_dev_put:
 #endif
 }
 
-static int nulldisp_remove(struct platform_device *pdev)
+static void nulldisp_remove(struct platform_device *pdev)
 {
 	struct drm_device *ddev = platform_get_drvdata(pdev);
 
@@ -2090,7 +2090,6 @@ static int nulldisp_remove(struct platform_device *pdev)
 #else
 	drm_put_dev(ddev);
 #endif
-	return 0;
 }
 
 static void nulldisp_shutdown(struct platform_device *pdev)

@@ -233,7 +233,7 @@ exit_err_clean:
  *  * 0 - OK.
  *  * Negative value - Error.
  */
-static int bmi3_i2c_remove(struct i2c_client *client)
+static void bmi3_i2c_remove(struct i2c_client *client)
 {
 	int err = 0;
 

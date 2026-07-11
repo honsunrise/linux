@@ -1621,7 +1621,7 @@ err_devm_kzalloc:
 	return ret;
 }
 
-static int sunxi_owa_dev_remove(struct platform_device *pdev)
+static void sunxi_owa_dev_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
@@ -1656,8 +1656,6 @@ static int sunxi_owa_dev_remove(struct platform_device *pdev)
 	of_node_put(np);
 
 	SND_LOG_DEBUG("unregister owa platform success\n");
-
-	return 0;
 }
 
 static const struct sunxi_owa_quirks sunxi_owa_quirks = {

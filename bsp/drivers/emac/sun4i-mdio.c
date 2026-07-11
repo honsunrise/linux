@@ -160,14 +160,12 @@ err_out_free_mdiobus:
 	return ret;
 }
 
-static int sun4i_mdio_remove(struct platform_device *pdev)
+static void sun4i_mdio_remove(struct platform_device *pdev)
 {
 	struct mii_bus *bus = platform_get_drvdata(pdev);
 
 	mdiobus_unregister(bus);
 	mdiobus_free(bus);
-
-	return 0;
 }
 
 static const struct of_device_id sun4i_mdio_dt_ids[] = {

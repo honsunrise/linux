@@ -395,7 +395,7 @@ err_out:
 	return ret;
 }
 
-static int sunxi_rpbuf_sample_remove(struct platform_device *pdev)
+static void sunxi_rpbuf_sample_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sunxi_rpbuf_sample_instance *inst = dev_get_drvdata(dev);
@@ -403,8 +403,6 @@ static int sunxi_rpbuf_sample_remove(struct platform_device *pdev)
 	sysfs_remove_group(&pdev->dev.kobj, &sunxi_rpbuf_sample_attr_group);
 
 	devm_kfree(dev, inst);
-
-	return 0;
 }
 
 static const struct of_device_id sunxi_rpbuf_sample_ids[] = {
