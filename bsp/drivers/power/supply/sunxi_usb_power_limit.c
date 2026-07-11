@@ -2,6 +2,7 @@
 /* Copyright(c) 2020 - 2023 Allwinner Technology Co.,Ltd. All rights reserved. */
 #define pr_fmt(x) KBUILD_MODNAME ": " x "\n"
 
+#include <linux/version.h>
 #include "sunxi_usb_power_limit.h"
 
 /*------------------------------
@@ -825,7 +826,11 @@ static int sunxi_usb_power_limit_parse_device_tree(struct sunxi_usb_power_limit_
 
 	psy = power_limit->power_psy[SUNXI_SUPPLY_LIST_USB_POWER].psy;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+	np = of_parse_phandle(psy->dev.of_node, "det_usb_supply", 0);
+#else
 	np = of_parse_phandle(psy->of_node, "det_usb_supply", 0);
+#endif
 	if (np) {
 		ret = sunxi_usb_power_limit_dt_parse(np, power_limit_config);
 		if (ret) {
@@ -973,7 +978,11 @@ static int sunxi_usb_power_limit_probe(struct platform_device *pdev)
 	power_limit->name = "sunxi_usb_power_limit";
 	power_limit->dev = &pdev->dev;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+	psy_cfg.fwnode = dev_fwnode(&pdev->dev);
+#else
 	psy_cfg.of_node = pdev->dev.of_node;
+#endif
 	psy_cfg.drv_data = power_limit;
 
 	ret = sunxi_usb_power_limit_parse_device_tree(power_limit);
