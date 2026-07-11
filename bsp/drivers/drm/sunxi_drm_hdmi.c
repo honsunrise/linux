@@ -18,6 +18,7 @@
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/regulator/consumer.h>
 
@@ -2735,7 +2736,11 @@ use_default:
 }
 
 static enum drm_mode_status _sunxi_drm_hdmi_mode_valid(
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+		struct drm_connector *connector, const struct drm_display_mode *mode)
+#else
 		struct drm_connector *connector, struct drm_display_mode *mode)
+#endif
 {
 	struct sunxi_drm_hdmi *hdmi = drm_connector_to_hdmi(connector);
 	int rate = drm_mode_vrefresh(mode);
@@ -3246,11 +3251,13 @@ static int ___sunxi_hdmi_init_i2cm_adap(struct sunxi_drm_hdmi *hdmi)
 	}
 
 	adap->nr    = hdmi->hdmi_ctrl.drv_dts_ddc_index;
+#ifdef I2C_CLASS_DDC
 	adap->class = I2C_CLASS_DDC;
+#endif
 	adap->owner = THIS_MODULE;
 	adap->dev.parent = hdmi->dev;
 	adap->algo = &sunxi_hdmi_i2cm_algo;
-	strlcpy(adap->name, "SUNXI HDMI", sizeof(adap->name));
+	strscpy(adap->name, "SUNXI HDMI", sizeof(adap->name));
 
 	i2c_set_adapdata(adap, hdmi);
 	ret = i2c_add_numbered_adapter(adap);
