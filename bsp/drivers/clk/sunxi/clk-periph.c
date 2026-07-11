@@ -19,6 +19,19 @@
 #include "clk-sunxi.h"
 #include "clk-periph.h"
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap sunxi_clk_periph_round_rate into .determine_rate. */
+static int sunxi_clk_periph_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = sunxi_clk_periph_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 #define NEW_RATE_CALCULATE 1
 
 static u8 sunxi_clk_periph_get_parent(struct clk_hw *hw)
@@ -578,7 +591,7 @@ const struct clk_ops sunxi_clk_periph_ops = {
 	.set_parent = sunxi_clk_periph_set_parent,
 
 	.recalc_rate = sunxi_clk_periph_recalc_rate,
-	.round_rate = sunxi_clk_periph_round_rate,
+	.determine_rate = sunxi_clk_periph_round_rate_shim,
 	.set_rate = sunxi_clk_periph_set_rate,
 
 	.is_enabled = sunxi_clk_periph_is_enabled,

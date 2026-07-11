@@ -12,6 +12,19 @@
 #include "ccu_gate.h"
 #include "ccu-sunxi-trace.h"
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap ccu_gate_round_rate into .determine_rate. */
+static int ccu_gate_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = ccu_gate_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 void ccu_pll_output_helper_disable(struct ccu_common *common, u32 output)
 {
 	unsigned long flags;
@@ -330,7 +343,7 @@ const struct clk_ops ccu_gate_ops = {
 	.disable	= ccu_gate_disable,
 	.enable		= ccu_gate_enable,
 	.is_enabled	= ccu_gate_is_enabled,
-	.round_rate	= ccu_gate_round_rate,
+	.determine_rate = ccu_gate_round_rate_shim,
 	.set_rate	= ccu_gate_set_rate,
 	.recalc_rate	= ccu_gate_recalc_rate,
 	.init		= ccu_gate_init,

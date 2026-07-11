@@ -23,6 +23,19 @@
 #include <linux/reset.h>
 #include <linux/phy/phy.h>
 #include "sunxi_dsi_combophy_reg.h"
+
+/* v7.1 compat: .round_rate removed from clk_ops; wrap sunxi_displl_clk_round_rate into .determine_rate. */
+static int sunxi_displl_clk_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = sunxi_displl_clk_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
 #define CLK_PLL_DISPLL		0
 #define CLK_DSI_LS		1
 #define CLK_DSI_HS		2
@@ -161,7 +174,7 @@ const struct clk_ops sunxi_displl_clk_ops = {
 	.enable		= sunxi_displl_clk_enable,
 	.disable	= sunxi_displl_clk_disable,
 	.recalc_rate	= sunxi_displl_clk_recalc_rate,
-	.round_rate	= sunxi_displl_clk_round_rate,
+	.determine_rate = sunxi_displl_clk_round_rate_shim,
 	.set_rate	= sunxi_displl_clk_set_rate,
 };
 

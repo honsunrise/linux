@@ -28,6 +28,19 @@
 #include <linux/of_platform.h>
 #include <sunxi-sip.h>
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap sunxi_ddr_clk_round_rate into .determine_rate. */
+static int sunxi_ddr_clk_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = sunxi_ddr_clk_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 #define DRIVER_NAME	"DDR-Clock-Driver"
 
 struct sunxi_ddrclk_plat_data {
@@ -180,7 +193,7 @@ static int sunxi_ddr_clk_set_rate(struct clk_hw *hw, unsigned long drate,
 
 const struct clk_ops sunxi_ddrclk_ops = {
 	.recalc_rate = sunxi_ddr_clk_recalc_rate,
-	.round_rate = sunxi_ddr_clk_round_rate,
+	.determine_rate = sunxi_ddr_clk_round_rate_shim,
 	.set_rate = sunxi_ddr_clk_set_rate,
 };
 

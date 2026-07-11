@@ -14,6 +14,19 @@
 #include "ccu_nkmp.h"
 #include "ccu-sunxi-trace.h"
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap ccu_nkmp_round_rate into .determine_rate. */
+static int ccu_nkmp_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = ccu_nkmp_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 struct _ccu_nkmp {
 	unsigned long	n, min_n, max_n;
 	unsigned long	k, min_k, max_k;
@@ -325,7 +338,7 @@ const struct clk_ops ccu_nkmp_ops = {
 	.is_enabled	= ccu_nkmp_is_enabled,
 
 	.recalc_rate	= ccu_nkmp_recalc_rate,
-	.round_rate	= ccu_nkmp_round_rate,
+	.determine_rate = ccu_nkmp_round_rate_shim,
 	.set_rate	= ccu_nkmp_set_rate,
 	.init		= ccu_nkmp_init,
 };

@@ -22,6 +22,19 @@
 #include "clk-sunxi.h"
 #include "clk-factors.h"
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap sunxi_clk_factors_round_rate into .determine_rate. */
+static int sunxi_clk_factors_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = sunxi_clk_factors_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 static int sunxi_clk_disable_plllock(struct sunxi_clk_factors *factor)
 {
 	volatile u32 reg;
@@ -636,7 +649,7 @@ static const struct clk_ops clk_factors_ops = {
 	.is_enabled = sunxi_clk_fators_is_enabled,
 
 	.recalc_rate = sunxi_clk_factors_recalc_rate,
-	.round_rate = sunxi_clk_factors_round_rate,
+	.determine_rate = sunxi_clk_factors_round_rate_shim,
 	.set_rate = sunxi_clk_factors_set_rate,
 };
 

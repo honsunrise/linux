@@ -13,6 +13,19 @@
 #include "ccu_nm.h"
 #include "ccu_sdm.h"
 
+/* v7.1 compat: .round_rate removed from clk_ops; wrap ccu_nm_round_rate into .determine_rate. */
+static int ccu_nm_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
+{
+	unsigned long parent_rate = req->best_parent_rate;
+	long r = ccu_nm_round_rate(hw, req->rate, &parent_rate);
+	if (r < 0)
+		return r;
+	req->rate = r;
+	req->best_parent_rate = parent_rate;
+	return 0;
+}
+
+
 struct _ccu_nm {
 	unsigned long	n, min_n, max_n;
 	unsigned long	m, min_m, max_m;
@@ -350,7 +363,7 @@ const struct clk_ops ccu_nm_ops = {
 	.is_enabled	= ccu_nm_is_enabled,
 
 	.recalc_rate	= ccu_nm_recalc_rate,
-	.round_rate	= ccu_nm_round_rate,
+	.determine_rate = ccu_nm_round_rate_shim,
 	.set_rate	= ccu_nm_set_rate,
 	.init		= ccu_nm_init,
 };
