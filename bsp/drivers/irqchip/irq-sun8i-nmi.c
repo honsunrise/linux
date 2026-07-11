@@ -153,13 +153,13 @@ static void sunxi_nmi_pad_control(struct device_node *node)
 static struct irq_chip_generic *sys_gc;
 static const struct sunxi_sc_nmi_reg_offs *sys_reg_offs;
 static uint32_t sys_vaule;
-static int sunxi_nmi_suspend(void)
+static int sunxi_nmi_suspend(void *unused)
 {
 	sys_vaule = sunxi_sc_nmi_read(sys_gc, sys_reg_offs->enable);
 	return 0;
 }
 
-static void sunxi_nmi_resume(void)
+static void sunxi_nmi_resume(void *unused)
 {
 	sunxi_sc_nmi_write(sys_gc, sys_reg_offs->enable, sys_vaule);
 }
@@ -168,6 +168,7 @@ static struct syscore_ops sunxi_nmi_syscore_ops = {
 	.suspend = sunxi_nmi_suspend,
 	.resume = sunxi_nmi_resume,
 };
+static struct syscore sunxi_nmi_syscore_ops_wrapper = { .ops = &sunxi_nmi_syscore_ops };
 
 static int sunxi_sc_nmi_irq_init(struct device_node *node,
 					const struct sunxi_sc_nmi_reg_offs *reg_offs)
@@ -240,7 +241,7 @@ static int sunxi_sc_nmi_irq_init(struct device_node *node,
 	sunxi_nmi_pad_control(node);
 	sys_gc = gc;
 	sys_reg_offs = reg_offs;
-	register_syscore_ops(&sunxi_nmi_syscore_ops);
+	register_syscore(&sunxi_nmi_syscore_ops_wrapper);
 
 	irq_set_chained_handler_and_data(irq, sunxi_sc_nmi_handle_irq, domain);
 
@@ -278,7 +279,7 @@ static void sunxi_irq_nmi_remove(struct platform_device *pdev)
 	struct device_node *node = pdev->dev.of_node;
 	struct resource res;
 
-	unregister_syscore_ops(&sunxi_nmi_syscore_ops);
+	unregister_syscore(&sunxi_nmi_syscore_ops_wrapper);
 	iounmap(sys_gc->reg_base);
 	of_address_to_resource(node, 0, &res);
 	release_mem_region(res.start, resource_size(&res));

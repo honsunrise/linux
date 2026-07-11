@@ -804,7 +804,7 @@ static int standby_dump_dev_resume_noirq(struct device *dev)
 	return standby_dump_printk();
 }
 
-static int standby_dump_syscore_suspend(void)
+static int standby_dump_syscore_suspend(void *unused)
 {
 	int ret  = 0;
 
@@ -826,7 +826,7 @@ static int standby_dump_syscore_suspend(void)
 	return ret;
 }
 
-static void standby_dump_syscore_resume(void)
+static void standby_dump_syscore_resume(void *unused)
 {
 	int ret = 0;
 
@@ -861,6 +861,7 @@ static struct syscore_ops standby_dump_syscore = {
 	.suspend = standby_dump_syscore_suspend,
 	.resume  = standby_dump_syscore_resume,
 };
+static struct syscore standby_dump_syscore_wrapper = { .ops = &standby_dump_syscore };
 
 /**
  * dump_show - show func of dump attribute.
@@ -1124,7 +1125,7 @@ static int sunxi_dump_reg_probe(struct platform_device *pdev)
 	if (!standby_dump_buff)
 		dev_err(dev, "malloc memory failed.\n");
 
-	register_syscore_ops(&standby_dump_syscore);
+	register_syscore(&standby_dump_syscore_wrapper);
 
 	return 0;
 error:
