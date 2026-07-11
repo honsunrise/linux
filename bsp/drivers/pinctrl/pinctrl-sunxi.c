@@ -1848,7 +1848,7 @@ static const struct pinmux_ops sunxi_pmx_ops = {
 static int sunxi_pinctrl_gpio_direction_input(struct gpio_chip *chip,
 					unsigned offset)
 {
-	return pinctrl_gpio_direction_input(chip->base + offset);
+	return pinctrl_gpio_direction_input(chip, offset);
 }
 
 static int sunxi_pinctrl_gpio_get(struct gpio_chip *chip, unsigned offset)
@@ -1872,7 +1872,7 @@ static int sunxi_pinctrl_gpio_get(struct gpio_chip *chip, unsigned offset)
 	return !!val;
 }
 
-static void sunxi_pinctrl_gpio_set(struct gpio_chip *chip,
+static int sunxi_pinctrl_gpio_set(struct gpio_chip *chip,
 				unsigned offset, int value)
 {
 	struct sunxi_pinctrl *pctl = gpiochip_get_data(chip);
@@ -1912,6 +1912,7 @@ static void sunxi_pinctrl_gpio_set(struct gpio_chip *chip,
 		writel(regval, pctl->membase + reg);
 	}
 	raw_spin_unlock_irqrestore(&pctl->lock, flags);
+	return 0;
 }
 
 static int sunxi_pinctrl_gpio_get_direction(struct gpio_chip *chip,
@@ -1936,7 +1937,7 @@ static int sunxi_pinctrl_gpio_direction_output(struct gpio_chip *chip,
 					unsigned offset, int value)
 {
 	sunxi_pinctrl_gpio_set(chip, offset, value);
-	return pinctrl_gpio_direction_output(chip->base + offset);
+	return pinctrl_gpio_direction_output(chip, offset);
 }
 
 static int sunxi_pinctrl_gpio_of_xlate(struct gpio_chip *gc,
@@ -2658,7 +2659,7 @@ int sunxi_bsp_pinctrl_init_with_variant(struct platform_device *pdev,
 
 	pctl->domain = irq_domain_create_hierarchy(pctl->parent_domain, 0,
 					     pctl->desc->irq_banks * IRQ_PER_BANK,
-					     of_node_to_fwnode(node),
+					     of_fwnode_handle(node),
 					     &sunxi_pinctrl_irq_domain_ops,
 					     pctl);
 	if (!pctl->domain) {

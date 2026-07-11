@@ -11,6 +11,37 @@
 #include "ccu_gate.h"
 #include "ccu_div.h"
 
+/*
+ * v7.1 upstream removed divider_round_rate_parent() (used to compute a
+ * best-fit rate honoring a divider table + width + flags, given a
+ * candidate parent clock). The replacement is divider_determine_rate(),
+ * which uses a struct clk_rate_request instead of discrete args.
+ *
+ * Provide a compat shim so the vendor .round_rate callback below keeps
+ * compiling unmodified — behaviourally identical: build the request
+ * struct on the stack, hand it to the new API, extract rate +
+ * parent_rate back out.
+ */
+static inline long divider_round_rate_parent(struct clk_hw *hw,
+					     struct clk_hw *parent,
+					     unsigned long rate,
+					     unsigned long *prate,
+					     const struct clk_div_table *table,
+					     u8 width, unsigned long flags)
+{
+	struct clk_rate_request req = {
+		.rate = rate,
+		.best_parent_rate = prate ? *prate : 0,
+		.best_parent_hw = parent,
+	};
+	int ret = divider_determine_rate(hw, &req, table, width, flags);
+	if (ret)
+		return ret;
+	if (prate)
+		*prate = req.best_parent_rate;
+	return req.rate;
+}
+
 static unsigned long ccu_div_round_rate(struct ccu_mux_internal *mux,
 					struct clk_hw *parent,
 					unsigned long *parent_rate,
