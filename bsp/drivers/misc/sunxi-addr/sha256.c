@@ -169,7 +169,7 @@ static void sha256_final(struct sha256_ctx *ctx, uint8_t *hash)
 	}
 }
 
-int hmac_sha256(const uint8_t *plaintext, ssize_t psize, uint8_t *output)
+int sunxi_addr_hmac_sha256(const uint8_t *plaintext, ssize_t psize, uint8_t *output)
 {
 	struct sha256_ctx ctx;
 

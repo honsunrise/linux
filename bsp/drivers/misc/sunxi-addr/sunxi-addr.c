@@ -85,7 +85,7 @@ static struct addr_mgt_info info[] = {
 	{TYPE_ANY, TYPE_ANY, 1, NULL, "eth" },
 };
 
-extern int hmac_sha256(const uint8_t *plaintext, ssize_t psize, uint8_t *output);
+extern int sunxi_addr_hmac_sha256(const uint8_t *plaintext, ssize_t psize, uint8_t *output);
 
 #if IS_ENABLED(CONFIG_AW_SID)
 #include <sunxi-sid.h>
@@ -244,7 +244,7 @@ static int addr_factory(struct device_node *np,
 				initial = 0;
 				return -1;
 			}
-			if (hmac_sha256(id, ID_LEN, hash)) {
+			if (sunxi_addr_hmac_sha256(id, ID_LEN, hash)) {
 				initial = 0;
 				return -1;
 			}
