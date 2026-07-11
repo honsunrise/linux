@@ -18,6 +18,7 @@
 #include <linux/component.h>
 #include <linux/phy/phy.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/delay.h>
 
