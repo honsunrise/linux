@@ -511,13 +511,11 @@ static int sunxi_rtc_ccu_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sunxi_rtc_ccu_remove(struct platform_device *pdev)
+static void sunxi_rtc_ccu_remove(struct platform_device *pdev)
 {
 	struct sunxi_rtc_ccu *priv = platform_get_drvdata(pdev);
 
 	sunxi_rtc_clk_provider_unregister(priv);
-
-	return 0;
 }
 
 static struct platform_driver sunxi_rtc_ccu = {
