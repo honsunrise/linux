@@ -22,9 +22,11 @@
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/irqchip.h>
 #include <linux/irqdomain.h>
@@ -160,9 +162,16 @@ static int __init wakeupgen_init(struct device_node *node,
 		return -ENXIO;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+	domain = irq_domain_create_hierarchy(parent_domain, 0, GIC_SUPPORT_IRQS,
+					     of_fwnode_handle(node),
+					     &sunxi_domain_ops,
+					     NULL);
+#else
 	domain = irq_domain_add_hierarchy(parent_domain, 0, GIC_SUPPORT_IRQS,
 					  node, &sunxi_domain_ops,
 					  NULL);
+#endif
 	if (!domain) {
 		pr_err("%s: failed to allocated domain\n", node->full_name);
 		return -ENOMEM;
