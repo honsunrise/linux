@@ -3778,9 +3778,11 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 
 	host->card_pwr_gpio = of_get_named_gpio(np, "card-pwr-gpios", 0);
 	if (gpio_is_valid(host->card_pwr_gpio)) {
+		/* GPIOF_DIR_OUT was removed in v7.1 (deprecated GPIO flags);
+		 * use GPIO_ACTIVE_HIGH bare value 0 for output direction. */
 		ret =
 		    devm_gpio_request_one(&pdev->dev, host->card_pwr_gpio,
-					  GPIOF_DIR_OUT, "card-pwr-gpios");
+					  0, "card-pwr-gpios");
 		if (ret < 0)
 			SM_ERR(&pdev->dev,
 				"could not get  card-pwr-gpios gpio\n");

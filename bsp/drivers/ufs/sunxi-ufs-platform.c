@@ -808,22 +808,22 @@ out:
 }
 
 
-static int sunxi_ufs_pre_pwr_change(struct ufs_hba *hba,
-				  struct ufs_pa_layer_attr *dev_max_params,
+static int sunxi_ufs_negotiate_pwr_mode(struct ufs_hba *hba,
+				  const struct ufs_pa_layer_attr *dev_max_params,
 				  struct ufs_pa_layer_attr *dev_req_params)
 {
-	struct ufs_dev_params host_cap;
+	struct ufs_host_params host_params;
 	int ret;
 	struct ufs_sunxi_priv *priv = hba->priv;
 
-	ufshcd_init_pwr_dev_param(&host_cap);
-	host_cap.hs_rx_gear = UFS_HS_G4;
-	host_cap.hs_tx_gear = UFS_HS_G4;
-	host_cap.hs_rate = priv->phy_hs_rate;
+	ufshcd_init_host_params(&host_params);
+	host_params.hs_rx_gear = UFS_HS_G4;
+	host_params.hs_tx_gear = UFS_HS_G4;
+	host_params.hs_rate = priv->phy_hs_rate;
 
-	ret = ufshcd_get_pwr_dev_param(&host_cap,
-				       dev_max_params,
-				       dev_req_params);
+	ret = ufshcd_negotiate_pwr_params(&host_params,
+					  dev_max_params,
+					  dev_req_params);
 	if (ret) {
 		pr_info("%s: failed to determine capabilities\n",
 			__func__);
@@ -877,7 +877,6 @@ static void ufshcd_print_pwr_info(struct ufs_hba *hba, struct ufs_pa_layer_attr 
 
 static int sunxi_ufs_pwr_change_notify(struct ufs_hba *hba,
 				     enum ufs_notify_change_status stage,
-				     struct ufs_pa_layer_attr *dev_max_params,
 				     struct ufs_pa_layer_attr *dev_req_params)
 {
 	int ret = 0;
@@ -888,8 +887,7 @@ static int sunxi_ufs_pwr_change_notify(struct ufs_hba *hba,
 
 	switch (stage) {
 	case PRE_CHANGE:
-		ret = sunxi_ufs_pre_pwr_change(hba, dev_max_params,
-					     dev_req_params);
+		/* v7.1: rate negotiation moved to .negotiate_pwr_mode. */
 		break;
 	case POST_CHANGE:
 		ufshcd_print_pwr_info(hba, dev_req_params);
@@ -2004,6 +2002,7 @@ static struct ufs_hba_variant_ops sunxi_ufs_v0_pltfm_hba_vops = {
 	.hce_enable_notify = sunxi_ufs_hce_enable_notify,
 	.link_startup_notify = sunxi_ufs_link_startup_notify,
 	.pwr_change_notify = sunxi_ufs_pwr_change_notify,
+	.negotiate_pwr_mode = sunxi_ufs_negotiate_pwr_mode,
 	.phy_initialization = sunxi_ufs_phy_config,
 	.device_reset = sunxi_ufs_device_reset,
 	.event_notify = sunxi_ufs_event_notify,
