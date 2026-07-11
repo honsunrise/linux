@@ -12,6 +12,7 @@
 #include "ccu_gate.h"
 #include "ccu-sunxi-trace.h"
 
+static long ccu_gate_round_rate(struct clk_hw *hw, unsigned long rate, unsigned long *prate);
 /* v7.1 compat: .round_rate removed from clk_ops; wrap ccu_gate_round_rate into .determine_rate. */
 static int ccu_gate_round_rate_shim(struct clk_hw *hw, struct clk_rate_request *req)
 {
