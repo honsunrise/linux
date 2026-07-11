@@ -53,7 +53,7 @@ TRACE_EVENT(sunxi_gmac_tx_desc,
 	TP_fast_assign(
 		__entry->tx_clean = tx_clean;
 		__entry->tx_dirty = tx_dirty;
-		__entry->desc_dma = dma_addr,
+		__entry->desc_dma = dma_addr;
 		__assign_str(devname);
 	),
 
@@ -77,7 +77,7 @@ TRACE_EVENT(sunxi_gmac_rx_desc,
 	TP_fast_assign(
 		__entry->rx_clean = rx_clean;
 		__entry->rx_dirty = rx_dirty;
-		__entry->desc_dma = dma_addr,
+		__entry->desc_dma = dma_addr;
 		__assign_str(devname);
 	),
 
