@@ -195,7 +195,7 @@ static void sunxi_hwspinlock_remove(struct platform_device *pdev)
 	ret = hwspin_lock_unregister(bank);
 	if (ret) {
 		dev_err(&pdev->dev, "%s failed: %d\n", __func__, ret);
-		return ret;
+		return;
 	}
 
 	sunxi_hwspinlock_clk_dinit(private);
