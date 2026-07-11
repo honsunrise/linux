@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <linux/irq.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/pm.h>
@@ -2087,7 +2088,7 @@ static void sunxi_gpadc_remove(struct platform_device *pdev)
 	sunxi_gpadc_sysfs_destroy(chip);
 	err = sunxi_gpadc_hw_exit(chip);
 	if (err)
-		return err;
+		return;
 	sunxi_gpadc_inputdev_unregister(chip);
 
 #ifdef CONFIG_AW_AMP_SYS_RSC_MANAGER
