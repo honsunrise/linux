@@ -3133,7 +3133,11 @@ static int sunxi_twi_probe(struct platform_device *pdev)
 	twi->adap.nr = twi->bus_num;
 	twi->adap.retries = 3;
 	twi->adap.timeout = 3 * HZ;
-	twi->adap.class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+	twi->adap.class = I2C_CLASS_HWMON
+#ifdef I2C_CLASS_SPD
+			| I2C_CLASS_SPD
+#endif
+			;
 	twi->adap.algo = &sunxi_twi_algorithm;
 	twi->adap.bus_recovery_info = &sunxi_twi_bus_recovery;
 	twi->adap.lock_ops = &sunxi_twi_adap_lock_ops;
