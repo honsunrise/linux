@@ -22,6 +22,22 @@
 #endif
 #include <drm/drm_fourcc.h>
 #include <drm/drm_framebuffer.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+/* v6.12 removed drm_framebuffer_plane_{width,height}; supply shims
+ * that route through the replacement drm_format_info_plane_* API. */
+static inline int drm_framebuffer_plane_width(int width,
+					      const struct drm_framebuffer *fb,
+					      int plane)
+{
+	return drm_format_info_plane_width(fb->format, width, plane);
+}
+static inline int drm_framebuffer_plane_height(int height,
+					       const struct drm_framebuffer *fb,
+					       int plane)
+{
+	return drm_format_info_plane_height(fb->format, height, plane);
+}
+#endif
 #include "de_channel.h"
 #include "de_ovl.h"
 #include "de_scaler.h"
