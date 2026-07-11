@@ -92,7 +92,7 @@ static int sunxi_sc_nmi_set_type(struct irq_data *data, unsigned int flow_type)
 	unsigned int src_type;
 	unsigned int i;
 
-	irq_gc_lock(gc);
+	raw_spin_lock(&gc->lock);
 
 	switch (flow_type & IRQF_TRIGGER_MASK) {
 	case IRQ_TYPE_EDGE_FALLING:
@@ -109,7 +109,7 @@ static int sunxi_sc_nmi_set_type(struct irq_data *data, unsigned int flow_type)
 		src_type = SUNXI_SRC_TYPE_LEVEL_LOW;
 		break;
 	default:
-		irq_gc_unlock(gc);
+		raw_spin_unlock(&gc->lock);
 		pr_err("Cannot assign multiple trigger modes to IRQ %d.\n",
 			data->irq);
 		return -EBADR;
@@ -127,7 +127,7 @@ static int sunxi_sc_nmi_set_type(struct irq_data *data, unsigned int flow_type)
 	src_type_reg |= src_type;
 	sunxi_sc_nmi_write(gc, ctrl_off, src_type_reg);
 
-	irq_gc_unlock(gc);
+	raw_spin_unlock(&gc->lock);
 
 	return IRQ_SET_MASK_OK;
 }
