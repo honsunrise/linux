@@ -30,7 +30,13 @@
 #include <drm/drm_vblank.h>
 #include <linux/proc_fs.h>
 #if defined(CONFIG_PM_DEVFREQ)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+/* v6.6+ moved the governor.h private header to
+ * include/linux/devfreq-governor.h */
+#include <linux/devfreq-governor.h>
+#else
 #include <../drivers/devfreq/governor.h>
+#endif
 #include <linux/devfreq.h>
 #endif
 #include <linux/pm_opp.h>
