@@ -1829,8 +1829,8 @@ module_init(car_reverse_module_init);
 module_exit(car_reverse_module_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_IMPORT_NS(ANDROID_GKI_VFS_EXPORT_ONLY);
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("ANDROID_GKI_VFS_EXPORT_ONLY");
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 MODULE_AUTHOR("<huangyongxing@allwinnertech.com>");
 MODULE_DESCRIPTION("Sunxi fast car reverse image preview");
 MODULE_VERSION("1.0.0");

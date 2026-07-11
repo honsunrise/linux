@@ -101,7 +101,7 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 #endif
 
 static vip_status_e gckvip_allocator_dyn_alloc_contiguous(

@@ -1010,7 +1010,7 @@ static ssize_t disp_capture_dump_store(struct device *dev,
 	int ret = -1, cs = DISP_CSC_TYPE_RGB;
 	struct bmp_header bmp_header;
 
-	MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+	MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 	num_screens = bsp_disp_feat_get_num_screens();
 
 	if (g_disp < num_screens)
@@ -5643,7 +5643,7 @@ module_init(disp_module_init);
 module_exit(disp_module_exit);
 
 MODULE_AUTHOR("tan");
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 MODULE_DESCRIPTION("display driver");
 MODULE_VERSION("1.0.0");
 MODULE_LICENSE("GPL");

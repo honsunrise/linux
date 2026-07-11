@@ -12,7 +12,7 @@
 #define LOAD_BUF_SIZE 1024
 #define MAX_PATH_NUM  3
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 static char *dbg_ini_file_path[MAX_PATH_NUM] = {
 	"/data/misc/wifi/wifi_dbg.ini",

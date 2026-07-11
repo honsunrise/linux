@@ -22,7 +22,7 @@
 #define AAD_LEN 20
 
 #include <crypto/internal/cipher.h>
-MODULE_IMPORT_NS(CRYPTO_INTERNAL);
+MODULE_IMPORT_NS("CRYPTO_INTERNAL");
 
 static void gf_mulx(u8 *pad)
 {

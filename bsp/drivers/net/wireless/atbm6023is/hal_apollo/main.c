@@ -2678,7 +2678,7 @@ void atbm_core_release(struct atbm_common *self)
 	return;
 }
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 //EXPORT_SYMBOL_GPL(atbm_core_release);
 #ifdef CUSTOM_FEATURE_MAC /* To use macaddr and ps mode of customers */

@@ -1957,7 +1957,7 @@ late_initcall(aw_hdmi_module_init);
 module_exit(aw_hdmi_module_exit);
 
 MODULE_LICENSE("GPL v2");
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 MODULE_AUTHOR("liangxianhui");
 MODULE_DESCRIPTION("aw hdmi tx module driver");
 MODULE_VERSION("2.0");

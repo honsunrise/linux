@@ -27,7 +27,7 @@ unsigned int vin_log_mask = 0xffff - VIN_LOG_ISP - VIN_LOG_STAT - VIN_LOG_VIDEO 
 EXPORT_SYMBOL_GPL(vin_log_mask);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 #endif
 
 unsigned int vin_set_large_overlayer(unsigned int width)

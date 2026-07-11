@@ -17,7 +17,7 @@
 #include "g2d_mixer.h"
 #include <linux/idr.h>
 #include <linux/version.h>
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 static LIST_HEAD(g2d_task_list);
 static DEFINE_IDA(g2d_task_ida);

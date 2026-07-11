@@ -33,7 +33,7 @@
 #define UNISOC_DBG_PATH_DEFAULT "/data/unisoc_dbg"
 #endif
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 /* size of cp2 log files, default is 20M. */
 static unsigned int wcn_cp2_log_limit_size =

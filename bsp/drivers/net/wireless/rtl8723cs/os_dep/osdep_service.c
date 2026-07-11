@@ -29,7 +29,7 @@ atomic_t _malloc_size = ATOMIC_INIT(0);
 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 #endif
 #if defined(PLATFORM_LINUX)
 /*

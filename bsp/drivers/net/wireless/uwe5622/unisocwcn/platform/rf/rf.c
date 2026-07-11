@@ -51,7 +51,7 @@
 #define TXPW_CARCH_ED \
 	((int8_t *)&p->txpower_cali.txpower_subcarries_channel[14])
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 static struct nvm_name_table g_config_table[] = {
 	/*

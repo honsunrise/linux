@@ -25,7 +25,7 @@
 #include "wep.h"
 
 #include <crypto/internal/cipher.h>
-MODULE_IMPORT_NS(CRYPTO_INTERNAL);
+MODULE_IMPORT_NS("CRYPTO_INTERNAL");
 
 int ieee80211_wep_init(struct ieee80211_local *local)
 {

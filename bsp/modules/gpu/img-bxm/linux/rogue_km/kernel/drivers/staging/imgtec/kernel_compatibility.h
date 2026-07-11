@@ -233,7 +233,7 @@ __pvr_access_ok_compat(int type, const void __user * addr, unsigned long size)
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0))
-#define MODULE_IMPORT_NS(ns)
+#define MODULE_IMPORT_NS("ns")
 #endif
 
 /*

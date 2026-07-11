@@ -18,7 +18,7 @@
 #include "aes_ccm.h"
 
 #include <crypto/internal/cipher.h>
-MODULE_IMPORT_NS(CRYPTO_INTERNAL);
+MODULE_IMPORT_NS("CRYPTO_INTERNAL");
 
 static void aes_ccm_prepare(struct crypto_cipher *tfm, u8 *scratch, u8 *a)
 {

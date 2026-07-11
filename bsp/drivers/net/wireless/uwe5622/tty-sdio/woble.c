@@ -30,7 +30,7 @@
 #define MAX_WAKE_DEVICE_MAX_NUM 36
 #define CONFIG_FILE_PATH "/data/misc/bluedroid/bt_config.conf"
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 static struct hci_cmd_t hci_cmd;
 uint8_t device_count_db;

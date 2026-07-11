@@ -61,4 +61,4 @@ MODULE_AUTHOR("kanghoupeng<kanghoupeng@allwinnertech.com>");
 MODULE_DESCRIPTION("sunxi crash dump debug");
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION("1.0.8");
-MODULE_IMPORT_NS(MINIDUMP);
+MODULE_IMPORT_NS("MINIDUMP");

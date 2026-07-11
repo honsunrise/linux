@@ -110,7 +110,7 @@ static char *wcn_fw_path[WCN_FW_MAX_PATH_NUM] = {
 #endif
 
 MODULE_LICENSE("GPL");
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 
 static char BTWF_FIRMWARE_PATH[255];
 static char GNSS_FIRMWARE_PATH[255];

@@ -1729,4 +1729,4 @@ MODULE_AUTHOR("zxb <zhengxiaobin@allwinnertech.com>");
 MODULE_DESCRIPTION("g2d(rcq) driver");
 MODULE_VERSION("1.0.1");
 MODULE_LICENSE("GPL");
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");

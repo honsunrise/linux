@@ -90,7 +90,7 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 #endif
 
 extern vipdrv_driver_t *kdriver;

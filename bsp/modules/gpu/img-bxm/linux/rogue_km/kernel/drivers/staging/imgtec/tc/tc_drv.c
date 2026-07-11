@@ -74,7 +74,7 @@
 #define DEVICE_ID_PCIE_APOLLO_FPGA	0x1CF2
 
 MODULE_DESCRIPTION("PowerVR testchip framework driver");
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 
 static int tc_core_clock;
 module_param(tc_core_clock, int, 0444);

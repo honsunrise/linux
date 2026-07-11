@@ -33,6 +33,7 @@
 #include <linux/proc_fs.h>
 #include <linux/component.h>
 #include <linux/platform_device.h>
+#include <linux/dma-buf.h>
 #include "sunxi_drm_drv.h"
 #include "sunxi_drm_crtc.h"
 #include "sunxi_drm_gem.h"
@@ -40,6 +41,7 @@
 
 #define DRIVER_NAME "sunxi-drm"
 #define DRIVER_DESC "allwinnertech SoC DRM"
+/* v7.1: struct drm_driver.date was removed; keep define for module tag only */
 #define DRIVER_DATE "20230901"
 #define DRIVER_MAJOR 3
 #define DRIVER_MINOR 0
@@ -113,10 +115,18 @@ static const struct drm_framebuffer_funcs sunxi_drm_gem_fb_funcs = {
 
 struct drm_framebuffer *
 sunxi_drm_gem_fb_create(struct drm_device *dev, struct drm_file *file,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+			const struct drm_format_info *info,
+#endif
 			const struct drm_mode_fb_cmd2 *mode_cmd)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+	return drm_gem_fb_create_with_funcs(dev, file, info, mode_cmd,
+					    &sunxi_drm_gem_fb_funcs);
+#else
 	return drm_gem_fb_create_with_funcs(dev, file, mode_cmd,
 					    &sunxi_drm_gem_fb_funcs);
+#endif
 }
 
 static int sunxi_drm_atomic_helper_commit(struct drm_device *dev,
@@ -422,7 +432,9 @@ static struct drm_driver sunxi_drm_driver = {
 	.num_ioctls         = ARRAY_SIZE(sunxi_drm_ioctls),
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 13, 0)
 	.date = DRIVER_DATE,
+#endif
 	.major = DRIVER_MAJOR,
 	.minor = DRIVER_MINOR,
 	.gem_create_object = sunxi_gem_create_object,
@@ -1438,7 +1450,7 @@ static void __exit sunxi_drm_drv_exit(void)
 module_init(sunxi_drm_drv_init);
 module_exit(sunxi_drm_drv_exit);
 
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 MODULE_DESCRIPTION("Allwinnertech SoC DRM Driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("V1.1.6");
