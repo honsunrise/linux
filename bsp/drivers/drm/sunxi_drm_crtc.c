@@ -667,10 +667,15 @@ static int __maybe_unused sunxi_plane_atomic_precheck(struct drm_plane *plane,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
 				      struct drm_plane_state *new_state)
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 
 static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
 					struct drm_atomic_state *state)
+#else
+
+static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
+					struct drm_atomic_state *state,
+					bool flip)
 #endif
 {
 	return 0;
