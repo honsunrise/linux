@@ -32,7 +32,13 @@
 #include <linux/time.h>
 #include <linux/version.h>
 #include <linux/cpufreq.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+/* v6.6+ moved the governor.h private header to
+ * include/linux/devfreq-governor.h */
+#include <linux/devfreq-governor.h>
+#else
 #include <../drivers/devfreq/governor.h>
+#endif
 //#include "../crashdump/sunxi-crashdump.h"
 
 #if IS_ENABLED(CONFIG_ARCH_SUN65IW1)

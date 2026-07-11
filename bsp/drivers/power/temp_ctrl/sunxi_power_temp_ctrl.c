@@ -69,8 +69,13 @@ static const struct thermal_cooling_device_ops psy_tcd_ops = {
 
 int sunxi_power_register_cooler(struct power_supply *psy)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+	psy->tcd = devm_thermal_of_cooling_device_register(&psy->dev,
+		psy->dev.of_node, (char *)psy->desc->name, psy, &psy_tcd_ops);
+#else
 	psy->tcd = devm_thermal_of_cooling_device_register(&psy->dev,
 		psy->of_node, (char *)psy->desc->name, psy, &psy_tcd_ops);
+#endif
 
 	return PTR_ERR_OR_ZERO(psy->tcd);
 }
