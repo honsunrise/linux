@@ -2,6 +2,7 @@
 /* Copyright(c) 2020 - 2023 Allwinner Technology Co.,Ltd. All rights reserved. */
 #define pr_fmt(x) KBUILD_MODNAME ": " x "\n"
 
+#include <linux/version.h>
 #include "sunxi_usb_power.h"
 
 static enum power_supply_property sunxi_usb_power_props[] = {
@@ -241,7 +242,11 @@ static int sunxi_usb_power_parse_device_tree(struct sunxi_usb_power_supply_data 
 	if (np) {
 		if (of_device_is_available(np)) {
 			PMIC_INFO("usb power device is enabled\n");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+			psy = devm_power_supply_get_by_reference(usb_power->dev, "det_usb_supply");
+#else
 			psy = devm_power_supply_get_by_phandle(usb_power->dev, "det_usb_supply");
+#endif
 			if (IS_ERR_OR_NULL(psy)) {
 				PMIC_ERR("usb power device is not ready\n");
 				return -EPROBE_DEFER;
@@ -295,7 +300,11 @@ static int sunxi_usb_power_gpio_det_init_common(struct sunxi_usb_power_supply_da
 
 	memset(&gpio_para, 0, sizeof(gpio_para));
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+	gpio_para.gpio = of_get_named_gpio(psy->dev.of_node, gpio_name, 0);
+#else
 	gpio_para.gpio = of_get_named_gpio(psy->of_node, gpio_name, 0);
+#endif
 	if (gpio_para.gpio < 0) {
 		PMIC_INFO("%s not detected\n", gpio_name);
 		return 0;
@@ -397,7 +406,11 @@ static int sunxi_usb_power_probe(struct platform_device *pdev)
 	usb_power->name = "sunxi_usb";
 	usb_power->dev = &pdev->dev;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+	psy_cfg.fwnode = dev_fwnode(&pdev->dev);
+#else
 	psy_cfg.of_node = pdev->dev.of_node;
+#endif
 	psy_cfg.drv_data = usb_power;
 
 	ret = sunxi_usb_power_parse_device_tree(usb_power);

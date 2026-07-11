@@ -1097,7 +1097,7 @@ static void sunxi_dmcfreq_remove(struct platform_device *pdev)
 	struct sunxi_dmcfreq *dmcfreq = platform_get_drvdata(pdev);
 
 	if (dmcfreq == NULL)
-		return 0;
+		return;
 
 	dev_pm_opp_of_remove_table(dev);
 	devfreq_remove_governor(&sunxi_devfreq_governor);
