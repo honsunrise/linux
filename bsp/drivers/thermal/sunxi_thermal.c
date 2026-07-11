@@ -382,7 +382,11 @@ static const struct thermal_zone_of_device_ops ths_ops = {
 #else
 static int sunxi_ths_get_temp(struct thermal_zone_device *data, int *temp)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+	struct tsensor *s = (struct tsensor *)thermal_zone_device_priv(data);
+#else
 	struct tsensor *s = (struct tsensor *)data->devdata;
+#endif
 	struct ths_device *tmdev = s->tmdev;
 
 	return tmdev->chip->get_temp(s, temp);
