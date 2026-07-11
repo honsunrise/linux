@@ -18,6 +18,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/io.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/module.h>
@@ -322,12 +323,11 @@ out:
 	return ret;
 }
 
-static int ddr_clock_remove(struct platform_device *pdev)
+static void ddr_clock_remove(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 
 	of_clk_del_provider(np);
-	return 0;
 }
 
 static struct platform_driver ddr_clock_driver = {
