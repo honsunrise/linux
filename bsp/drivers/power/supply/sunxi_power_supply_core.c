@@ -8,6 +8,7 @@
  * Author: xinouyang <xinouyang@allwinnertech.com>
  */
 
+#include <linux/version.h>
 #include "sunxi-power-supply.h"
 
 static void _sunxi_power_supply_check_online(struct sunxi_supply_psy_status *power_psy,
@@ -184,7 +185,11 @@ int sunxi_power_supply_init_dt_supply(struct device *dev, struct device_node *of
 		return 0;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+	psy = devm_power_supply_get_by_reference(dev, phandle_name);
+#else
 	psy = devm_power_supply_get_by_phandle(dev, phandle_name);
+#endif
 	if (IS_ERR_OR_NULL(psy)) {
 		PMIC_ERR("%s supply is not ready\n", phandle_name);
 		return -EPROBE_DEFER;
