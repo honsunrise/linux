@@ -9,6 +9,7 @@
  * warranty of any kind, whether express or implied.
  ******************************************************************************/
 #include <linux/delay.h>
+#include <linux/hdmi.h>
 
 #include "dw_dev.h"
 #include "dw_avp.h"

@@ -38,6 +38,7 @@
 #include <linux/init.h>
 #include <linux/err.h>
 #include <linux/scatterlist.h>
+#include <linux/vmalloc.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_net.h>
 #include <linux/of_mdio.h>
@@ -2824,7 +2825,7 @@ static int sunxi_gmac_ethtool_get_sset_count(struct net_device *netdev, int sset
 static void sunxi_gmac_ethtool_getdrvinfo(struct net_device *ndev,
 					struct ethtool_drvinfo *info)
 {
-	strlcpy(info->driver, "sunxi_gmac", sizeof(info->driver));
+	strscpy(info->driver, "sunxi_gmac", sizeof(info->driver));
 
 	strcpy(info->version, SUNXI_GMAC_MODULE_VERSION);
 	info->fw_version[0] = '\0';
@@ -3007,7 +3008,7 @@ static int sunxi_gmac_loopback_test(struct net_device *ndev, u32 flags,
 		sunxi_gmac_loopback(chip->base, true);
 	} else {
 		*test_index = EXTERNAL_LOOPBACK_TEST;
-		err |= phy_loopback(ndev->phydev, true);
+		err |= phy_loopback(ndev->phydev, true, 0);
 		if (err)
 			goto out;
 	}
@@ -3034,7 +3035,7 @@ out:
 	if (!(flags & ETH_TEST_FL_EXTERNAL_LB))
 		sunxi_gmac_loopback(chip->base, false);
 	else
-		err |= phy_loopback(ndev->phydev, false);
+		err |= phy_loopback(ndev->phydev, false, 0);
 
 	return err;
 }
