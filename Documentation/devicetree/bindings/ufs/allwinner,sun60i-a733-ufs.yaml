@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ufs/allwinner,sun60i-a733-ufs.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Allwinner A733 Universal Flash Storage Host Controller
+
+maintainers:
+  - Hansun Zhu <honsun@linux.com>
+
+allOf:
+  - $ref: ufs-common.yaml
+
+properties:
+  compatible:
+    const: allwinner,sun60i-a733-ufs
+
+  reg:
+    maxItems: 1
+
+  clocks:
+    maxItems: 11
+
+  clock-names:
+    items:
+      - const: osc24m
+      - const: pll_periph
+      - const: pll_periph_2
+      - const: axi_clk_gate
+      - const: ahb_gate
+      - const: cfg_clk_gate
+      - const: store_ahb
+      - const: store_mbus
+      - const: msi_lite
+      - const: dcxo_wakeup
+      - const: dcxo_ufs_gating
+
+  resets:
+    maxItems: 4
+
+  reset-names:
+    items:
+      - const: controller_rst
+      - const: phy_rst
+      - const: axi_rst
+      - const: ahb_rst
+
+  nvmem-cells:
+    minItems: 2
+    maxItems: 2
+
+  nvmem-cell-names:
+    items:
+      - const: calibration-low
+      - const: calibration-high
+
+  vcc-supply: true
+  vccq-supply: true
+  vccq2-supply: true
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+  - resets
+  - reset-names
+  - nvmem-cells
+  - nvmem-cell-names
+  - vcc-supply
+  - vccq-supply
+  - vccq2-supply
+
+dependencies:
+  nvmem-cells: [nvmem-cell-names]
+
+unevaluatedProperties: false
