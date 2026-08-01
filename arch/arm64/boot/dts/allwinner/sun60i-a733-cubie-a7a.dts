@@ -10,6 +10,14 @@
 	model = "Radxa Cubie A7A";
 	compatible = "radxa,cubie-a7a", "allwinner,sun60i-a733";
 
+	reg_vcc5v0: regulator-vcc5v0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
 	aliases {
 		serial0 = &uart0;
 		ethernet0 = &gmac0;
@@ -23,7 +31,7 @@
 
 &r_i2c0 {
 	clock-frequency = <400000>;
-	status = "disabled";
+	status = "okay";
 
 	pmu0: pmic@36 {
 		compatible = "x-powers,axp8191";
@@ -32,7 +40,23 @@
 		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
-		status = "disabled";
+		vin1-supply = <&reg_vcc5v0>;
+		vin2-supply = <&reg_vcc5v0>;
+		vin3-supply = <&reg_vcc5v0>;
+		vin4-supply = <&reg_vcc5v0>;
+		vin5-supply = <&reg_vcc5v0>;
+		vin6-supply = <&reg_vcc5v0>;
+		vin7-supply = <&reg_vcc5v0>;
+		vin8-supply = <&reg_vcc5v0>;
+		vin9-supply = <&reg_vcc5v0>;
+		aldoin-supply = <&reg_vcc5v0>;
+		bldoin-supply = <&reg_vcc5v0>;
+		cldoin-supply = <&reg_vcc5v0>;
+		dldoin-supply = <&reg_vcc5v0>;
+		eldoin-supply = <&reg_vcc5v0>;
+		ips-supply = <&reg_vcc5v0>;
+		swin-supply = <&reg_dcdc1>;
+		status = "okay";
 
 		regulators {
 			reg_dcdc1: dcdc1 {
@@ -311,11 +335,9 @@
 			};
 			reg_dc1sw1: dc1sw1 {
 				regulator-name = "axp8191-dc1sw1";
-				swin-supply = <&reg_dcdc1>;
 			};
 			reg_dc1sw2: dc1sw2 {
 				regulator-name = "axp8191-dc1sw2";
-				swin-supply = <&reg_dcdc1>;
 				regulator-always-on;
 			};
 		};
