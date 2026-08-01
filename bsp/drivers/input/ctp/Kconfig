@@ -13,7 +13,7 @@ menuconfig AW_INPUT_CTP
 
 if AW_INPUT_CTP
 
-source "bsp/drivers/input/ctp/gt9xx_secondary//Kconfig"
+source "bsp/drivers/input/ctp/gt9xx_secondary/Kconfig"
 source "bsp/drivers/input/ctp/gslx680new/Kconfig"
 source "bsp/drivers/input/ctp/wacom_pen/Kconfig"
 source "bsp/drivers/input/ctp/gt9xxnew/Kconfig"
