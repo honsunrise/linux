@@ -11,6 +11,7 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/delay.h>
@@ -18,6 +19,7 @@
 #include <linux/reset.h>
 #include <linux/clk.h>
 #include <linux/version.h>
+#include <linux/unaligned.h>
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 119))
 #include "../../../drivers/ufs/host/ufshcd-pltfrm.h"
 #else
@@ -28,20 +30,11 @@
 #include "ufshci-sunxi.h"
 #include "sunxi_ufs_unipro.h"
 #include "sunxi-ufs.h"
-#include "sunxi-sid.h"
 
 #define SUNXI_UFS_DRIVER_VESION "0.0.27 2026.05.16 15:20"
 //#define PHY_DEBUG_DUMP
 //#define CCU_DBG
 #define SUNXI_UFS_AXI_CLK		(200*1000*1000)
-#if defined(CONFIG_ARCH_SUN60IW2)
-#define SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_LOW         (0x60)
-#define SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_HIGH        (0x64)
-#elif defined(CONFIG_ARCH_SUN60IW3)
-#define SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_LOW         (0x48)
-#define SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_HIGH        (0x4c)
-#endif
-
 
 #define SUNXI_UFS_CARD_INT_BIT  (0x7 << 29)
 
@@ -98,115 +91,92 @@ static void sunxi_ufshcd_delay_us(unsigned long us, unsigned long tolerance)
 		usleep_range(us, us + tolerance);
 }
 
-static inline int sunxi_ufs_get_cal_words(struct ufs_hba *hba, u32 *pll_rate_a, u32 *pll_rate_b, \
-										u32 *att_lane0, u32 *ctle_lane0, \
-										u32 *att_lane1, u32 *ctle_lane1)
+static int sunxi_ufs_read_calibration(struct device *dev, const char *name,
+				      u32 *value)
 {
-	u32 rval_l  = 0;
-	u32 rval_h  = 0;
-	int ret = 0;
+	struct nvmem_cell *cell;
+	size_t len;
+	void *buf;
+	int ret;
 
-#if defined(CONFIG_ARCH_SUN60IW2)
-	dev_dbg(hba->dev, "Get ufs_cal_word_l\n");
-	ret = sunxi_get_module_param_from_sid(&rval_l, SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_LOW, 4);
-	if (ret) {
-		dev_err(hba->dev, "Get ufs_cal_word_l failed\n");
-		return -1;
+	cell = devm_nvmem_cell_get(dev, name);
+	if (IS_ERR(cell))
+		return dev_err_probe(dev, PTR_ERR(cell),
+				     "failed to get %s calibration cell\n", name);
+
+	buf = nvmem_cell_read(cell, &len);
+	if (IS_ERR(buf))
+		return dev_err_probe(dev, PTR_ERR(buf),
+				     "failed to read %s calibration cell\n", name);
+
+	if (len != sizeof(*value)) {
+		dev_err(dev, "%s calibration cell has invalid length %zu\n",
+			name, len);
+		ret = -EINVAL;
+	} else {
+		*value = get_unaligned_le32(buf);
+		ret = 0;
 	}
 
-	dev_dbg(hba->dev, "Get ufs_cal_word_h\n");
-	ret = sunxi_get_module_param_from_sid(&rval_h, SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_HIGH, 4);
-	if (ret) {
-		dev_err(hba->dev, "Get ufs_cal_word_h failed\n");
-		return -1;
-	}
-#elif defined(CONFIG_ARCH_SUN60IW3)
-	/* A735: new efuse read method with bit manipulation */
-	u32 rval_a  = 0;
-	u32 rval_b  = 0;
+	kfree(buf);
+	return ret;
+}
 
-	dev_dbg(hba->dev, "Get ufs_cal_word_a\n");
-	ret = sunxi_get_module_param_from_sid(&rval_a, SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_LOW, 4);
-	if (ret) {
-		dev_err(hba->dev, "Get ufs_cal_word_a failed\n");
-		return -1;
+static int sunxi_ufs_get_cal_words(struct ufs_hba *hba,
+				   u32 *pll_rate_a, u32 *pll_rate_b,
+				   u32 *att_lane0, u32 *ctle_lane0,
+				   u32 *att_lane1, u32 *ctle_lane1)
+{
+	u32 rval_l;
+	u32 rval_h;
+	int ret;
+
+	ret = sunxi_ufs_read_calibration(hba->dev, "calibration-low", &rval_l);
+	if (ret)
+		return ret;
+
+	ret = sunxi_ufs_read_calibration(hba->dev, "calibration-high", &rval_h);
+	if (ret)
+		return ret;
+
+	dev_info(hba->dev,
+		 "calibration-low=0x%08x calibration-high=0x%08x\n",
+		 rval_l, rval_h);
+
+	if (!rval_l && !rval_h) {
+		*pll_rate_a = 0;
+		*pll_rate_b = 0;
+		*att_lane0 = 0;
+		*ctle_lane0 = 0;
+		*att_lane1 = 0;
+		*ctle_lane1 = 0;
+		dev_info(hba->dev, "using default M-PHY calibration\n");
+		return 0;
 	}
 
-	dev_dbg(hba->dev, "Get ufs_cal_word_b\n");
-	ret = sunxi_get_module_param_from_sid(&rval_b, SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_HIGH, 4);
-	if (ret) {
-		dev_err(hba->dev, "Get ufs_cal_word_b failed\n");
-		return -1;
-	}
-	rval_l  = rval_a << 16;
-	rval_h  = ((rval_a >> 16) & 0xffff) | ((rval_b << 16) & 0xffff0000);
-#endif
-
-	dev_info(hba->dev, "Cal words efuse addr 0x%x value 0x%08x, addr 0x%x value 0x%08x\n",\
-						SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_LOW, rval_l,\
-						SUNXI_UFS_CAL_WORDS_EFUSE_ALIGN_HIGH, rval_h);
 	*pll_rate_a = (rval_h >> 16) & 0xff;
 	*pll_rate_b = (rval_h >> 24) & 0xff;
-
-	if (*pll_rate_a && *pll_rate_b) {
-		if ((*pll_rate_a < 0x14) \
-			|| (*pll_rate_a > 0x4b)\
-			|| (*pll_rate_b < 0x4b)\
-			|| (*pll_rate_b > 0x73)) {
-			dev_err(hba->dev, "pll cal words over valid range"
-					"pll rate a 0x%08x, pll rate b 0x%08x\n", *pll_rate_a, *pll_rate_b);
-
-			if ((*pll_rate_b < 0x4b) ||\
-				(*pll_rate_b > 0x73))
-				*pll_rate_b = 0;
-			if ((*pll_rate_a < 0x14) \
-				|| (*pll_rate_a > 0x4b))\
-				*pll_rate_a = 0;
-		}
-	}
-
-
 	*att_lane0 = (rval_l >> 16) & 0xff;
 	*ctle_lane0 = (rval_l >> 24) & 0xff;
-	if ((*att_lane0) \
-		&& (*ctle_lane0)) {
-		if ((*att_lane0 == 0) \
-			|| (*att_lane0 == 255)\
-			|| (*ctle_lane0 == 0)\
-			|| (*ctle_lane0 == 255)) {
-			dev_err(hba->dev, "afe cal words over valid range"
-					"att lane0 0x%08x, ctle_lane0 0x%08x\n",
-					*att_lane0, *ctle_lane0);
-			return -1;
-		}
-	}
-
-	*att_lane1 = (rval_h >> 0) & 0xff;
+	*att_lane1 = rval_h & 0xff;
 	*ctle_lane1 = (rval_h >> 8) & 0xff;
-	if ((*att_lane1) \
-		&& (*ctle_lane1)) {
-		if ((*att_lane1 == 0) \
-			|| (*att_lane1 == 255)\
-			|| (*ctle_lane1 == 0)\
-			|| (*ctle_lane1 == 255)) {
-			dev_err(hba->dev, "afe cal words over valid range"
-					"att lane1 0x%08x, ctle_lane1 0x%08x\n",
-					*att_lane1, *ctle_lane1);
-			return -1;
-		}
+
+	if (*pll_rate_a < 0x14 || *pll_rate_a > 0x4b ||
+	    *pll_rate_b < 0x4b || *pll_rate_b > 0x73) {
+		dev_err(hba->dev,
+			"invalid PLL calibration: rate-a=%#x rate-b=%#x\n",
+			*pll_rate_a, *pll_rate_b);
+		return -EINVAL;
 	}
 
-	dev_dbg(hba->dev, "pll rate a 0x%08x, pll rate b 0x%08x\n",\
-						*pll_rate_a, *pll_rate_b);
-	dev_dbg(hba->dev, "att lane0 0x%08x, ctle_lane0 0x%08x\n",\
-						*att_lane0, *ctle_lane0);
-	dev_dbg(hba->dev, "att lane1 0x%08x, ctle_lane1 0x%08x\n",
-						*att_lane1, *ctle_lane1);
-
-	if (!(*pll_rate_a) && !(*pll_rate_b)\
-		&& !(*att_lane0) && !(*ctle_lane0)\
-		&& !(*att_lane1) && !(*ctle_lane1)) {
-		dev_info(hba->dev, "Phy PLL Use auto mode and default afe value\n");
+	if (!*att_lane0 || *att_lane0 == 0xff ||
+	    !*ctle_lane0 || *ctle_lane0 == 0xff ||
+	    !*att_lane1 || *att_lane1 == 0xff ||
+	    !*ctle_lane1 || *ctle_lane1 == 0xff) {
+		dev_err(hba->dev,
+			"invalid AFE calibration: lane0=%#x/%#x lane1=%#x/%#x\n",
+			*att_lane0, *ctle_lane0, *att_lane1, *ctle_lane1);
+		return -EINVAL;
 	}
 
 	return 0;
@@ -2031,6 +2001,7 @@ static int ufs_sunxi_common_init(struct ufs_hba *hba)
 */
 	//hba->quirks |= UFSHCD_QUIRK_BROKEN_AUTO_HIBERN8;
 	ufshcd_set_variant(hba, &sunxi_ufs_host_priv);
+	hba->caps |= UFSHCD_CAP_WB_EN;
 	ret = ufs_ufs_parse_dt(dev, hba);
 
 	return ret;
@@ -2157,6 +2128,10 @@ static struct ufs_hba_variant_ops sunxi_ufs_v0_pltfm_hba_vops = {
 
 
 static const struct of_device_id sunxi_ufs_pltfm_match[] = {
+	{
+		.compatible = "allwinner,sun60i-a733-ufs",
+		.data = &sunxi_ufs_v0_pltfm_hba_vops,
+	},
 	{
 		.compatible = "allwinner,sunxi-ufs-v0",
 		.data = &sunxi_ufs_v0_pltfm_hba_vops,

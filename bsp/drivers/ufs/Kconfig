@@ -6,10 +6,18 @@
 menu "SUNXI UFS Drivers"
 	depends on AW_BSP
 
-config AW_UFS
-	tristate "Allwinner UFS Support"
+config SCSI_UFS_SUNXI
+	tristate "Allwinner A733 UFS support"
 	depends on SCSI_UFSHCD_PLATFORM
+	depends on ARCH_SUNXI
+	select NVMEM
 	help
-	  This selects allwinner ufs drivers
+	  Enable the platform glue for the UFS host controller found in the
+	  Allwinner A733 SoC. The driver controls the host clocks and resets,
+	  initializes the integrated M-PHY, and loads board calibration data
+	  from the SoC NVMEM provider. The controller is integrated into the
+	  A733 and uses the standard UFS host controller core.
+
+	  Say Y for systems that boot from UFS.
 
 endmenu
