@@ -48,6 +48,7 @@ static const char * const axp20x_model_names[] = {
 	[AXP806_ID] = "AXP806",
 	[AXP809_ID] = "AXP809",
 	[AXP813_ID] = "AXP813",
+	[AXP8191_ID] = "AXP8191",
 	[AXP15060_ID] = "AXP15060",
 };
 
@@ -252,6 +253,24 @@ static const struct regmap_access_table axp717_volatile_table = {
 	.n_yes_ranges = ARRAY_SIZE(axp717_volatile_ranges),
 };
 
+static const struct regmap_range axp8191_writeable_ranges[] = {
+	regmap_reg_range(AXP8191_IC_TYPE, AXP8191_WATCHDOG_CFG),
+};
+
+static const struct regmap_range axp8191_volatile_ranges[] = {
+	regmap_reg_range(AXP8191_IC_TYPE, AXP8191_WATCHDOG_CFG),
+};
+
+static const struct regmap_access_table axp8191_writeable_table = {
+	.yes_ranges = axp8191_writeable_ranges,
+	.n_yes_ranges = ARRAY_SIZE(axp8191_writeable_ranges),
+};
+
+static const struct regmap_access_table axp8191_volatile_table = {
+	.yes_ranges = axp8191_volatile_ranges,
+	.n_yes_ranges = ARRAY_SIZE(axp8191_volatile_ranges),
+};
+
 static const struct regmap_range axp806_volatile_ranges[] = {
 	regmap_reg_range(AXP20X_IRQ1_STATE, AXP20X_IRQ2_STATE),
 };
@@ -373,6 +392,11 @@ static const struct resource axp717_pek_resources[] = {
 	DEFINE_RES_IRQ_NAMED(AXP717_IRQ_PEK_FAL_EDGE, "PEK_DBF"),
 };
 
+static const struct resource axp8191_pek_resources[] = {
+	DEFINE_RES_IRQ_NAMED(AXP8191_IRQ_PEK_RIS_EDGE, "PEK_DBR"),
+	DEFINE_RES_IRQ_NAMED(AXP8191_IRQ_PEK_FAL_EDGE, "PEK_DBF"),
+};
+
 static const struct resource axp803_pek_resources[] = {
 	DEFINE_RES_IRQ_NAMED(AXP803_IRQ_PEK_RIS_EDGE, "PEK_DBR"),
 	DEFINE_RES_IRQ_NAMED(AXP803_IRQ_PEK_FAL_EDGE, "PEK_DBF"),
@@ -462,6 +486,15 @@ static const struct regmap_config axp717_regmap_config = {
 	.wr_table = &axp717_writeable_table,
 	.volatile_table = &axp717_volatile_table,
 	.max_register = AXP717_TYPEC_CC_STATUS,
+	.cache_type = REGCACHE_MAPLE,
+};
+
+static const struct regmap_config axp8191_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.wr_table = &axp8191_writeable_table,
+	.volatile_table = &axp8191_volatile_table,
+	.max_register = AXP8191_WATCHDOG_CFG,
 	.cache_type = REGCACHE_MAPLE,
 };
 
@@ -697,6 +730,33 @@ static const struct regmap_irq axp717_regmap_irqs[] = {
 	INIT_REGMAP_IRQ(AXP717, TYPEC_PLUGIN,		4, 5),
 };
 
+static const struct regmap_irq axp8191_regmap_irqs[] = {
+	INIT_REGMAP_IRQ(AXP8191, DCDC8_V_LOW,		0, 7),
+	INIT_REGMAP_IRQ(AXP8191, DCDC7_V_LOW,		0, 6),
+	INIT_REGMAP_IRQ(AXP8191, DCDC6_V_LOW,		0, 5),
+	INIT_REGMAP_IRQ(AXP8191, DCDC5_V_LOW,		0, 4),
+	INIT_REGMAP_IRQ(AXP8191, DCDC4_V_LOW,		0, 3),
+	INIT_REGMAP_IRQ(AXP8191, DCDC3_V_LOW,		0, 2),
+	INIT_REGMAP_IRQ(AXP8191, DCDC2_V_LOW,		0, 1),
+	INIT_REGMAP_IRQ(AXP8191, DCDC1_V_LOW,		0, 0),
+	INIT_REGMAP_IRQ(AXP8191, LDO_OVER_CURR,		1, 7),
+	INIT_REGMAP_IRQ(AXP8191, PEK_RIS_EDGE,		1, 6),
+	INIT_REGMAP_IRQ(AXP8191, PEK_FAL_EDGE,		1, 5),
+	INIT_REGMAP_IRQ(AXP8191, PEK_SHORT,		1, 4),
+	INIT_REGMAP_IRQ(AXP8191, PEK_LONG,		1, 3),
+	INIT_REGMAP_IRQ(AXP8191, DIE_TEMP_HIGH_LV2,	1, 2),
+	INIT_REGMAP_IRQ(AXP8191, DIE_TEMP_HIGH_LV1,	1, 1),
+	INIT_REGMAP_IRQ(AXP8191, DCDC9_V_LOW,		1, 0),
+	INIT_REGMAP_IRQ(AXP8191, GPIO3_INPUT,		2, 6),
+	INIT_REGMAP_IRQ(AXP8191, GPIO2_INPUT,		2, 5),
+	INIT_REGMAP_IRQ(AXP8191, GPIO1_INPUT,		2, 4),
+	INIT_REGMAP_IRQ(AXP8191, PCB_TEMP_UNDER,		2, 3),
+	INIT_REGMAP_IRQ(AXP8191, PCB_TEMP_UNDER_END,	2, 2),
+	INIT_REGMAP_IRQ(AXP8191, PCB_TEMP_OVER,		2, 1),
+	INIT_REGMAP_IRQ(AXP8191, PCB_TEMP_OVER_END,	2, 0),
+	INIT_REGMAP_IRQ(AXP8191, WATCHDOG,		3, 0),
+};
+
 static const struct regmap_irq axp803_regmap_irqs[] = {
 	INIT_REGMAP_IRQ(AXP803, ACIN_OVER_V,		0, 7),
 	INIT_REGMAP_IRQ(AXP803, ACIN_PLUGIN,		0, 6),
@@ -893,6 +953,17 @@ static const struct regmap_irq_chip axp717_regmap_irq_chip = {
 	.irqs			= axp717_regmap_irqs,
 	.num_irqs		= ARRAY_SIZE(axp717_regmap_irqs),
 	.num_regs		= 5,
+};
+
+static const struct regmap_irq_chip axp8191_regmap_irq_chip = {
+	.name			= "axp8191",
+	.status_base		= AXP8191_IRQ1_STATE,
+	.ack_base		= AXP8191_IRQ1_STATE,
+	.unmask_base		= AXP8191_IRQ1_EN,
+	.init_ack_masked	= true,
+	.irqs			= axp8191_regmap_irqs,
+	.num_irqs		= ARRAY_SIZE(axp8191_regmap_irqs),
+	.num_regs		= 4,
 };
 
 static const struct regmap_irq_chip axp803_regmap_irq_chip = {
@@ -1106,6 +1177,11 @@ static const struct property_entry axp288_fuel_gauge_properties[] = {
 static const struct software_node axp288_fuel_gauge_sw_node = {
 	.name = "axp288_fuel_gauge",
 	.properties = axp288_fuel_gauge_properties,
+};
+
+static const struct mfd_cell axp8191_cells[] = {
+	MFD_CELL_NAME("axp20x-regulator"),
+	MFD_CELL_RES("axp20x-pek", axp8191_pek_resources),
 };
 
 static const struct mfd_cell axp288_cells[] = {
@@ -1325,6 +1401,12 @@ int axp20x_match_device(struct axp20x_dev *axp20x)
 		axp20x->regmap_cfg = &axp717_regmap_config;
 		axp20x->regmap_irq_chip = &axp717_regmap_irq_chip;
 		break;
+	case AXP8191_ID:
+		axp20x->nr_cells = ARRAY_SIZE(axp8191_cells);
+		axp20x->cells = axp8191_cells;
+		axp20x->regmap_cfg = &axp8191_regmap_config;
+		axp20x->regmap_irq_chip = &axp8191_regmap_irq_chip;
+		break;
 	case AXP803_ID:
 		axp20x->nr_cells = ARRAY_SIZE(axp803_cells);
 		axp20x->cells = axp803_cells;
@@ -1458,7 +1540,7 @@ int axp20x_device_probe(struct axp20x_dev *axp20x)
 		return ret;
 	}
 
-	if (axp20x->variant != AXP288_ID)
+	if (axp20x->variant != AXP288_ID && axp20x->variant != AXP8191_ID)
 		devm_register_power_off_handler(axp20x->dev, axp20x_power_off, axp20x);
 
 	dev_info(axp20x->dev, "AXP20X driver loaded\n");
