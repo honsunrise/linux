@@ -19,7 +19,6 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
-#include <linux/string_choices.h>
 #include <linux/types.h>
 
 #include "virt-dma.h"
@@ -622,20 +621,26 @@ static irqreturn_t sun6i_dma_interrupt(int irq, void *dev_id)
 	struct sun6i_vchan *vchan;
 	struct sun6i_pchan *pchan;
 	int i, j, ret = IRQ_NONE;
+	unsigned int pchan_idx;
 	u32 status;
 
-	for (i = 0; i < sdev->num_pchans / sdev->cfg->num_channels_per_reg; i++) {
+	for (i = 0; i < DIV_ROUND_UP(sdev->num_pchans,
+				      sdev->cfg->num_channels_per_reg); i++) {
 		status = sdev->cfg->read_irq_stat(sdev, i);
 		if (!status)
 			continue;
 
-		dev_dbg(sdev->slave.dev, "DMA irq status %s: 0x%x\n",
-			str_high_low(i), status);
+		dev_dbg(sdev->slave.dev, "DMA IRQ status register %d: 0x%x\n",
+			i, status);
 
 		sdev->cfg->write_irq_stat(sdev, i, status);
 
 		for (j = 0; (j < sdev->cfg->num_channels_per_reg) && status; j++) {
-			pchan = sdev->pchans + j;
+			pchan_idx = i * sdev->cfg->num_channels_per_reg + j;
+			if (pchan_idx >= sdev->num_pchans)
+				break;
+
+			pchan = &sdev->pchans[pchan_idx];
 			vchan = pchan->vchan;
 			if (vchan && (status & vchan->irq_type)) {
 				if (vchan->cyclic) {
