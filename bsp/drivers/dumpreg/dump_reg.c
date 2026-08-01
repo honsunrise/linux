@@ -804,9 +804,11 @@ static int standby_dump_dev_resume_noirq(struct device *dev)
 	return standby_dump_printk();
 }
 
-static int standby_dump_syscore_suspend(void)
+static int standby_dump_syscore_suspend(void *data)
 {
 	int ret  = 0;
+
+	(void)data;
 
 	if (!(standby_dump_ctrl & (0x1<<DUMP_CTRL_SYSCORE_SUSPEND)))
 		return 0;
@@ -826,9 +828,11 @@ static int standby_dump_syscore_suspend(void)
 	return ret;
 }
 
-static void standby_dump_syscore_resume(void)
+static void standby_dump_syscore_resume(void *data)
 {
 	int ret = 0;
+
+	(void)data;
 
 	if (!(standby_dump_ctrl & (0x1<<DUMP_CTRL_SYSCORE_RESUME)))
 		return;
@@ -857,9 +861,13 @@ static struct dev_pm_ops standby_dump_ops = {
 	.resume_noirq = standby_dump_dev_resume_noirq,
 };
 
-static struct syscore_ops standby_dump_syscore = {
+static const struct syscore_ops standby_dump_syscore_ops = {
 	.suspend = standby_dump_syscore_suspend,
 	.resume  = standby_dump_syscore_resume,
+};
+
+static struct syscore standby_dump_syscore = {
+	.ops = &standby_dump_syscore_ops,
 };
 
 /**
@@ -1124,7 +1132,7 @@ static int sunxi_dump_reg_probe(struct platform_device *pdev)
 	if (!standby_dump_buff)
 		dev_err(dev, "malloc memory failed.\n");
 
-	register_syscore_ops(&standby_dump_syscore);
+	register_syscore(&standby_dump_syscore);
 
 	return 0;
 error:
@@ -1132,16 +1140,17 @@ error:
 	return -1;
 }
 
-static int sunxi_dump_reg_remove(struct platform_device *pdev)
+static void sunxi_dump_reg_remove(struct platform_device *pdev)
 {
 	int i;
+
+	unregister_syscore(&standby_dump_syscore);
 
 	for (i = 0; i < ARRAY_SIZE(dump_class_attrs); i++) {
 		class_remove_file(dump_class, &dump_class_attrs[i]);
 	}
 
 	class_destroy(dump_class);
-	return 0;
 }
 
 static struct platform_driver sunxi_dump_reg_driver = {
