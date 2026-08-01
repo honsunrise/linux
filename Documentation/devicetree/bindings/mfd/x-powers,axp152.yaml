@@ -86,10 +86,37 @@ allOf:
               - x-powers,axp323
               - x-powers,axp15060
               - x-powers,axp717
+              - x-powers,axp8191
 
     then:
       properties:
         x-powers,dcdc-freq: false
+
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: x-powers,axp8191
+
+    then:
+      required:
+        - vin1-supply
+        - vin2-supply
+        - vin3-supply
+        - vin4-supply
+        - vin5-supply
+        - vin6-supply
+        - vin7-supply
+        - vin8-supply
+        - vin9-supply
+        - aldoin-supply
+        - bldoin-supply
+        - cldoin-supply
+        - dldoin-supply
+        - eldoin-supply
+        - ips-supply
+        - swin-supply
 
 properties:
   compatible:
@@ -108,6 +135,7 @@ properties:
           - x-powers,axp806
           - x-powers,axp809
           - x-powers,axp813
+          - x-powers,axp8191
           - x-powers,axp15060
       - items:
           - const: x-powers,axp228
@@ -179,6 +207,14 @@ properties:
   vin7-supply:
     description: >
       DCDC7 power supply node, if present.
+
+  vin8-supply:
+    description: >
+      DCDC8 power supply node, if present.
+
+  vin9-supply:
+    description: >
+      DCDC9 power supply node, if present.
 
   vina-supply:
     description: >
@@ -277,7 +313,7 @@ properties:
           Defines the work frequency of DC-DC in kHz.
 
     patternProperties:
-      "^(([a-f])?ldo[0-9]|dcdc[0-7a-e]|ldo(_|-)io(0|1)|(dc1)?sw|rtc(_|-)ldo|cpusldo|drivevbus|dc5ldo|boost)$":
+      "^(([a-f])?ldo[0-9]|dcdc[0-9a-e]|ldo(_|-)io(0|1)|dc1sw[12]|(dc1)?sw|rtc(_|-)ldo|cpusldo|drivevbus|dc5ldo|boost)$":
         $ref: /schemas/regulator/regulator.yaml#
         type: object
         unevaluatedProperties: false
