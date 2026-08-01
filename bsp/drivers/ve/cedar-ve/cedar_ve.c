@@ -45,6 +45,7 @@
 #include <linux/delay.h>
 #include <linux/scatterlist.h>
 #include <linux/mm.h>
+#include <linux/vmalloc.h>
 #include <linux/debugfs.h>
 #include <linux/pm_runtime.h>
 #include <linux/devfreq.h>
@@ -1820,7 +1821,6 @@ static const struct file_operations cedardev_fops = {
 	.mmap	 = cedardev_mmap,
 	.open	 = cedardev_open,
 	.release = cedardev_release,
-	.llseek	 = no_llseek,
 	.unlocked_ioctl	= compat_cedardev_ioctl,
 	.compat_ioctl   = compat_cedardev_ioctl,
 };
@@ -2060,7 +2060,7 @@ static void cedardev_exit(struct platform_device *pdev)
 	VE_LOGD("cedar-ve exit\n");
 }
 
-static int sunxi_cedar_remove(struct platform_device *pdev)
+static void sunxi_cedar_remove(struct platform_device *pdev)
 {
 	struct cedar_dev *cedar_devp = dev_get_drvdata(&pdev->dev);
 	const struct cedar_ve_quirks *quirks = NULL;
@@ -2070,7 +2070,7 @@ static int sunxi_cedar_remove(struct platform_device *pdev)
 
 	if (!cedar_devp) {
 		VE_LOGE("cedar_devp invalid\n");
-		return 0;
+		return;
 	}
 	quirks = cedar_devp->quirks;
 
@@ -2082,14 +2082,14 @@ static int sunxi_cedar_remove(struct platform_device *pdev)
 		if (pdev->id == 1) {
 			VE_LOGI("remove ve just use to del iommu master\n");
 			kfree(cedar_devp);
-			return 0;
+			return;
 		} else {
 			VE_LOGI("remove ve\n");
 		}
 	} else if (quirks->ve_mod == VE_MODULE_1) {
 		VE_LOGI("remove ve1\n");
 		kfree(cedar_devp);
-		return 0;
+		return;
 	} else if (quirks->ve_mod == VE_MODULE_2) {
 		VE_LOGI("remove ve2\n");
 	} else {
@@ -2101,7 +2101,7 @@ static int sunxi_cedar_remove(struct platform_device *pdev)
 #endif
 	cedardev_exit(pdev);
 	kfree(cedar_devp);
-	return 0;
+	return;
 }
 
 static int sunxi_cedar_probe(struct platform_device *pdev)
@@ -2234,5 +2234,5 @@ MODULE_LICENSE("GPL");
 MODULE_VERSION(DRV_VERSION);
 MODULE_ALIAS("platform:cedarc-sunxi");
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 25))
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 #endif
