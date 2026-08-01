@@ -364,7 +364,7 @@
 		phy-supply = <&reg_dc1sw1>;
 		tx-internal-delay-ps = <1200>;
 		rx-internal-delay-ps = <1000>;
-		status = "disabled";
+		status = "okay";
 
 		mdio0: mdio {
 			compatible = "snps,dwmac-mdio";
@@ -397,7 +397,7 @@
 	max-frequency = <200000000>;
 	vmmc-supply = <&reg_dc1sw2>;
 	vqmmc-supply = <&reg_cldo5>;
-	status = "disabled";
+	status = "okay";
 };
 
 &ufs {
@@ -406,7 +406,7 @@
 	vcc-supply = <&reg_dldo6>;
 	vccq-supply = <&reg_dcdc8>;
 	vccq2-supply = <&reg_dcdc8>;
-	status = "disabled";
+	status = "okay";
 };
 
 &uart0 {
