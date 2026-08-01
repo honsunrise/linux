@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR MIT)
 
-#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/sun6i-rtc.h>
 #include <dt-bindings/clock/sun60i-a733-ccu.h>
+#include <dt-bindings/clock/sun60i-a733-r-ccu.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/reset/sun60i-a733-ccu.h>
+#include <dt-bindings/reset/sun60i-a733-r-ccu.h>
 
 / {
 	interrupt-parent = <&gic>;
@@ -78,25 +81,18 @@
 		};
 	};
 
-	osc24M: osc24M-clk {
+	osc26M: osc26M-clk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
-		clock-frequency = <24000000>;
-		clock-output-names = "osc24M";
+		clock-frequency = <26000000>;
+		clock-output-names = "osc26M";
 	};
 
-	osc32k: osc32k-clk {
+	ext_osc32k: ext-osc32k-clk {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
 		clock-frequency = <32768>;
-		clock-output-names = "osc32k";
-	};
-
-	iosc: internal-osc-clk {
-		#clock-cells = <0>;
-		compatible = "fixed-clock";
-		clock-frequency = <16000000>;
-		clock-output-names = "iosc";
+		clock-output-names = "ext-osc32k";
 	};
 
 	psci {
@@ -133,7 +129,7 @@
 				     <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&ccu CLK_APB1>, <&osc24M>, <&osc32k>;
+			clocks = <&ccu CLK_APB1>, <&osc26M>, <&rtc CLK_OSC32K>;
 			clock-names = "apb", "hosc", "losc";
 			gpio-controller;
 			#gpio-cells = <3>;
@@ -143,17 +139,25 @@
 			mmc0_pins: mmc0-pins {
 				pins = "PF0", "PF1", "PF2",
 				       "PF3", "PF4", "PF5";
+				allwinner,pinmux = <2>;
 				function = "mmc0";
 				drive-strength = <30>;
 				bias-pull-up;
+			};
+
+			uart0_pb9_pb10_pins: uart0-pb9-pb10-pins {
+				pins = "PB9", "PB10";
+				allwinner,pinmux = <2>;
+				function = "uart0";
 			};
 		};
 
 		ccu: clock-controller@2002000 {
 			compatible = "allwinner,sun60i-a733-ccu";
 			reg = <0x02002000 0x2000>;
-			clocks = <&osc24M>, <&osc32k>, <&iosc>;
-			clock-names = "hosc", "losc", "iosc";
+			clocks = <&osc26M>, <&rtc CLK_OSC32K>,
+				 <&rtc CLK_IOSC>, <&rtc CLK_OSC32K_FANOUT>;
+			clock-names = "hosc", "losc", "iosc", "losc-fanout";
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 		};
@@ -193,6 +197,53 @@
 			status = "disabled";
 			#address-cells = <1>;
 			#size-cells = <0>;
+		};
+
+		dma: dma-controller@4601000 {
+			compatible = "allwinner,sun60i-a733-dma";
+			reg = <0x04601000 0x2000>;
+			interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_DMA0>, <&ccu CLK_MBUS_DMA0>;
+			clock-names = "bus", "mbus";
+			resets = <&ccu RST_BUS_DMA0>;
+			dma-channels = <16>;
+			dma-requests = <64>;
+			#dma-cells = <1>;
+		};
+
+		r_ccu: clock-controller@7010000 {
+			compatible = "allwinner,sun60i-a733-r-ccu";
+			reg = <0x07010000 0x340>;
+			clocks = <&osc26M>, <&rtc CLK_OSC32K>, <&rtc CLK_IOSC>,
+				 <&ccu CLK_SYS_24M>, <&ccu CLK_PLL_PERIPH0_200M>,
+				 <&ccu CLK_PLL_PERIPH0_300M>, <&ccu CLK_PLL_PERIPH1_300M>;
+			clock-names = "hosc", "losc", "iosc", "sys-24m",
+				      "pll-periph0-200m", "pll-periph0-300m",
+				      "pll-periph1-300m";
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+
+		nmi: interrupt-controller@7010320 {
+			compatible = "allwinner,sun60i-a733-nmi",
+				     "allwinner,sun55i-a523-nmi";
+			reg = <0x07010320 0xc>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		rtc: rtc@7090000 {
+			compatible = "allwinner,sun60i-a733-rtc",
+				     "allwinner,sun50i-r329-rtc";
+			reg = <0x07090000 0x400>;
+			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&r_ccu CLK_BUS_R_RTC>, <&osc26M>,
+				 <&r_ccu CLK_R_AHB>, <&ext_osc32k>;
+			clock-names = "bus", "hosc", "ahb", "ext-osc32k";
+			clock-output-names = "osc32k", "osc32k-fanout", "iosc";
+			#clock-cells = <1>;
 		};
 	};
 };
