@@ -401,6 +401,8 @@
 };
 
 &ufs {
+	nvmem-cells = <&ufs_calibration_low>, <&ufs_calibration_high>;
+	nvmem-cell-names = "calibration-low", "calibration-high";
 	vcc-supply = <&reg_dldo6>;
 	vccq-supply = <&reg_dcdc8>;
 	vccq2-supply = <&reg_dcdc8>;
