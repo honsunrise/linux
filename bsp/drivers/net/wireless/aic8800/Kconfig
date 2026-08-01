@@ -19,6 +19,7 @@ endchoice
 
 choice
 	prompt "Choice host wake IRQ type"
+	depends on AIC_WLAN_SUPPORT
 	default AIC_IRQ_ACTIVE_UNSET
 	help
 		Choice host wake IRQ type.
