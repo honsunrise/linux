@@ -216,7 +216,6 @@
 			resets = <&ccu RST_BUS_UFS_CORE>, <&ccu RST_BUS_UFS_PHY>,
 				 <&ccu RST_BUS_UFS_AXI>, <&ccu RST_BUS_UFS_AHB>;
 			reset-names = "controller_rst", "phy_rst", "axi_rst", "ahb_rst";
-			caps-wb-en;
 			status = "disabled";
 		};
 
@@ -303,5 +302,20 @@
 			clock-output-names = "osc32k", "osc32k-fanout", "iosc";
 			#clock-cells = <1>;
 		};
+		sid: efuse@3006000 {
+			compatible = "allwinner,sun60i-a733-sid";
+			reg = <0x03006000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			ufs_calibration_low: calibration-low@60 {
+				reg = <0x60 0x4>;
+			};
+
+			ufs_calibration_high: calibration-high@64 {
+				reg = <0x64 0x4>;
+			};
+		};
+
 	};
 };
