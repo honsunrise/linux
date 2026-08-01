@@ -8,7 +8,7 @@
 #ifndef __FLUSH_CACHE_H
 #define __FLUSH_CACHE_H
 
-#include <asm-generic/export.h>
+#include <linux/export.h>
 
 #include <asm/asm-offsets.h>
 #include <asm/alternative.h>
