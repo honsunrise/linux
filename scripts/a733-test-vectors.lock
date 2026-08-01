@@ -56,15 +56,18 @@
   "archives": {
     "gpu_prime": {
       "source": "ayiejosh/a733-powervr-fex@28c82689457033ac658fe863f230d8abf4e5b7c4",
-      "sha256": "0c25fd5dd483d8d3fb9dd2df33ffc0656929c568c5aabc3afb9cf2d5fab4f546"
+      "sha256": "0c25fd5dd483d8d3fb9dd2df33ffc0656929c568c5aabc3afb9cf2d5fab4f546",
+      "size": 102449
     },
     "npu_models": {
       "source": "arnaudlvq/MediaPipe-FaceLandmarker-NPU-Version-A733-VeriSilicon-VIP9000@925773701b5bb07515d976ee31fd4468d6ecb373",
-      "sha256": "108ed69343d6161988daf9426e931e3189bbc25ffd940d8204f98c9458dc0e1c"
+      "sha256": "108ed69343d6161988daf9426e931e3189bbc25ffd940d8204f98c9458dc0e1c",
+      "size": 15269870
     },
     "npu_runtime": {
       "source": "ZIFENG278/ai-sdk@fc90006d0f6569da2f6726c2d8395877686f5aca",
-      "sha256": "c562e7ed8a5a6f341029e521bdf05568f7ba25e26c5da426eb3d9d45db171cae"
+      "sha256": "c562e7ed8a5a6f341029e521bdf05568f7ba25e26c5da426eb3d9d45db171cae",
+      "size": 384668032
     }
   },
   "thresholds": {

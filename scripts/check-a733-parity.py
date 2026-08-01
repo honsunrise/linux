@@ -435,7 +435,8 @@ def validate_required_feature_set(rows: list[MapRow]) -> None:
     ):
         raise CheckError("map lacks AIC8800 firmware coverage")
     if not any(
-        row.kind == "firmware" and row.feature_id.lower().endswith(".nbg")
+        row.kind == "firmware"
+        and row.feature_id.lower().endswith((".nb", ".nbg"))
         for row in rows
     ):
         raise CheckError("map lacks NPU NBG firmware/model coverage")

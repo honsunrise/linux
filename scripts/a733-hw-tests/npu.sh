@@ -20,9 +20,9 @@ for name,size in [('detector.input',98304),('landmarks.input',393216),('blendsha
     (root/name).write_bytes(bytes(size))
 PY
 
-default_profiles="detector:face_detection.nbg:detector.input:0.67
-landmarks:face_landmarks.nbg:landmarks.input:3.16
-blendshapes:face_blendshapes.nbg:blendshapes.input:0.48"
+default_profiles="detector:face_detector_nbg_int16/network_binary.nb:detector.input:0.67
+landmarks:face_landmarks_detector_nbg_int16/network_binary.nb:landmarks.input:3.16
+blendshapes:face_blendshapes_nbg_int16/network_binary.nb:blendshapes.input:0.48"
 profiles=${A733_NPU_PROFILES:-$default_profiles}
 metrics='{}'
 for profile in $profiles; do
@@ -31,7 +31,8 @@ for profile in $profiles; do
 	rest=${rest#*:}; input=${rest%%:*}; baseline=${rest##*:}
 	[ -f "$model_dir/$model" ] || a733_block "missing NPU model $model"
 	sample="$work/$name.sample.txt"
-	printf '%s %s\n' "$model_dir/$model" "$work/$input" >"$sample"
+	printf '[network]\n%s\n[input]\n%s\n' \
+		"$model_dir/$model" "$work/$input" >"$sample"
 	strace -f -e openat,ioctl -o "$work/$name.strace" \
 		vpm_run -s "$sample" -l 100 >"$work/$name.out" 2>&1
 	grep -F '/dev/vipcore' "$work/$name.strace" >/dev/null || \

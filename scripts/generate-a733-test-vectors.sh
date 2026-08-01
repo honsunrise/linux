@@ -131,9 +131,17 @@ lock_filter=$(cat <<'JQ'
     pcie: "same job with an independent 1 GiB regular file on A733_PCIE_TEST_MOUNT"
   },
   archives: {
-    gpu_prime: {source: $gpu_source, sha256: $gpu_hash},
-    npu_models: {source: $npu_model_source, sha256: $npu_model_hash},
-    npu_runtime: {source: $npu_runtime_source, sha256: $npu_runtime_hash}
+    gpu_prime: {source: $gpu_source, sha256: $gpu_hash, size: 102449},
+    npu_models: {
+      source: $npu_model_source,
+      sha256: $npu_model_hash,
+      size: 15269870
+    },
+    npu_runtime: {
+      source: $npu_runtime_source,
+      sha256: $npu_runtime_hash,
+      size: 384668032
+    }
   },
   thresholds: {
     decoder_frames: 300,

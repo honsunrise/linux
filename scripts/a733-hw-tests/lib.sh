@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-only
 
-set -euo pipefail
+set -Eeuo pipefail
 
 A733_SCHEMA_VERSION=1
 A733_FINISHED=0
@@ -20,6 +20,7 @@ a733_begin() {
 	A733_METRICS="$A733_TMPDIR/metrics.json"
 	: >"$A733_CHECKS"
 	printf '{}\n' >"$A733_METRICS"
+	trap 'a733_on_error $? "$BASH_COMMAND"' ERR
 	trap 'a733_cleanup $?' EXIT INT TERM
 }
 
@@ -30,6 +31,15 @@ a733_cleanup() {
 		a733_finish fail "test exited unexpectedly with status $code" "$code"
 	fi
 	rm -rf "${A733_TMPDIR:-}"
+}
+
+a733_on_error() {
+	code=$1
+	command_text=$2
+	if [ "${A733_FINISHED:-0}" -eq 0 ]; then
+		set +e
+		a733_finish fail "command failed with status $code: $command_text" "$code"
+	fi
 }
 
 a733_add_check() {
