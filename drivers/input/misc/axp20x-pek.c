@@ -31,6 +31,7 @@
 #define AXP20X_PEK_SHUTDOWN_MASK	(0x03)
 
 struct axp20x_info {
+	unsigned int pek_key_reg;
 	const struct axp20x_time *startup_time;
 	unsigned int startup_mask;
 	const struct axp20x_time *shutdown_time;
@@ -64,6 +65,13 @@ static const struct axp20x_time axp221_startup_time[] = {
 	{ .time = 3000, .idx = 3 },
 };
 
+static const struct axp20x_time axp8191_startup_time[] = {
+	{ .time = 512,  .idx = 0 },
+	{ .time = 1000, .idx = 1 },
+	{ .time = 2000, .idx = 2 },
+	{ .time = 3000, .idx = 3 },
+};
+
 static const struct axp20x_time shutdown_time[] = {
 	{ .time = 4000,  .idx = 0 },
 	{ .time = 6000,  .idx = 1 },
@@ -72,6 +80,7 @@ static const struct axp20x_time shutdown_time[] = {
 };
 
 static const struct axp20x_info axp20x_info = {
+	.pek_key_reg = AXP20X_PEK_KEY,
 	.startup_time = startup_time,
 	.startup_mask = AXP20X_PEK_STARTUP_MASK,
 	.shutdown_time = shutdown_time,
@@ -79,10 +88,19 @@ static const struct axp20x_info axp20x_info = {
 };
 
 static const struct axp20x_info axp221_info = {
+	.pek_key_reg = AXP20X_PEK_KEY,
 	.startup_time = axp221_startup_time,
 	.startup_mask = AXP20X_PEK_STARTUP_MASK,
 	.shutdown_time = shutdown_time,
 	.shutdown_mask = AXP20X_PEK_SHUTDOWN_MASK,
+};
+
+static const struct axp20x_info axp8191_info = {
+	.pek_key_reg = AXP8191_PONLEVEL_SET,
+	.startup_time = axp8191_startup_time,
+	.startup_mask = GENMASK(1, 0),
+	.shutdown_time = shutdown_time,
+	.shutdown_mask = GENMASK(3, 2),
 };
 
 static ssize_t axp20x_show_attr(struct device *dev,
@@ -93,7 +111,8 @@ static ssize_t axp20x_show_attr(struct device *dev,
 	unsigned int val;
 	int ret, i;
 
-	ret = regmap_read(axp20x_pek->axp20x->regmap, AXP20X_PEK_KEY, &val);
+	ret = regmap_read(axp20x_pek->axp20x->regmap,
+			  axp20x_pek->info->pek_key_reg, &val);
 	if (ret != 0)
 		return ret;
 
@@ -155,8 +174,8 @@ static ssize_t axp20x_store_attr(struct device *dev,
 	}
 
 	idx <<= ffs(mask) - 1;
-	ret = regmap_update_bits(axp20x_pek->axp20x->regmap, AXP20X_PEK_KEY,
-				 mask, idx);
+	ret = regmap_update_bits(axp20x_pek->axp20x->regmap,
+				 axp20x_pek->info->pek_key_reg, mask, idx);
 	if (ret != 0)
 		return -EINVAL;
 
@@ -321,6 +340,8 @@ static int axp20x_pek_probe(struct platform_device *pdev)
 	}
 
 	axp20x_pek->info = (struct axp20x_info *)match->driver_data;
+	if (axp20x_pek->axp20x->variant == AXP8191_ID)
+		axp20x_pek->info = (struct axp20x_info *)&axp8191_info;
 
 	platform_set_drvdata(pdev, axp20x_pek);
 
