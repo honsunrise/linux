@@ -18,7 +18,7 @@
 # Init all variables
 ccflags-y += -I $(srctree)/include/linux/
 
-KERNEL_SRC_DIR := $(LICHEE_KERN_DIR)
+KERNEL_SRC_DIR := $(srctree)
 MODULE_INS_DIR := $(LICHEE_MOD_DIR)
 KERNEL_OUT_DIR := $(O)
 #$(info 1 $(SOC),$(KERNEL_SRC_DIR), $(KERNEL_OUT_DIR) )

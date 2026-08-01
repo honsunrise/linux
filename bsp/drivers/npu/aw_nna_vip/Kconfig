@@ -36,9 +36,9 @@ config NPU_SET_CLK_VOL
 	 Choose M to enable NPU Set Clk Vol
 
 #if NNA_VIP1
-#source "$(BSP_TOP)drivers/npu/aw_nna_vip/vip1/Kconfig"
+#source "bsp/drivers/npu/aw_nna_vip/vip1/Kconfig"
 #endif
 
 #if NNA_VIP2
-#source "$(BSP_TOP)drivers/npu/aw_nna_vip/vip2/Kconfig"
+#source "bsp/drivers/npu/aw_nna_vip/vip2/Kconfig"
 #endif
