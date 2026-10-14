@@ -112,11 +112,11 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       qcom/qcs6490-radxa-dragon-q6a-kvm.dtb. The latter combines the base DTB
       with qcs6490-radxa-dragon-q6a-kvm.dtbo, retaining radxa,enable-kvm,
       EL2 GPU setup, remoteproc broken-reset and SCM shared-memory ownership.
-    - The initial downstream build failed as recorded above. No build,
-      tests or hardware validation were rerun by the source-migration
-      worker after these fixes. The integration owner must validate both
-      Q6A DTBs, the previously skipped SC8280XP family, kernel/modules,
-      EFI boot, UFS I/O, Iris PM and KVM before deployment.
+    - Validate the configured kernel/modules, both Q6A DTBs and the formerly
+      skipped SC8280XP family in the consuming Nix configuration after each
+      source update. Physical EFI boot, UFS I/O, Iris PM and KVM require
+      separate hardware validation before deployment; compilation alone does
+      not establish those properties.
 
   Manually ported / synced across v7.0.11 → v7.1.y
     Group A: Radxa CM-Q64 board support
