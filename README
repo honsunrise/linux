@@ -22,6 +22,13 @@ The UFS interrupt trigger is a preserved bring-up setting, not a verified
 hardware requirement; the vendor DT describes an edge-rising interrupt.
 No experimental UFS IRQ/error-handler changes are carried.
 
+The 7.2 API adaptations also migrate sunxi DRM atomic transactions to
+drm_atomic_commit and replace removed strncpy calls in the enabled pinctrl,
+RTC, NSI, SID, sysinfo and power-key drivers. Bounded input copies retain
+termination and parser limits; unsupported drivers are not enabled or used
+as substitutes for these fixes. The Iris IRQ/runtime-PM corrections preserve
+the complete synchronization and reference-counting fix as one unit.
+
 The configuration interface remains:
 
   make ARCH=arm64 BSP_TOP=bsp/ LICHEE_KERN_DIR=./ \

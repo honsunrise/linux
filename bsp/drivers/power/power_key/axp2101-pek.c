@@ -156,8 +156,9 @@ static ssize_t axp20x_store_ext_attr(struct device *dev,
 	unsigned int val, idx = 0;
 	unsigned int best_err = UINT_MAX;
 
-	val_str[sizeof(val_str) - 1] = '\0';
-	strncpy(val_str, buf, sizeof(val_str) - 1);
+	len = min(count, sizeof(val_str) - 1);
+	memcpy(val_str, buf, len);
+	val_str[len] = '\0';
 	len = strlen(val_str);
 
 	if (len && val_str[len - 1] == '\n')

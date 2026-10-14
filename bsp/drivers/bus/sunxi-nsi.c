@@ -1808,24 +1808,22 @@ static ssize_t nsi_store_value(struct device *dev,
 {
 	int nr = to_sensor_dev_attr(attr)->index;
 	unsigned long port, val;
-	unsigned char buffer[64];
-	unsigned char *pbuf, *pbufi;
+	char buffer[64];
+	char *pbuf, *pbufi;
 	int err;
 
-	if (strlen(buf) >= 64) {
+	if (strscpy(buffer, buf, sizeof(buffer)) < 0) {
 		dev_err(dev, "arguments out of range!\n");
 		return -EINVAL;
 	}
 
-	while (*buf == ' ') /* find the first unblank character */
-		buf++;
-	strncpy(buffer, buf, strlen(buf));
-
-	pbufi = buffer;
-	while (*pbufi != ' ') /* find the first argument */
-		pbufi++;
-	*pbufi = 0x0;
-	pbuf = (unsigned char *)buffer;
+	pbuf = buffer;
+	while (*pbuf == ' ') /* find the first unblank character */
+		pbuf++;
+	pbufi = strchr(pbuf, ' ');
+	if (!pbufi)
+		return -EINVAL;
+	*pbufi = '\0';
 	err = kstrtoul(pbuf, 10, &port);
 	if (err < 0)
 		return err;
@@ -1838,7 +1836,7 @@ static ssize_t nsi_store_value(struct device *dev,
 	while (*pbuf == ' ') /* remove extra space character */
 		pbuf++;
 	pbufi = pbuf;
-	while ((*pbufi != ' ') && (*pbufi != '\n'))
+	while (*pbufi && (*pbufi != ' ') && (*pbufi != '\n'))
 		pbufi++;
 	*pbufi = 0x0;
 

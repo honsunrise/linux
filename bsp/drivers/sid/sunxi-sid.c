@@ -838,7 +838,7 @@ EXPORT_SYMBOL(sunxi_get_platform_id);
 
 s32 sunxi_efuse_readn(s8 *key_name, void *buf, u32 n)
 {
-	char name[32] = {0};
+	char name[SUNXI_KEY_NAME_LEN];
 
 	if ((key_name == NULL) || (*(s8 *)key_name == 0)
 			|| (n == 0) || (buf == NULL)) {
@@ -848,7 +848,8 @@ s32 sunxi_efuse_readn(s8 *key_name, void *buf, u32 n)
 	}
 	WARN_ON(n < 4);
 
-	strncpy(name, key_name, strlen(key_name));
+	if (strscpy(name, key_name, sizeof(name)) < 0)
+		return -EINVAL;
 	sid_read_key(name, buf, n, sunxi_soc_is_secure());
 	return 0;
 }

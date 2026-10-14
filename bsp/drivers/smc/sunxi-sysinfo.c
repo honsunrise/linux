@@ -248,11 +248,15 @@ static ssize_t key_info_store(
 #endif
 		const char *buf, size_t count)
 {
+	size_t len = count;
+
 	if (count >= SUNXI_KEY_NAME_LEN)
 		return -EINVAL;
 
+	if (len && buf[len - 1] == '\n')
+		len--;
 	memset(key_name, 0, SUNXI_KEY_NAME_LEN);
-	strncpy(key_name, buf, count - 1);
+	memcpy(key_name, buf, len);
 	return count;
 }
 
