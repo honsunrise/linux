@@ -2778,7 +2778,7 @@ _sunxi_drm_hdmi_detect(struct drm_connector *connector, bool force)
 	}
 
 	ret = _sunxi_drv_hdmi_hpd_get(hdmi);
-	hdmi_inf("drm hdmi detect: %s\n", ret ? "connect" : "disconnect");
+	hdmi_trace("drm hdmi detect: %s\n", ret ? "connect" : "disconnect");
 	return ret == 1 ? connector_status_connected : connector_status_disconnected;
 }
 
