@@ -25,6 +25,7 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/string.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -1109,7 +1110,7 @@ static ssize_t flag_store(struct device *dev,
 		dev_err(dev, "parameter is too long\n");
 		return size;
 	}
-	strncpy(str, buf, size - 1);
+	memcpy(str, buf, size - 1);
 	str[size - 1] = '\0';
 
 	flag = str2flag(str);
