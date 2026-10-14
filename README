@@ -41,10 +41,10 @@ caller suffixes remain supported. Nix retains responsibility for its
 embedded initramfs, root preparation, CPU_IDLE/PREEMPT/RCU settings and
 the measured boot command line, including irqpoll.
 
-The 7.1.3 runtime baseline was validated before this migration. This
-7.2.10 source update has not been built or boot-tested; BSP API compatibility,
-the generated configuration, and A7A UFS/Ethernet operation require the
-integrating Nix build and hardware validation.
+The 7.1.3 runtime baseline was validated before this migration. Validate each
+7.2.10 update with the consuming Nix configuration, including the generated
+config, kernel/modules and Cubie DTBs. A successful build is not a substitute
+for physical A7A UFS/Ethernet and boot validation before deployment.
 
 Quick Start
 -----------
