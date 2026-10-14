@@ -32,6 +32,7 @@
 #include <linux/platform_device.h>
 #include <linux/pinctrl/pinconf.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 #include <sunxi-sip.h>
 #include <linux/iopoll.h>
 #if IS_ENABLED(CONFIG_SUNXI_RPROC_SHARE_IRQ)
@@ -2727,8 +2728,7 @@ int sunxi_bsp_pinctrl_init_with_variant(struct platform_device *pdev,
 			goto clk_error;
 		}
 
-		strncpy(pctl->pad_addr[0].name, "i2s0", 4);
-		pctl->pad_addr[0].name[4] = '\0';
+		strscpy(pctl->pad_addr[0].name, "i2s0");
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dmic");
@@ -2740,8 +2740,7 @@ int sunxi_bsp_pinctrl_init_with_variant(struct platform_device *pdev,
 			goto clk_error;
 		}
 
-		strncpy(pctl->pad_addr[1].name, "dmic", 4);
-		pctl->pad_addr[1].name[4] = '\0';
+		strscpy(pctl->pad_addr[1].name, "dmic");
 	}
 #endif
 	sunxi_pinctrl_setup_debounce(pctl, node);
