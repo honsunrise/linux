@@ -237,7 +237,7 @@ void iris_vpu_power_off(struct iris_core *core)
 	iris_unset_icc_bw(core);
 
 	if (!iris_vpu_watchdog(core, core->intr_status))
-		disable_irq_nosync(core->irq);
+		disable_irq(core->irq);
 }
 
 int iris_vpu_power_on_controller(struct iris_core *core)
@@ -295,12 +295,12 @@ int iris_vpu_power_on_hw(struct iris_core *core)
 
 	ret = iris_prepare_enable_clock(core, IRIS_BSE_HW_CLK);
 	if (ret && ret != -ENOENT)
-		goto err_disable_bse_hw_clock;
+		goto err_disable_hw_ahb_clock;
 
 	return 0;
 
-err_disable_bse_hw_clock:
-	iris_disable_unprepare_clock(core, IRIS_BSE_HW_CLK);
+err_disable_hw_ahb_clock:
+	iris_disable_unprepare_clock(core, IRIS_HW_AHB_CLK);
 err_disable_hw_clock:
 	iris_disable_unprepare_clock(core, IRIS_HW_CLK);
 err_disable_power:

@@ -1,26 +1,28 @@
 This repository is an UNOFFICIAL fork of the Linux kernel.
 
-  Upstream base : Linux stable v7.1.2  (commit 03e2778d1f11)
+  Upstream base : Linux stable v7.2.10 (commit 7b20d05fd38d)
   Vendor source : https://github.com/radxa/kernel  branch linux-7.0.11  (commit 922ecc5644d9)
-  Forwarded to  : v7.1.y  (in branch honsunrise/v7.1)
+  Forwarded to  : v7.2.y  (in branch honsunrise/v7.2)
 
   Pipeline      : Radxa  (309 vendor commits on stable v7.0.11)
                   → drop noise   (-3 historical wip, -1 pmic-glink HACK, -2 PKGBUILD)
                   → rebase --signoff onto stable v7.1.2, --empty=drop
                   → keep the existing v7.1 forward-port and refresh the stable base
                   → sync Radxa 7.0.11-2 delta: 7 ported, 1 already upstream, 1 HACK omitted
-                  → 263 vendor commits (this branch)
+                  → 263 carried vendor commits at v7.1 HEAD 2ca9a714e4e3
+                  → merge stable v7.2.10 without rewriting vendor history
 
-  Every commit carries DCO Signed-off-by:
+  Vendor forwarding commits carry DCO Signed-off-by:
       - original author (preserved verbatim)
       - Honsun Zhu <honsun@linux.com>  (forwarder)
 
   Branches (all visible at github.com/honsunrise/linux):
     master                       upstream Linus mainline (mirror)
     linux-7.0.y                  stable v7.0.y series (mirror)
-    linux-7.1.y                  stable v7.1.y series (mirror, this branch's base)
+    linux-7.1.y                  stable v7.1.y series (mirror, previous base)
     radxa-original/linux-7.0.11  Radxa vendor untouched (mirror, reference)
-    honsunrise/v7.1              this fork's main branch
+    honsunrise/v7.1              preserved v7.1 forward-port
+    honsunrise/v7.2              this fork's v7.2 stable integration branch
 
   Trademark notice
     Linux® is the registered trademark of Linus Torvalds in the U.S. and other
@@ -33,6 +35,52 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
     and LICENSES/). Original SPDX-License-Identifier headers and copyright
     lines are preserved unchanged. Additions made under honsunrise's own name
     are released under GPL-2.0 unless a per-file SPDX header states otherwise.
+
+  v7.2.10 integration
+    - Merge v7.2.10, retaining the complete v7.1 vendor ancestry and its
+      original authors, licenses and DCO trailers; no vendor-history rebase.
+    - Preserve Q6A/CM-Q64 PCIe bus-topology mappings while adding the missing
+      SMMU mask cells, following upstream Q6A fix efcf504642bae.
+    - Preserve SC8280XP thermal sensors, PCI bridge-only PERST parsing and
+      externally preloaded remoteproc support. Combine remoteproc attachment
+      with upstream handover-IRQ balancing and stopped-subsystem detection.
+    - Adapt carried DP CEC to upstream's threaded-IRQ/plugged lifecycle and
+      retain Radxa panel timing and bridge support. Upstream 5e97d117b79c3
+      supersedes the carried PUSH_IDLE fix; 96379c2dec725 supplies the
+      cached-EDID fix. The previously omitted 15 patches below remain omitted.
+    - Reconcile Iris with upstream platform/firmware and encoder refactors,
+      retaining SC8280XP, Gen1/Gen2 firmware fallback, SFR reporting and HEVC
+      alignment. Retain upstream GOP fix cfcaa26b36f7e and runtime-PM fixes.
+    - Upstream now supplies UFS active-lane validation, including the PCI
+      unset-lane guard, and asynchronous remoteproc attachment; retain these
+      implementations rather than duplicate the carried backports.
+    - Restore the SC8280XP video node's original Radxa includes:
+      clock/qcom,sm8350-videocc.h, reset/qcom,sm8350-videocc.h and
+      interconnect/qcom,icc.h. SC8280XP uses videocc-sm8350.c; there is no
+      separate qcom,videocc-sc8280xp.h to import. Do not skip SC8280XP,
+      SA8540P, SA8295P or Dragon Q8B DTBs to conceal missing bindings.
+
+  Build / downstream interface
+    - Source release is 7.2.10 (EXTRAVERSION empty). Downstream source-archive
+      builds must use version/modDirVersion 7.2.10, CONFIG_LOCALVERSION=""
+      and CONFIG_LOCALVERSION_AUTO=n; update the source revision/hash and
+      remove skip-sc8280xp-dtbs.patch.
+    - Keep the existing headless config, not a replacement defconfig:
+      CONFIG_DRM_MSM=m and CONFIG_DRM_MSM_KMS=n. Enabling KMS previously
+      caused a DP IRQ storm on the deployed Q6A; no display enablement is
+      implied by carrying these display driver changes.
+    - Preserve CONFIG_EFI=y, CONFIG_EFI_STUB=y, CONFIG_KVM=y and built-in
+      CONFIG_SCSI_UFSHCD/CONFIG_SCSI_UFSHCD_PLATFORM/CONFIG_SCSI_UFS_QCOM.
+      No new explicit config selection is needed for these paths. Iris
+      selects QCOM_UBWC_CONFIG; SC_VIDEOCC_7280 serves Q6A and SM_VIDEOCC_8350
+      serves SC8280XP.
+    - ARCH_QCOM builds qcom/qcs6490-radxa-dragon-q6a.dtb and
+      qcom/qcs6490-radxa-dragon-q6a-kvm.dtb. The latter combines the base DTB
+      with qcs6490-radxa-dragon-q6a-kvm.dtbo, retaining radxa,enable-kvm,
+      EL2 GPU setup, remoteproc broken-reset and SCM shared-memory ownership.
+    - No build or hardware validation was performed during this source
+      migration. Validate both Q6A DTBs, the previously skipped SC8280XP
+      family, kernel/modules, EFI boot, UFS I/O and KVM before deployment.
 
   Manually ported / synced across v7.0.11 → v7.1.y
     Group A: Radxa CM-Q64 board support
@@ -63,12 +111,12 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       - spi: qcom-geni: Fix cs_change handling on the last transfer
 
 
-  Needs-rewrite for v7.1 (15 commits, NOT in this branch)
+  Needs-rewrite since v7.1 (15 commits, NOT ported into this branch)
     The drm/msm/dp subsystem and qcom q6apm were substantially reworked in
     upstream v7.1, in ways that invalidate the assumptions of these Radxa
     patches (touched functions deleted, struct layouts changed, lifecycle
     hooks moved). Rather than risk a wrong port, they are intentionally
-    omitted; each must be reauthored against the v7.1 design.
+    omitted; each needs an independent port against the current design.
 
     Effect: DisplayPort DSC compression, DP HDR metadata SDP, DP color
     spaces (BT.2020 / DCI-P3), max bpc selection, peripheral flush for
