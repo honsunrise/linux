@@ -155,6 +155,10 @@ void vgic_v3_fold_lr_state(struct kvm_vcpu *vcpu)
 	for (int lr = 0; lr < cpuif->used_lrs; lr++)
 		vgic_v3_fold_lr(vcpu, cpuif->vgic_lr[lr]);
 
+	cpuif->used_lrs = 0;
+	if (!irq)
+		return;
+
 	/*
 	 * EOIMode=0: use EOIcount to emulate deactivation. We are
 	 * guaranteed to deactivate in reverse order of the activation, so
@@ -188,8 +192,6 @@ void vgic_v3_fold_lr_state(struct kvm_vcpu *vcpu)
 		vgic_v3_fold_lr(vcpu, lr);
 		eoicount--;
 	}
-
-	cpuif->used_lrs = 0;
 }
 
 void vgic_v3_deactivate(struct kvm_vcpu *vcpu, u64 val)
@@ -275,7 +277,13 @@ void vgic_v3_deactivate(struct kvm_vcpu *vcpu, u64 val)
 		lr = vgic_v3_compute_lr(vcpu, irq) & ~ICH_LR_ACTIVE_BIT;
 	}
 
-	if (lr & ICH_LR_HW)
+	/*
+	 * In the nested state, the irq has already been deactivated via the HW
+	 * bit in the LR. Deactivating again would be harmless except AmpereOne
+	 * errata AC03_CPU_57, AC04_CPU_29 could cause irq delivery to break if
+	 * the deactivation hits the highest priority pending irq.
+	 */
+	if ((lr & ICH_LR_HW) && !vgic_state_is_nested(vcpu))
 		vgic_v3_deactivate_phys(FIELD_GET(ICH_LR_PHYS_ID_MASK, lr));
 
 	vgic_v3_fold_lr(vcpu, lr);
@@ -611,9 +619,13 @@ int vgic_v3_save_pending_tables(struct kvm *kvm)
 		bool is_pending;
 		bool stored;
 
+		irq = vgic_get_irq(kvm, index);
+		if (!irq)
+			continue;
+
 		vcpu = irq->target_vcpu;
 		if (!vcpu)
-			continue;
+			goto put_irq;
 
 		pendbase = GICR_PENDBASER_ADDRESS(vcpu->arch.vgic_cpu.pendbaser);
 
@@ -624,7 +636,7 @@ int vgic_v3_save_pending_tables(struct kvm *kvm)
 		if (ptr != last_ptr) {
 			ret = kvm_read_guest_lock(kvm, ptr, &val, 1);
 			if (ret)
-				goto out;
+				goto put_irq;
 			last_ptr = ptr;
 		}
 
@@ -636,7 +648,7 @@ int vgic_v3_save_pending_tables(struct kvm *kvm)
 			vgic_v4_get_vlpi_state(irq, &is_pending);
 
 		if (stored == is_pending)
-			continue;
+			goto put_irq;
 
 		if (is_pending)
 			val |= 1 << bit_nr;
@@ -644,6 +656,8 @@ int vgic_v3_save_pending_tables(struct kvm *kvm)
 			val &= ~(1 << bit_nr);
 
 		ret = vgic_write_guest_lock(kvm, ptr, &val, 1);
+put_irq:
+		vgic_put_irq(kvm, irq);
 		if (ret)
 			goto out;
 	}

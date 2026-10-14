@@ -1520,12 +1520,14 @@ static int btrfs_reconfigure(struct fs_context *fc)
 	sync_filesystem(sb);
 	set_bit(BTRFS_FS_STATE_REMOUNTING, &fs_info->fs_state);
 
-	if (!btrfs_check_options(fs_info, &ctx->mount_opt, fc->sb_flags))
-		return -EINVAL;
+	if (!btrfs_check_options(fs_info, &ctx->mount_opt, fc->sb_flags)) {
+		ret = -EINVAL;
+		goto restore;
+	}
 
 	ret = btrfs_check_features(fs_info, !(fc->sb_flags & SB_RDONLY));
 	if (ret < 0)
-		return ret;
+		goto restore;
 
 	btrfs_ctx_to_info(fs_info, ctx);
 	btrfs_remount_begin(fs_info, old_ctx.mount_opt, fc->sb_flags);
@@ -1843,8 +1845,12 @@ static int btrfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	f_fsid.val[0] ^= btrfs_root_id(BTRFS_I(d_inode(dentry))->root) >> 32;
 	f_fsid.val[1] ^= btrfs_root_id(BTRFS_I(d_inode(dentry))->root);
 
-	/* Hash dev_t to avoid f_fsid collision with cloned filesystems. */
-	if (fs_info->fs_devices->total_devices == 1) {
+	/*
+	 * Hash dev_t to avoid f_fsid collisions with cloned filesystems.
+	 * Only do this when a clone is present so the original filesystem
+	 * (mounted first) maintains backward-compatible f_fsid behavior.
+	 */
+	if (fs_info->fs_devices->temp_fsid) {
 		__kernel_fsid_t dev_fsid =
 			u64_to_fsid(huge_encode_dev(fs_info->fs_devices->latest_dev->bdev->bd_dev));
 
