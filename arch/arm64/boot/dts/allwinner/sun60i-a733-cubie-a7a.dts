@@ -878,6 +878,16 @@
 	vcc-supply = <&reg_dldo6>;
 	vccq-supply = <&reg_dcdc8>;
 	vccq2-supply = <&reg_dcdc8>;
+	/*
+	 * Retain the trigger used by the bring-up boots that enumerated UFS
+	 * while testing the unmodified core IRQ/EH paths. This is NOT a
+	 * verified hardware requirement: the vendor dtsi and the captured
+	 * vendor DT both describe an edge-rising interrupt.
+	 *
+	 * Revisit using controller status and IRQ traces, not merely the
+	 * absence of spurious-interrupt warnings.
+	 */
+	interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 	status = "okay";
 };
 
