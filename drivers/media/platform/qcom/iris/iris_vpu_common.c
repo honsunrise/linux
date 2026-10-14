@@ -231,13 +231,18 @@ void iris_vpu_power_off_hw(struct iris_core *core)
 
 void iris_vpu_power_off(struct iris_core *core)
 {
+	/*
+	 * Callers synchronously disable the IRQ before taking core->lock.
+	 * Retain a disable reference after they release their temporary one.
+	 * A watchdog interrupt already holds that reference.
+	 */
+	if (!iris_vpu_watchdog(core, core->intr_status))
+		disable_irq_nosync(core->irq);
+
 	iris_opp_set_rate(core->dev, 0);
 	core->iris_platform_data->vpu_ops->power_off_hw(core);
 	core->iris_platform_data->vpu_ops->power_off_controller(core);
 	iris_unset_icc_bw(core);
-
-	if (!iris_vpu_watchdog(core, core->intr_status))
-		disable_irq(core->irq);
 }
 
 int iris_vpu_power_on_controller(struct iris_core *core)

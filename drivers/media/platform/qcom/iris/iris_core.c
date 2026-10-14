@@ -16,6 +16,8 @@ void iris_core_deinit(struct iris_core *core)
 
 	ret = pm_runtime_resume_and_get(core->dev);
 
+	/* Drain the IRQ thread before taking the lock it also needs. */
+	disable_irq(core->irq);
 	mutex_lock(&core->lock);
 	if (core->state != IRIS_CORE_DEINIT) {
 		iris_fw_unload(core);
@@ -27,6 +29,7 @@ void iris_core_deinit(struct iris_core *core)
 		core->state = IRIS_CORE_DEINIT;
 	}
 	mutex_unlock(&core->lock);
+	enable_irq(core->irq);
 
 	if (!ret)
 		pm_runtime_put_sync(core->dev);
@@ -53,6 +56,8 @@ int iris_core_init(struct iris_core *core)
 {
 	int ret;
 
+	/* Keep the IRQ quiesced through power-on and any error unwind. */
+	disable_irq(core->irq);
 	mutex_lock(&core->lock);
 	if (core->state == IRIS_CORE_INIT) {
 		ret = 0;
@@ -91,6 +96,7 @@ int iris_core_init(struct iris_core *core)
 		goto error_unload_fw;
 
 	mutex_unlock(&core->lock);
+	enable_irq(core->irq);
 
 	return iris_wait_for_system_response(core);
 
@@ -104,6 +110,7 @@ error:
 	core->state = IRIS_CORE_DEINIT;
 exit:
 	mutex_unlock(&core->lock);
+	enable_irq(core->irq);
 
 	return ret;
 }
