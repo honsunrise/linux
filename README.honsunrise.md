@@ -75,12 +75,19 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       every iommu-map tuple has four cells. It retains supported RID ranges,
       map-mask aliases and CRC8 collision chaining without copying the map
       or scanning the complete RID space.
-    - Iris power transitions synchronously quiesce IRQs before taking
-      core->lock, covering init/deinit as well as suspend/resume. Temporary
-      masking and the persistent powered-off/watchdog reference are balanced
-      separately so shutdown cannot deadlock against the IRQ thread and
-      hardware is not powered down with IRQ work still active. This generic
-      fix is isolated in commit 0d36bc055e78 for other v7.2.10 Iris users.
+    - Iris IRQ-depth and core-mutex ordering are fixed by 0d36bc055e78,
+      covering init/deinit as well as suspend/resume. That commit alone
+      does not fix the runtime-PM dependency: Gen1 responses can submit
+      commands requiring PM, and IRQ handlers can also wait for inst->lock
+      held by ordinary PM-owning command submitters.
+    - Runtime suspend therefore uses disable_hardirq to detect active IRQ
+      threads without waiting for them. If one is active, it balances the
+      temporary disable and returns -EAGAIN without touching power. Once no
+      handler is active and the IRQ is disabled, synchronize_irq completes
+      full quiescence before the existing locked power-off sequence.
+      Commands and responses retain their normal PM ownership; a failed
+      pm_runtime_resume_and_get no longer incorrectly drops a reference.
+      Port this follow-up together with 0d36bc055e78, not that commit alone.
     - Successful PAS attachment records its resource lifecycle independently
       of rproc->state. Stop disables the attached handover IRQ without
       unpreparing load-state/interconnect resources it never acquired,

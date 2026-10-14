@@ -5,6 +5,7 @@
 
 #include <linux/clk.h>
 #include <linux/interconnect.h>
+#include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_opp.h>
@@ -317,8 +318,22 @@ static int __maybe_unused iris_pm_suspend(struct device *dev)
 
 	core = dev_get_drvdata(dev);
 
-	/* Drain the IRQ thread before taking the lock it also needs. */
-	disable_irq(core->irq);
+	/*
+	 * A response can submit a command needing runtime PM, or wait for an
+	 * instance lock held by such a submitter. Do not wait for that thread
+	 * while PM is RPM_SUSPENDING: let it finish with the hardware powered.
+	 */
+	if (!disable_hardirq(core->irq)) {
+		enable_irq(core->irq);
+		pm_runtime_mark_last_busy(dev);
+		return -EAGAIN;
+	}
+
+	/*
+	 * No handler is active and the IRQ is disabled, so no new thread can
+	 * start. Finish synchronizing in-flight hardware IRQs before power-off.
+	 */
+	synchronize_irq(core->irq);
 	mutex_lock(&core->lock);
 	if (core->state != IRIS_CORE_INIT)
 		goto exit;
