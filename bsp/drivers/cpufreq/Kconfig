@@ -1,3 +1,4 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-source "$(BSP_TOP)drivers/cpufreq/cpufreq-linux-$(VERSION).$(PATCHLEVEL)/Kconfig"
+# The imported provider is versioned by its port, not the running kernel.
+source "$(BSP_TOP)drivers/cpufreq/cpufreq-linux-7.1/Kconfig"

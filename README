@@ -4,6 +4,48 @@ Linux kernel
 The Linux kernel is the core of any Linux operating system. It manages hardware,
 system resources, and provides the fundamental services for all other software.
 
+A733 BSP fork maintenance
+------------------------
+
+The honsunrise/a733-bsp-v7.2 branch merges official stable v7.2.10
+(7b20d05fd38de8e0be168956f6fd241d750c7d69) into the existing Radxa BSP
+forward port. It retains the bsp/ providers and the Cubie A7A/A7S/A7Z DTBs;
+the validated runtime target is the A7A with its UFS combo module.
+
+Five separately committed fixes are imported from the validated Nix source:
+HDMI detection trace gating, the MMC UHS-II host callback guard, A733
+GMAC210 support in dwmac-sun55i, the A7A GMAC resource/PHY setup (including
+tx-queue-0 and rx-queue-0 IRQ names), and the UFS level-high IRQ baseline.
+None is superseded by v7.2.10. The GMAC driver is based on Jerome Brunet's
+2026-07-31 RFC, with the locally validated reset, DMA and PHY clock fixes.
+The UFS interrupt trigger is a preserved bring-up setting, not a verified
+hardware requirement; the vendor DT describes an edge-rising interrupt.
+No experimental UFS IRQ/error-handler changes are carried.
+
+The configuration interface remains:
+
+  make ARCH=arm64 BSP_TOP=bsp/ LICHEE_KERN_DIR=./ \
+       KBUILD_DEFCONFIG=bsp.config defconfig radxa.config radxa_custom.config
+
+Pass the usual CROSS_COMPILE and O= settings for the toolchain/build tree.
+The cpufreq provider is pinned to its existing cpufreq-linux-7.1 directory
+instead of constructing a nonexistent directory from VERSION.PATCHLEVEL.
+Its previously unsupported drivers remain disabled; no new hardware is
+enabled by this stable update. Mainline stmmac is explicit in the final
+fragment, replacing the obsolete vendor-GMAC expectation.
+
+Makefile reports 7.2.10 with empty EXTRAVERSION. The final fragment clears
+CONFIG_LOCALVERSION and disables CONFIG_LOCALVERSION_AUTO; the default
+exported empty LOCALVERSION prevents an implicit Git '+' suffix. Explicit
+caller suffixes remain supported. Nix retains responsibility for its
+embedded initramfs, root preparation, CPU_IDLE/PREEMPT/RCU settings and
+the measured boot command line, including irqpoll.
+
+The 7.1.3 runtime baseline was validated before this migration. This
+7.2.10 source update has not been built or boot-tested; BSP API compatibility,
+the generated configuration, and A7A UFS/Ethernet operation require the
+integrating Nix build and hardware validation.
+
 Quick Start
 -----------
 

@@ -451,7 +451,7 @@ static void gud_fb_handle_damage(struct gud_device *gdrm, struct drm_framebuffer
 }
 
 int gud_plane_atomic_check(struct drm_plane *plane,
-			   struct drm_atomic_state *state)
+			   struct drm_atomic_commit *state)
 {
 	struct gud_device *gdrm = to_gud_device(plane->dev);
 	struct drm_plane_state *old_plane_state = drm_atomic_get_old_plane_state(state, plane);
@@ -481,6 +481,9 @@ int gud_plane_atomic_check(struct drm_plane *plane,
 
 	if (!new_plane_state->visible)
 		return 0;
+
+	if (gdrm->flags & GUD_DISPLAY_FLAG_FULL_UPDATE)
+		new_plane_state->ignore_damage_clips = true;
 
 	if (old_plane_state->rotation != new_plane_state->rotation)
 		crtc_state->mode_changed = true;
@@ -562,8 +565,8 @@ int gud_plane_atomic_check(struct drm_plane *plane,
 			goto out;
 		}
 
-		req->properties[num_properties + i].prop = cpu_to_le16(prop);
-		req->properties[num_properties + i].val = cpu_to_le64(val);
+		req->properties[num_properties].prop = cpu_to_le16(prop);
+		req->properties[num_properties].val = cpu_to_le64(val);
 		num_properties++;
 	}
 
@@ -581,7 +584,7 @@ out:
 }
 
 void gud_crtc_atomic_enable(struct drm_crtc *crtc,
-			    struct drm_atomic_state *state)
+			    struct drm_atomic_commit *state)
 {
 	struct drm_device *drm = crtc->dev;
 	struct gud_device *gdrm = to_gud_device(drm);
@@ -598,7 +601,7 @@ void gud_crtc_atomic_enable(struct drm_crtc *crtc,
 }
 
 void gud_crtc_atomic_disable(struct drm_crtc *crtc,
-			     struct drm_atomic_state *state)
+			     struct drm_atomic_commit *state)
 {
 	struct drm_device *drm = crtc->dev;
 	struct gud_device *gdrm = to_gud_device(drm);
@@ -614,7 +617,7 @@ void gud_crtc_atomic_disable(struct drm_crtc *crtc,
 }
 
 void gud_plane_atomic_update(struct drm_plane *plane,
-			     struct drm_atomic_state *atomic_state)
+			     struct drm_atomic_commit *atomic_state)
 {
 	struct drm_device *drm = plane->dev;
 	struct gud_device *gdrm = to_gud_device(drm);

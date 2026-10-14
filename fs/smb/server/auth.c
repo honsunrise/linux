@@ -24,7 +24,6 @@
 
 #include <linux/fips.h>
 #include <crypto/arc4.h>
-#include <crypto/des.h>
 
 #include "server.h"
 #include "smb_common.h"
@@ -133,15 +132,17 @@ out:
  * @blen:		NTLMv2 blob length
  * @domain_name:	domain name
  * @cryptkey:		session crypto key
+ * @sess_key:		derived session key output buffer
  *
  * Return:	0 on success, error number on error
  */
 int ksmbd_auth_ntlmv2(struct ksmbd_conn *conn, struct ksmbd_session *sess,
 		      struct ntlmv2_resp *ntlmv2, int blen, char *domain_name,
-		      char *cryptkey)
+		      char *cryptkey, char *sess_key)
 {
 	char ntlmv2_hash[CIFS_ENCPWD_SIZE];
 	char ntlmv2_rsp[CIFS_HMAC_MD5_HASH_SIZE];
+	char base_key[SMB2_NTLMV2_SESSKEY_SIZE];
 	struct hmac_md5_ctx ctx;
 	int rc;
 
@@ -164,12 +165,21 @@ int ksmbd_auth_ntlmv2(struct ksmbd_conn *conn, struct ksmbd_session *sess,
 	/* Generate the session key */
 	hmac_md5_usingrawkey(ntlmv2_hash, CIFS_HMAC_MD5_HASH_SIZE,
 			     ntlmv2_rsp, CIFS_HMAC_MD5_HASH_SIZE,
-			     sess->sess_key);
+			     base_key);
 
 	if (crypto_memneq(ntlmv2->ntlmv2_hash, ntlmv2_rsp,
-			  CIFS_HMAC_MD5_HASH_SIZE))
-		return -EINVAL;
-	return 0;
+			  CIFS_HMAC_MD5_HASH_SIZE)) {
+		rc = -EINVAL;
+		goto out;
+	}
+
+	memcpy(sess_key, base_key, sizeof(base_key));
+	rc = 0;
+out:
+	memzero_explicit(ntlmv2_hash, sizeof(ntlmv2_hash));
+	memzero_explicit(ntlmv2_rsp, sizeof(ntlmv2_rsp));
+	memzero_explicit(base_key, sizeof(base_key));
+	return rc;
 }
 
 /**
@@ -179,12 +189,13 @@ int ksmbd_auth_ntlmv2(struct ksmbd_conn *conn, struct ksmbd_session *sess,
  * @blob_len:	length of the @authblob message
  * @conn:	connection
  * @sess:	session of connection
+ * @sess_key:	derived session key output buffer
  *
  * Return:	0 on success, error number on error
  */
 int ksmbd_decode_ntlmssp_auth_blob(struct authenticate_message *authblob,
 				   int blob_len, struct ksmbd_conn *conn,
-				   struct ksmbd_session *sess)
+				   struct ksmbd_session *sess, char *sess_key)
 {
 	char *domain_name;
 	unsigned int nt_off, dn_off;
@@ -224,8 +235,10 @@ int ksmbd_decode_ntlmssp_auth_blob(struct authenticate_message *authblob,
 	ret = ksmbd_auth_ntlmv2(conn, sess,
 				(struct ntlmv2_resp *)((char *)authblob + nt_off),
 				nt_len - CIFS_ENCPWD_SIZE,
-				domain_name, conn->ntlmssp.cryptkey);
+				domain_name, conn->ntlmssp.cryptkey, sess_key);
 	kfree(domain_name);
+	if (ret)
+		return ret;
 
 	/* The recovered secondary session key */
 	if (conn->ntlmssp.client_flags & NTLMSSP_NEGOTIATE_KEY_XCH) {
@@ -245,8 +258,8 @@ int ksmbd_decode_ntlmssp_auth_blob(struct authenticate_message *authblob,
 		if (!ctx_arc4)
 			return -ENOMEM;
 
-		arc4_setkey(ctx_arc4, sess->sess_key, SMB2_NTLMV2_SESSKEY_SIZE);
-		arc4_crypt(ctx_arc4, sess->sess_key,
+		arc4_setkey(ctx_arc4, sess_key, SMB2_NTLMV2_SESSKEY_SIZE);
+		arc4_crypt(ctx_arc4, sess_key,
 			   (char *)authblob + sess_key_off, sess_key_len);
 		kfree_sensitive(ctx_arc4);
 	}
@@ -388,7 +401,8 @@ ksmbd_build_ntlmssp_challenge_blob(struct challenge_message *chgblob,
 
 #ifdef CONFIG_SMB_SERVER_KERBEROS5
 int ksmbd_krb5_authenticate(struct ksmbd_session *sess, char *in_blob,
-			    int in_len, char *out_blob, int *out_len)
+			    int in_len, char *out_blob, int *out_len,
+			    char *sess_key)
 {
 	struct ksmbd_spnego_authen_response *resp;
 	struct ksmbd_login_response_ext *resp_ext = NULL;
@@ -424,6 +438,7 @@ int ksmbd_krb5_authenticate(struct ksmbd_session *sess, char *in_blob,
 		resp_ext = ksmbd_ipc_login_request_ext(resp->login_response.account);
 
 	user = ksmbd_alloc_user(&resp->login_response, resp_ext);
+	kvfree(resp_ext);
 	if (!user) {
 		ksmbd_debug(AUTH, "login failure\n");
 		retval = -ENOMEM;
@@ -436,17 +451,18 @@ int ksmbd_krb5_authenticate(struct ksmbd_session *sess, char *in_blob,
 	} else {
 		if (!ksmbd_compare_user(sess->user, user)) {
 			ksmbd_debug(AUTH, "different user tried to reuse session\n");
-			retval = -EPERM;
+			retval = -EKEYREJECTED;
 			ksmbd_free_user(user);
 			goto out;
 		}
 		ksmbd_free_user(user);
 	}
 
-	memcpy(sess->sess_key, resp->payload, resp->session_key_len);
+	memcpy(sess_key, resp->payload, resp->session_key_len);
 	memcpy(out_blob, resp->payload + resp->session_key_len,
 	       resp->spnego_blob_len);
 	*out_len = resp->spnego_blob_len;
+	sess->kerberos_expiry = resp->session_expiry;
 	retval = 0;
 out:
 	kvfree(resp);
@@ -454,7 +470,8 @@ out:
 }
 #else
 int ksmbd_krb5_authenticate(struct ksmbd_session *sess, char *in_blob,
-			    int in_len, char *out_blob, int *out_len)
+			    int in_len, char *out_blob, int *out_len,
+			    char *sess_key)
 {
 	return -EOPNOTSUPP;
 }
@@ -513,7 +530,7 @@ struct derivation {
 	bool binding;
 };
 
-static void generate_key(struct ksmbd_conn *conn, struct ksmbd_session *sess,
+static void generate_key(struct ksmbd_conn *conn, const char *sess_key,
 			 struct kvec label, struct kvec context, __u8 *key,
 			 unsigned int key_size)
 {
@@ -524,7 +541,7 @@ static void generate_key(struct ksmbd_conn *conn, struct ksmbd_session *sess,
 	unsigned char prfhash[SMB2_HMACSHA256_SIZE];
 	struct hmac_sha256_ctx ctx;
 
-	hmac_sha256_init_usingrawkey(&ctx, sess->sess_key,
+	hmac_sha256_init_usingrawkey(&ctx, sess_key,
 				     SMB2_NTLMV2_SESSKEY_SIZE);
 	hmac_sha256_update(&ctx, i, 4);
 	hmac_sha256_update(&ctx, label.iov_base, label.iov_len);
@@ -547,18 +564,21 @@ static int generate_smb3signingkey(struct ksmbd_session *sess,
 				   const struct derivation *signing)
 {
 	struct channel *chann;
-	char *key;
+	char *key, *sess_key;
 
 	chann = lookup_chann_list(sess, conn);
 	if (!chann)
 		return 0;
 
-	if (conn->dialect >= SMB30_PROT_ID && signing->binding)
+	if (conn->dialect >= SMB30_PROT_ID && signing->binding) {
 		key = chann->smb3signingkey;
-	else
+		sess_key = chann->sess_key;
+	} else {
 		key = sess->smb3signingkey;
+		sess_key = sess->sess_key;
+	}
 
-	generate_key(conn, sess, signing->label, signing->context, key,
+	generate_key(conn, sess_key, signing->label, signing->context, key,
 		     SMB3_SIGN_KEY_SIZE);
 
 	if (!(conn->dialect >= SMB30_PROT_ID && signing->binding))
@@ -615,11 +635,11 @@ static void generate_smb3encryptionkey(struct ksmbd_conn *conn,
 				       struct ksmbd_session *sess,
 				       const struct derivation_twin *ptwin)
 {
-	generate_key(conn, sess, ptwin->encryption.label,
+	generate_key(conn, sess->sess_key, ptwin->encryption.label,
 		     ptwin->encryption.context, sess->smb3encryptionkey,
 		     SMB3_ENC_DEC_KEY_SIZE);
 
-	generate_key(conn, sess, ptwin->decryption.label,
+	generate_key(conn, sess->sess_key, ptwin->decryption.label,
 		     ptwin->decryption.context,
 		     sess->smb3decryptionkey, SMB3_ENC_DEC_KEY_SIZE);
 
@@ -697,8 +717,21 @@ static int ksmbd_get_encryption_key(struct ksmbd_work *work, __u64 ses_id,
 
 	if (enc)
 		sess = work->sess;
-	else
-		sess = ksmbd_session_lookup_all(work->conn, ses_id);
+	else {
+		/*
+		 * A previous-session replacement leaves the old encryption key in
+		 * place.  Use it to authenticate an encrypted request, then let
+		 * session validation reject the expired session.  This preserves the
+		 * encrypted STATUS_USER_SESSION_DELETED response without reviving
+		 * the session.
+		 */
+		sess = ksmbd_session_lookup_all_states(work->conn, ses_id);
+		if (sess && sess->state != SMB2_SESSION_VALID &&
+		    (sess->state != SMB2_SESSION_EXPIRED || !sess->enc)) {
+			ksmbd_user_session_put(sess);
+			sess = NULL;
+		}
+	}
 	if (!sess)
 		return -EINVAL;
 

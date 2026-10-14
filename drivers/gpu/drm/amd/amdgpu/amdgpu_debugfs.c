@@ -43,6 +43,11 @@
 
 #if defined(CONFIG_DEBUG_FS)
 
+/* Encode milliwatts in the raw Q24.8 sensor report format used by UMR. */
+#define AMDGPU_DEBUGFS_PWR_MW_TO_Q24_8(power_mw) \
+	DIV_ROUND_CLOSEST_ULL((u64)(power_mw) * BIT(8), \
+			      MILLIWATT_PER_WATT)
+
 /**
  * amdgpu_debugfs_process_reg_op - Handle MMIO register reads/writes
  *
@@ -1104,6 +1109,10 @@ static ssize_t amdgpu_debugfs_sensor_read(struct file *f, char __user *buf,
 		return r;
 	}
 
+	if (idx == AMDGPU_PP_SENSOR_GPU_AVG_POWER ||
+	    idx == AMDGPU_PP_SENSOR_GPU_INPUT_POWER)
+		values[0] = AMDGPU_DEBUGFS_PWR_MW_TO_Q24_8(values[0]);
+
 	if (size > valuesize) {
 		amdgpu_virt_disable_access_debugfs(adev);
 		return -EINVAL;
@@ -1319,8 +1328,8 @@ err:
  * @size: Number of bytes to read
  * @pos:  Offset to seek to
  *
- * Read the last residency value logged. It doesn't auto update, one needs to
- * stop logging before getting the current value.
+ * Read a live GFXOFF residency sample from firmware. One needs to start logging
+ * before getting the current value.
  */
 static ssize_t amdgpu_debugfs_gfxoff_residency_read(struct file *f, char __user *buf,
 						    size_t size, loff_t *pos)
@@ -1764,8 +1773,10 @@ static int amdgpu_debugfs_test_ib_show(struct seq_file *m, void *unused)
 
 	/* Avoid accidently unparking the sched thread during GPU reset */
 	r = down_write_killable(&adev->reset_domain->sem);
-	if (r)
+	if (r) {
+		pm_runtime_put_autosuspend(dev->dev);
 		return r;
+	}
 
 	/* hold on the scheduler */
 	for (i = 0; i < AMDGPU_MAX_RINGS; i++) {
@@ -2049,7 +2060,7 @@ static int amdgpu_debugfs_ib_preempt(void *data, u64 val)
 		/* swap out the old fences */
 		amdgpu_ib_preempt_fences_swap(ring, fences);
 
-		amdgpu_fence_driver_force_completion(ring);
+		amdgpu_fence_driver_force_completion(ring, NULL);
 
 		/* resubmit unfinished jobs */
 		amdgpu_ib_preempt_job_recovery(&ring->sched);
@@ -2125,6 +2136,9 @@ int amdgpu_debugfs_init(struct amdgpu_device *adev)
 
 	debugfs_create_x32("amdgpu_smu_debug", 0600, root,
 			   &adev->pm.smu_debug_mask);
+
+	debugfs_create_x64("unique_id", 0444, root, &adev->unique_id);
+	debugfs_create_x8("unitid", 0444, root, &adev->unitid);
 
 	ent = debugfs_create_file("amdgpu_preempt_ib", 0600, root, adev,
 				  &fops_ib_preempt);

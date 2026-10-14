@@ -32,6 +32,15 @@
 #define WL1271_BOOT_RETRIES 3
 #define WL1271_WAKEUP_TIMEOUT 500
 
+static const u32 cipher_suites[] = {
+	WLAN_CIPHER_SUITE_WEP40,
+	WLAN_CIPHER_SUITE_WEP104,
+	WLAN_CIPHER_SUITE_TKIP,
+	WLAN_CIPHER_SUITE_CCMP,
+	WL1271_CIPHER_SUITE_GEM,
+	WLAN_CIPHER_SUITE_AES_CMAC,
+};
+
 static char *fwlog_param;
 static int fwlog_mem_blocks = -1;
 static int bug_on_recovery = -1;
@@ -2367,6 +2376,7 @@ static int wl12xx_init_vif_data(struct wl1271 *wl, struct ieee80211_vif *vif)
 
 static int wl12xx_init_fw(struct wl1271 *wl)
 {
+	struct wlcore_platdev_data *pdev_data = dev_get_platdata(&wl->pdev->dev);
 	int retries = WL1271_BOOT_RETRIES;
 	bool booted = false;
 	struct wiphy *wiphy = wl->hw->wiphy;
@@ -2421,8 +2431,9 @@ power_off:
 
 	/* WLAN_CIPHER_SUITE_AES_CMAC must be last in cipher_suites;
 	   support only with firmware 8.9.1 and newer */
-	if (wl->chip.fw_ver[FW_VER_MAJOR] < 1)
-		wl->hw->wiphy->n_cipher_suites--;
+	if (wl->chip.fw_ver[FW_VER_MAJOR] < 1  ||
+	    (!strncmp(pdev_data->family->name, "wl12", 4)))
+		wl->hw->wiphy->n_cipher_suites = ARRAY_SIZE(cipher_suites) - 1;
 
 	/*
 	 * Now we know if 11a is supported (info from the NVS), so disable
@@ -3713,10 +3724,8 @@ void wlcore_regdomain_config(struct wl1271 *wl)
 		goto out;
 
 	ret = wlcore_cmd_regdomain_config_locked(wl);
-	if (ret < 0) {
+	if (ret < 0)
 		wl12xx_queue_recovery_work(wl);
-		goto out;
-	}
 
 	pm_runtime_put_autosuspend(wl->dev);
 out:
@@ -6198,14 +6207,6 @@ static void wl1271_unregister_hw(struct wl1271 *wl)
 static int wl1271_init_ieee80211(struct wl1271 *wl)
 {
 	int i;
-	static const u32 cipher_suites[] = {
-		WLAN_CIPHER_SUITE_WEP40,
-		WLAN_CIPHER_SUITE_WEP104,
-		WLAN_CIPHER_SUITE_TKIP,
-		WLAN_CIPHER_SUITE_CCMP,
-		WL1271_CIPHER_SUITE_GEM,
-		WLAN_CIPHER_SUITE_AES_CMAC,
-	};
 
 	/* The tx descriptor buffer */
 	wl->hw->extra_tx_headroom = sizeof(struct wl1271_tx_hw_descr);
@@ -6810,8 +6811,10 @@ void wlcore_remove(struct platform_device *pdev)
 
 	if (pdev_data->family && pdev_data->family->nvs_name)
 		wait_for_completion(&wl->nvs_loading_complete);
-	if (!wl->initialized)
+	if (!wl->initialized) {
+		pm_runtime_put_noidle(wl->dev);
 		return;
+	}
 
 	if (wl->wakeirq >= 0) {
 		dev_pm_clear_wake_irq(wl->dev);

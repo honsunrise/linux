@@ -134,7 +134,7 @@ static DEFINE_PER_CPU(struct cpc_desc *, cpc_desc_ptr);
  * cpc_regs[] with the corresponding index. 0 means mandatory and 1
  * means optional.
  */
-#define REG_OPTIONAL (0x1FC7D0)
+#define REG_OPTIONAL (0x7FC7D0)
 
 /*
  * Use the index of the register in per-cpu cpc_regs[] to check if
@@ -185,8 +185,13 @@ show_cppc_data(cppc_get_perf_caps, cppc_perf_caps, nominal_freq);
 
 show_cppc_data(cppc_get_perf_ctrs, cppc_perf_fb_ctrs, wraparound_time);
 
-/* Check for valid access_width, otherwise, fallback to using bit_width */
-#define GET_BIT_WIDTH(reg) ((reg)->access_width ? (8 << ((reg)->access_width - 1)) : (reg)->bit_width)
+/*
+ * PCC reuses the access_width field as the subspace id, so only decode access
+ * size for non-PCC registers. Otherwise, use the bit_width.
+ */
+#define GET_BIT_WIDTH(reg) (((reg)->access_width &&				\
+			     (reg)->space_id != ACPI_ADR_SPACE_PLATFORM_COMM) ? \
+			    (8 << ((reg)->access_width - 1)) : (reg)->bit_width)
 
 /* Shift and apply the mask for CPC reads/writes */
 #define MASK_VAL_READ(reg, val) (((val) >> (reg)->bit_offset) &				\
@@ -470,17 +475,29 @@ bool acpi_cpc_valid(void)
 }
 EXPORT_SYMBOL_GPL(acpi_cpc_valid);
 
-bool cppc_allow_fast_switch(void)
+bool cppc_allow_fast_switch(const struct cpumask *cpus)
 {
-	struct cpc_register_resource *desired_reg;
+	struct cpc_register_resource *desired_reg, *min_reg, *max_reg;
 	struct cpc_desc *cpc_ptr;
 	int cpu;
 
-	for_each_online_cpu(cpu) {
+	for_each_cpu(cpu, cpus) {
 		cpc_ptr = per_cpu(cpc_desc_ptr, cpu);
+		if (!cpc_ptr)
+			return false;
 		desired_reg = &cpc_ptr->cpc_regs[DESIRED_PERF];
-		if (!CPC_IN_SYSTEM_MEMORY(desired_reg) &&
-				!CPC_IN_SYSTEM_IO(desired_reg))
+		min_reg = &cpc_ptr->cpc_regs[MIN_PERF];
+		max_reg = &cpc_ptr->cpc_regs[MAX_PERF];
+
+		if (!CPC_SUPPORTED(desired_reg) ||
+		    (!CPC_IN_SYSTEM_MEMORY(desired_reg) &&
+		     !CPC_IN_SYSTEM_IO(desired_reg)) ||
+		    (CPC_SUPPORTED(min_reg) &&
+		     !CPC_IN_SYSTEM_MEMORY(min_reg) &&
+		     !CPC_IN_SYSTEM_IO(min_reg)) ||
+		    (CPC_SUPPORTED(max_reg) &&
+		     !CPC_IN_SYSTEM_MEMORY(max_reg) &&
+		     !CPC_IN_SYSTEM_IO(max_reg)))
 			return false;
 	}
 
@@ -751,18 +768,19 @@ int acpi_cppc_processor_probe(struct acpi_processor *pr)
 	/*
 	 * Disregard _CPC if the number of entries in the return package is not
 	 * as expected, but support future revisions being proper supersets of
-	 * the v3 and only causing more entries to be returned by _CPC.
+	 * the v4 and only causing more entries to be returned by _CPC.
 	 */
 	if ((cpc_rev == CPPC_V2_REV && num_ent != CPPC_V2_NUM_ENT) ||
 	    (cpc_rev == CPPC_V3_REV && num_ent != CPPC_V3_NUM_ENT) ||
-	    (cpc_rev > CPPC_V3_REV && num_ent <= CPPC_V3_NUM_ENT)) {
+	    (cpc_rev == CPPC_V4_REV && num_ent != CPPC_V4_NUM_ENT) ||
+	    (cpc_rev > CPPC_V4_REV && num_ent <= CPPC_V4_NUM_ENT)) {
 		pr_debug("Unexpected number of _CPC return package entries (%d) for CPU:%d\n",
 			 num_ent, pr->id);
 		goto out_free;
 	}
-	if (cpc_rev > CPPC_V3_REV) {
-		num_ent = CPPC_V3_NUM_ENT;
-		cpc_rev = CPPC_V3_REV;
+	if (cpc_rev > CPPC_V4_REV) {
+		num_ent = CPPC_V4_NUM_ENT;
+		cpc_rev = CPPC_V4_REV;
 	}
 
 	cpc_ptr->num_entries = num_ent;
@@ -845,6 +863,16 @@ int acpi_cppc_processor_probe(struct acpi_processor *pr)
 
 			cpc_ptr->cpc_regs[i-2].type = ACPI_TYPE_BUFFER;
 			memcpy(&cpc_ptr->cpc_regs[i-2].cpc_entry.reg, gas_t, sizeof(*gas_t));
+		} else if (cpc_obj->type == ACPI_TYPE_PACKAGE && (i - 2) == RESOURCE_PRIORITY) {
+			/*
+			 * ACPI 6.6, s8.4.6.1.2.7 defines Resource Priority as a
+			 * Package of Resource Priority Register Descriptor sub-packages.
+			 * Parsing the full structure is not yet supported.
+			 * Mark the register as unsupported for now.
+			 */
+			pr_debug("CPU:%d Resource Priority not supported\n", pr->id);
+			cpc_ptr->cpc_regs[i-2].type = ACPI_TYPE_INTEGER;
+			cpc_ptr->cpc_regs[i-2].cpc_entry.int_value = 0;
 		} else {
 			pr_debug("Invalid entry type (%d) in _CPC for CPU:%d\n",
 				 i, pr->id);
@@ -1045,7 +1073,6 @@ static int cpc_read(int cpu, struct cpc_register_resource *reg_res, u64 *val)
 		 * by the bit width field; the access size is used to indicate
 		 * the PCC subspace id.
 		 */
-		size = reg->bit_width;
 		vaddr = GET_PCC_VADDR(reg->address, pcc_ss_id);
 	}
 	else if (reg->space_id == ACPI_ADR_SPACE_SYSTEM_MEMORY)
@@ -1118,7 +1145,6 @@ static int cpc_write(int cpu, struct cpc_register_resource *reg_res, u64 val)
 		 * by the bit width field; the access size is used to indicate
 		 * the PCC subspace id.
 		 */
-		size = reg->bit_width;
 		vaddr = GET_PCC_VADDR(reg->address, pcc_ss_id);
 	}
 	else if (reg->space_id == ACPI_ADR_SPACE_SYSTEM_MEMORY)
@@ -1290,15 +1316,30 @@ static int cppc_set_reg_val(int cpu, enum cppc_regs reg_idx, u64 val)
 	return cpc_write(cpu, reg, val);
 }
 
+static bool cppc_desired_perf_readable(const struct cpc_desc *cpc_desc)
+{
+	return cpc_desc->version < CPPC_V4_REV;
+}
+
 /**
  * cppc_get_desired_perf - Get the desired performance register value.
  * @cpunum: CPU from which to get desired performance.
  * @desired_perf: Return address.
  *
- * Return: 0 for success, -EIO otherwise.
+ * Return: 0 for success, -EOPNOTSUPP for _CPC revision 4 or later, and a
+ * negative errno otherwise.
  */
 int cppc_get_desired_perf(int cpunum, u64 *desired_perf)
 {
+	struct cpc_desc *cpc_desc = per_cpu(cpc_desc_ptr, cpunum);
+
+	if (!cpc_desc)
+		return -ENODEV;
+
+	/* _CPC revision 4 no longer specifies Desired Performance as readable. */
+	if (!cppc_desired_perf_readable(cpc_desc))
+		return -EOPNOTSUPP;
+
 	return cppc_get_reg_val(cpunum, DESIRED_PERF, desired_perf);
 }
 EXPORT_SYMBOL_GPL(cppc_get_desired_perf);
@@ -1804,12 +1845,14 @@ int cppc_get_perf(int cpu, struct cppc_perf_ctrls *perf_ctrls)
 	u64 desired_perf = 0, min = 0, max = 0, energy_perf = 0, auto_sel = 0;
 	int pcc_ss_id = per_cpu(cpu_pcc_subspace_idx, cpu);
 	struct cppc_pcc_data *pcc_ss_data = NULL;
+	bool read_desired_perf;
 	int ret = 0, regs_in_pcc = 0;
 
 	if (!cpc_desc) {
 		pr_debug("No CPC descriptor for CPU:%d\n", cpu);
 		return -ENODEV;
 	}
+	read_desired_perf = cppc_desired_perf_readable(cpc_desc);
 
 	if (!perf_ctrls) {
 		pr_debug("Invalid perf_ctrls pointer\n");
@@ -1823,7 +1866,8 @@ int cppc_get_perf(int cpu, struct cppc_perf_ctrls *perf_ctrls)
 	auto_sel_reg = &cpc_desc->cpc_regs[AUTO_SEL_ENABLE];
 
 	/* Are any of the regs PCC ?*/
-	if (CPC_IN_PCC(desired_perf_reg) || CPC_IN_PCC(min_perf_reg) ||
+	if ((read_desired_perf && CPC_IN_PCC(desired_perf_reg)) ||
+	    CPC_IN_PCC(min_perf_reg) ||
 	    CPC_IN_PCC(max_perf_reg) || CPC_IN_PCC(energy_perf_reg) ||
 	    CPC_IN_PCC(auto_sel_reg)) {
 		if (pcc_ss_id < 0) {
@@ -1855,7 +1899,7 @@ int cppc_get_perf(int cpu, struct cppc_perf_ctrls *perf_ctrls)
 	}
 	perf_ctrls->min_perf = min;
 
-	if (CPC_SUPPORTED(desired_perf_reg)) {
+	if (read_desired_perf && CPC_SUPPORTED(desired_perf_reg)) {
 		ret = cpc_read(cpu, desired_perf_reg, &desired_perf);
 		if (ret)
 			goto out_err;
@@ -1937,16 +1981,17 @@ int cppc_set_perf(int cpu, struct cppc_perf_ctrls *perf_ctrls)
 		cpc_desc->write_cmd_status = 0;
 	}
 
-	cpc_write(cpu, desired_reg, perf_ctrls->desired_perf);
+	if (CPC_SUPPORTED(desired_reg))
+		cpc_write(cpu, desired_reg, perf_ctrls->desired_perf);
 
 	/*
 	 * Only write if min_perf and max_perf not zero. Some drivers pass zero
 	 * value to min and max perf, but they don't mean to set the zero value,
 	 * they just don't want to write to those registers.
 	 */
-	if (perf_ctrls->min_perf)
+	if (perf_ctrls->min_perf && CPC_SUPPORTED(min_perf_reg))
 		cpc_write(cpu, min_perf_reg, perf_ctrls->min_perf);
-	if (perf_ctrls->max_perf)
+	if (perf_ctrls->max_perf && CPC_SUPPORTED(max_perf_reg))
 		cpc_write(cpu, max_perf_reg, perf_ctrls->max_perf);
 
 	if (CPC_IN_PCC(desired_reg) || CPC_IN_PCC(min_perf_reg) || CPC_IN_PCC(max_perf_reg))
