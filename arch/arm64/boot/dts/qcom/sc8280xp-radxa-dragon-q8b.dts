@@ -12,7 +12,6 @@
 #include "sc8280xp.dtsi"
 #include "sc8280xp-pmics.dtsi"
 
-/delete-node/ &pil_video_mem;
 /delete-node/ &pil_nsp1_mem;
 /delete-node/ &remoteproc_nsp1;
 

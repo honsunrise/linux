@@ -4654,7 +4654,6 @@
 			operating-points-v2 = <&iris_opp_table>;
 			iommus = <&apps_smmu 0x2a00 0x400>,
 				 <&apps_smmu 0x2a07 0x400>;
-			memory-region = <&pil_video_mem>;
 			dma-coherent;
 
 			status = "disabled";
