@@ -864,7 +864,14 @@
 	/*vqmmc-supply = <&reg_aldo1>;*/
 	/*emmc io vol 1.8v*/
 	/*vqmmc-supply = <&reg_cldo1>;*/
-	status = "okay";
+	/*
+	 * The combo slot carries the UFS module on this board, so leave the
+	 * eMMC controller off: with no card present it retries its commands
+	 * indefinitely ("smc 0 p2 err, cmd 1, RTO"), and the UFS's first
+	 * transfer then times out ("cmd was completed, but without a
+	 * notifying intr"), hanging the boot.
+	 */
+	status = "disabled";
 };
 
 &ufs {
@@ -2131,19 +2138,79 @@
 &gmac0_phy0 {
 	compatible = "ethernet-phy-id7b74.4412";
 	reset-gpios = <&pio PH 16 GPIO_ACTIVE_LOW>;
+	/*
+	 * A733 GMAC210 EEE/LPI: the link intermittently drops when the PHY
+	 * stays in LPI mode long enough, and recovers once it exits LPI.
+	 * Workaround from the upstream RFC "net: stmmac: Add support for
+	 * Allwinner A733 GMAC210" cover letter (Jerome Brunet, 2026-07-31).
+	 */
+	eee-broken-100tx;
+	eee-broken-1000t;
 };
 
 &gmac0 {
+	/*
+	 * A733 GMAC210 is handled by dwmac-sun55i since the upstream RFC
+	 * "net: stmmac: Add support for Allwinner A733 GMAC210"
+	 * (2026-07-31, Jerome Brunet). Neither vendor string works here:
+	 * "allwinner,sunxi-gmac-210" matches no in-tree driver, and the
+	 * "snps,dwmac-5.20" fallback only matches the generic dwmac glue,
+	 * which cannot program the A733 glue MMIO region or its clocks.
+	 */
+	compatible = "allwinner,sun60i-a733-gmac210";
+	/* Match stmmac's multi-MSI queue names; keep the inherited SPIs. */
+	interrupt-names = "macirq", "eth_lpi", "tx-queue-0", "rx-queue-0";
 	phy-mode = "rgmii";
 	pinctrl-0 = <&gmac0_pins_default>;
 	pinctrl-1 = <&gmac0_pins_sleep>;
 	pinctrl-names = "default", "sleep";
 	aw,soc-phy-clk-en;
 	/delete-property/ aw,rgmii-clk-ext;
-	tx-delay = <12>;
-	rx-delay = <10>;
+	/*
+	 * The vendor "tx-delay = <12>" / "rx-delay = <10>" are in units of
+	 * 100ps but are only read by the vendor glue. dwmac-sun55i reads the
+	 * generic properties, so carry the same 1200ps / 1000ps over.
+	 */
+	tx-internal-delay-ps = <1200>;
+	rx-internal-delay-ps = <1000>;
+	/*
+	 * The glue driver asks for the MBUS clock by the name "mbus"
+	 * (devm_clk_get_enabled(dev, "mbus") in dwmac-sun55i.c), so the dtsi's
+	 * "pclk" name makes its probe fail with "Failed to get or enable MBUS
+	 * clock" before devm_stmmac_pltfr_probe() is ever reached - which is
+	 * why gmac0 comes up with no netdev at all. Keep the same clock
+	 * (CLK_GMAC0_MBUS) but expose it under the name the driver expects.
+	 */
+	clock-names = "stmmaceth", "mbus", "phy", "ptp_ref";
 	dwmac3v3-supply = <&reg_dc1sw2>;
 	phy3v3-supply = <&reg_dc1sw1>;
+	/*
+	 * dwmac-sun55i's probe calls
+	 * devm_regulator_get_enable_optional(dev, "phy"), i.e. it looks for
+	 * "phy-supply" - not the vendor "phy3v3-supply" that the Radxa tree
+	 * uses for the same rail. Without it the probe dies at that point with
+	 * "Failed to get or enable PHY supply" (-ENODEV) *after* it has already
+	 * enabled the MBUS gate and programmed the glue syscon register, and
+	 * that half-done state wedges the UFS controller: its doorbell stays
+	 * set with IS == 0, so the first transfer never completes
+	 * ("ufshcd_abort: Device abort task at tag 0" ... "err -110") and the
+	 * board hangs. Point "phy-supply" at the same regulator so the probe
+	 * runs to completion; verified by A/B boot - with it present both gmac0
+	 * (end0) and the UFS root come up cleanly.
+	 */
+	phy-supply = <&reg_dc1sw1>;
+	/*
+	 * Keep the inherited assigned-clocks = <&ccu CLK_GMAC0_PHY> and
+	 * assigned-clock-rates = <25000000> from the dtsi: gmac0-phy is the
+	 * PHY's reference clock (the board sets aw,soc-phy-clk-en, so the PHY
+	 * is clocked from the SoC fanout instead of a crystal) and it has to
+	 * be 25 MHz. gmac0_phy_clk is SUNXI_CCU_M_WITH_GATE(..., 0x1410, 0, 5,
+	 * BIT(31), 0) - flags 0, i.e. no CLK_SET_RATE_PARENT - so the rate is
+	 * applied to that clock's own divider (150 MHz / 6 = 25 MHz) and
+	 * PLL_PERI0 is left alone, leaving the UFS clocks unaffected. An
+	 * earlier revision deleted the assignment believing the divider
+	 * default already gave 25 MHz; it does not, it gives 150 MHz.
+	 */
 	status = "okay";
 };
 
