@@ -248,7 +248,7 @@ exit:
 }
 
 void sunxi_drm_lvds_encoder_atomic_enable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	int ret;
 	struct drm_crtc *crtc = encoder->crtc;
@@ -324,7 +324,7 @@ void sunxi_drm_lvds_encoder_atomic_enable(struct drm_encoder *encoder,
 }
 
 void sunxi_drm_lvds_encoder_atomic_disable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	struct sunxi_drm_lvds *lvds = encoder_to_sunxi_drm_lvds(encoder);
 

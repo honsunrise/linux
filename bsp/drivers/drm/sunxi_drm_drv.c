@@ -130,7 +130,7 @@ sunxi_drm_gem_fb_create(struct drm_device *dev, struct drm_file *file,
 }
 
 static int sunxi_drm_atomic_helper_commit(struct drm_device *dev,
-			     struct drm_atomic_state *state,
+			     struct drm_atomic_commit *state,
 			     bool nonblock)
 {
 	struct drm_connector *conn;
@@ -193,7 +193,7 @@ static const struct drm_mode_config_funcs sunxi_drm_mode_config_funcs = {
 	.fb_create = sunxi_drm_gem_fb_create,
 };
 
-static void sunxi_drm_atomic_helper_commit_tail(struct drm_atomic_state *old_state)
+static void sunxi_drm_atomic_helper_commit_tail(struct drm_atomic_commit *old_state)
 
 {
 	struct drm_device *dev = old_state->dev;
@@ -600,7 +600,7 @@ static int __maybe_unused commit_init_connecting(struct drm_device *drm)
 {
 	struct sunxi_drm_private *pri = to_sunxi_drm_private(drm);
 	struct drm_modeset_acquire_ctx ctx;
-	struct drm_atomic_state *state;
+	struct drm_atomic_commit *state;
 	struct drm_crtc_state *crtc_state;
 	struct drm_connector_state *new_conn_state;
 	struct drm_plane_state *plane_state;
@@ -615,7 +615,7 @@ static int __maybe_unused commit_init_connecting(struct drm_device *drm)
 	sunxi_drm_offline_mode_pre_init(drm);
 	sunxi_fbdev_init(drm, &channel);
 	drm_modeset_acquire_init(&ctx, 0);
-	state = drm_atomic_state_alloc(drm);
+	state = drm_atomic_commit_alloc(drm);
 	if (!state) {
 		ret = -ENOMEM;
 		goto out_ctx;
@@ -684,7 +684,7 @@ out_state:
 	if (ret == -EDEADLK)
 		goto backoff;
 
-	drm_atomic_state_put(state);
+	drm_atomic_commit_put(state);
 out_ctx:
 	drm_modeset_drop_locks(&ctx);
 	drm_modeset_acquire_fini(&ctx);
@@ -692,7 +692,7 @@ out_ctx:
 	return ret;
 
 backoff:
-	drm_atomic_state_clear(state);
+	drm_atomic_commit_clear(state);
 	drm_modeset_backoff(&ctx);
 
 	goto retry;

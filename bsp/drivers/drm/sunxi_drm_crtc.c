@@ -536,7 +536,7 @@ static void sunxi_plane_atomic_update(struct drm_plane *plane,
 	struct display_channel_state *old_cstate = to_display_channel_state(old_state);
 #else
 static void sunxi_plane_atomic_update(struct drm_plane *plane,
-				      struct drm_atomic_state *state)
+				      struct drm_atomic_commit *state)
 
 {
 	struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(state, plane);
@@ -670,11 +670,11 @@ static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 
 static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 #else
 
 static int sunxi_plane_atomic_async_check(struct drm_plane *plane,
-					struct drm_atomic_state *state,
+					struct drm_atomic_commit *state,
 					bool flip)
 #endif
 {
@@ -686,7 +686,7 @@ static void sunxi_plane_atomic_async_update(struct drm_plane *plane,
 {
 #else
 static void sunxi_plane_atomic_async_update(struct drm_plane *plane,
-					  struct drm_atomic_state *state)
+					  struct drm_atomic_commit *state)
 {
 	struct drm_plane_state *new_state = drm_atomic_get_new_plane_state(state,
 									   plane);
@@ -1885,7 +1885,7 @@ static void sunxi_crtc_atomic_enable(struct drm_crtc *crtc,
 
 #else
 static void sunxi_crtc_atomic_enable(struct drm_crtc *crtc,
-				     struct drm_atomic_state *state)
+				     struct drm_atomic_commit *state)
 #endif
 {
 	//struct sunxi_drm_private *pri = to_sunxi_drm_private(crtc->dev);
@@ -1973,7 +1973,7 @@ static void sunxi_crtc_atomic_disable(struct drm_crtc *crtc,
 
 #else
 static void sunxi_crtc_atomic_disable(struct drm_crtc *crtc,
-				      struct drm_atomic_state *state)
+				      struct drm_atomic_commit *state)
 #endif
 
 {
@@ -2025,7 +2025,7 @@ static void sunxi_crtc_atomic_begin(struct drm_crtc *crtc,
 
 #else
 static void sunxi_crtc_atomic_begin(struct drm_crtc *crtc,
-			     struct drm_atomic_state *state)
+			     struct drm_atomic_commit *state)
 #endif
 {
 	struct sunxi_drm_crtc *scrtc = to_sunxi_crtc(crtc);
@@ -2063,7 +2063,7 @@ static void sunxi_crtc_atomic_flush(struct drm_crtc *crtc,
 				    struct drm_crtc_state *old_state)
 #else
 static void sunxi_crtc_atomic_flush(struct drm_crtc *crtc,
-				    struct drm_atomic_state *state)
+				    struct drm_atomic_commit *state)
 #endif
 {
 	struct sunxi_drm_crtc *scrtc = to_sunxi_crtc(crtc);
@@ -2193,15 +2193,15 @@ static int sunxi_drm_crtc_atomic_check(struct drm_crtc *crtc,
 				      struct drm_crtc_state *state)
 {
 	struct drm_crtc_state *crtc_state = state;
-	struct drm_atomic_state *atomic_state = state->state;
+	struct drm_atomic_commit *atomic_state = state->state;
 #else
 
 static int sunxi_drm_crtc_atomic_check(struct drm_crtc *crtc,
-				       struct drm_atomic_state *state)
+				       struct drm_atomic_commit *state)
 {
 	struct drm_crtc_state *crtc_state =
 		drm_atomic_get_new_crtc_state(state, crtc);
-	struct drm_atomic_state *atomic_state = state;
+	struct drm_atomic_commit *atomic_state = state;
 #endif
 	struct sunxi_drm_crtc *scrtc = to_sunxi_crtc(crtc);
 	struct sunxi_crtc_state *scrtc_state = to_sunxi_crtc_state(crtc_state);

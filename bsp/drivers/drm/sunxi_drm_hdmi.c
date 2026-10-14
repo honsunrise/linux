@@ -2459,7 +2459,7 @@ static struct attribute_group _sunxi_hdmi_group = {
  * drm sunxi hdmi encoder helper functions
  ******************************************************************************/
 static void _sunxi_drm_hdmi_disable(struct drm_encoder *encoder,
-		struct drm_atomic_state *state)
+		struct drm_atomic_commit *state)
 {
 	int ret = 0;
 	struct device *dev = NULL;
@@ -2499,7 +2499,7 @@ exit:
 }
 
 static void _sunxi_drm_hdmi_enable(struct drm_encoder *encoder,
-		struct drm_atomic_state *state)
+		struct drm_atomic_commit *state)
 {
 	struct sunxi_drm_hdmi *hdmi = drm_encoder_to_hdmi(encoder);
 	struct drm_crtc *crtc = encoder->crtc;

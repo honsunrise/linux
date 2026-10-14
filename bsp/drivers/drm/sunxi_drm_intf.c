@@ -196,7 +196,7 @@ out:
 int sunxi_drm_atomic_helper_disable_all(struct drm_device *dev,
 				  struct drm_modeset_acquire_ctx *ctx)
 {
-	struct drm_atomic_state *state;
+	struct drm_atomic_commit *state;
 	struct drm_connector_state *conn_state;
 	struct drm_connector *conn;
 	struct drm_plane_state *plane_state;
@@ -205,7 +205,7 @@ int sunxi_drm_atomic_helper_disable_all(struct drm_device *dev,
 	struct drm_crtc *crtc;
 	int ret, i;
 
-	state = drm_atomic_state_alloc(dev);
+	state = drm_atomic_commit_alloc(dev);
 	if (!state)
 		return -ENOMEM;
 
@@ -249,7 +249,7 @@ int sunxi_drm_atomic_helper_disable_all(struct drm_device *dev,
 
 	ret = drm_atomic_commit(state);
 free:
-	drm_atomic_state_put(state);
+	drm_atomic_commit_put(state);
 	return ret;
 }
 
@@ -257,7 +257,7 @@ int sunxi_drm_mode_config_reset(struct drm_device *dev)
 {
 	int err;
 	struct drm_modeset_acquire_ctx ctx;
-	struct drm_atomic_state *state = NULL;
+	struct drm_atomic_commit *state = NULL;
 
 	if (!dev)
 		return 0;
@@ -283,7 +283,7 @@ int sunxi_drm_mode_config_reset(struct drm_device *dev)
 
 out:
 	DRM_MODESET_LOCK_ALL_END(dev, ctx, err);
-	drm_atomic_state_put(state);
+	drm_atomic_commit_put(state);
 
 	drm_fb_helper_set_suspend_unlocked(dev->fb_helper, 0);
 	drm_kms_helper_poll_enable(dev);

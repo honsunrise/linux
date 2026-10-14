@@ -742,7 +742,7 @@ static int sunxi_drm_dsi_get_line(struct device *dev)
 }
 
 void sunxi_drm_dsi_encoder_atomic_enable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	int ret, bpp, lcd_div;
 	struct drm_crtc *crtc = encoder->crtc;
@@ -904,7 +904,7 @@ void sunxi_drm_dsi_encoder_atomic_enable(struct drm_encoder *encoder,
 }
 
 void sunxi_drm_dsi_encoder_atomic_disable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	struct sunxi_drm_dsi *dsi = encoder_to_sunxi_drm_dsi(encoder);
 	struct sunxi_crtc_state *scrtc_state = to_sunxi_crtc_state(encoder->crtc->state);

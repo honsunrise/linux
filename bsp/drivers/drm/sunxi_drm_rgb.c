@@ -213,7 +213,7 @@ static int sunxi_rgb_displl_disable(struct sunxi_drm_rgb *rgb)
 	return 0;
 }
 void sunxi_drm_rgb_encoder_atomic_enable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	int ret;
 	struct drm_crtc *crtc = encoder->crtc;
@@ -275,7 +275,7 @@ void sunxi_drm_rgb_encoder_atomic_enable(struct drm_encoder *encoder,
 }
 
 void sunxi_drm_rgb_encoder_atomic_disable(struct drm_encoder *encoder,
-					struct drm_atomic_state *state)
+					struct drm_atomic_commit *state)
 {
 	struct sunxi_drm_rgb *rgb = encoder_to_sunxi_drm_rgb(encoder);
 

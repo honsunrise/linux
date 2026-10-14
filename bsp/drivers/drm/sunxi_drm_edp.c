@@ -3805,7 +3805,7 @@ static void sunxi_edp_set_backlight_value(void *data, int brightness)
 }
 
 void sunxi_edp_encoder_atomic_disable(struct drm_encoder *encoder,
-				      struct drm_atomic_state *state)
+				      struct drm_atomic_commit *state)
 {
 	struct sunxi_drm_edp *drm_edp = drm_encoder_to_sunxi_drm_edp(encoder);
 
@@ -3825,7 +3825,7 @@ void sunxi_edp_encoder_atomic_disable(struct drm_encoder *encoder,
 }
 
 void sunxi_edp_encoder_atomic_enable(struct drm_encoder *encoder,
-				     struct drm_atomic_state *state)
+				     struct drm_atomic_commit *state)
 {
 	struct drm_crtc *crtc = encoder->crtc;
 	struct sunxi_drm_edp *drm_edp = drm_encoder_to_sunxi_drm_edp(encoder);
