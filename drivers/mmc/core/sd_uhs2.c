@@ -1211,6 +1211,16 @@ int mmc_attach_sd_uhs2(struct mmc_host *host)
 	if (!(host->caps2 & MMC_CAP2_SD_UHS2))
 		return -EOPNOTSUPP;
 
+	/*
+	 * A host that advertises MMC_CAP2_SD_UHS2 without providing the
+	 * uhs2_control() op would be driven through sd_uhs2_power_up() and
+	 * jump through a NULL function pointer. sunxi-mmc (A733 SD/MMC host)
+	 * is exactly that combination, so refuse the UHS-II attempt rather
+	 * than taking the board down on the first card detect rescan.
+	 */
+	if (!host->ops->uhs2_control)
+		return -EOPNOTSUPP;
+
 	/* Turn off the legacy SD interface before trying with UHS-II. */
 	mmc_power_off(host);
 
