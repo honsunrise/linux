@@ -89,6 +89,7 @@ struct qcom_pas {
 	unsigned int smem_host_id;
 	bool decrypt_shutdown;
 	bool preloaded;
+	bool attached;
 	const char *info_name;
 
 	const struct firmware *firmware;
@@ -431,10 +432,15 @@ static int qcom_pas_stop(struct rproc *rproc)
 	qcom_pas_unmap_carveout(rproc, pas->mem_phys, pas->mem_size);
 
 	/*
-	 * qcom_q6v5_prepare is not called in qcom_pas_attach, skip unprepare to
-	 * avoid mismatch.
+	 * Attach only enables the handover IRQ; it does not prepare load state
+	 * or interconnect votes. Track the resource lifecycle rather than the
+	 * rproc state, which can still be DETACHED on subdevice-start failure
+	 * or CRASHED during recovery.
 	 */
-	if (pas->rproc->state != RPROC_ATTACHED) {
+	if (pas->attached) {
+		disable_irq(pas->q6v5.handover_irq);
+		pas->attached = false;
+	} else {
 		handover = qcom_q6v5_unprepare(&pas->q6v5);
 		if (handover)
 			qcom_pas_handover(&pas->q6v5);
@@ -632,6 +638,8 @@ static int qcom_pas_attach(struct rproc *rproc)
 			goto disable_running;
 		}
 	}
+
+	pas->attached = true;
 
 	return 0;
 
