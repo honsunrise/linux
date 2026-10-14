@@ -317,6 +317,8 @@ static int __maybe_unused iris_pm_suspend(struct device *dev)
 
 	core = dev_get_drvdata(dev);
 
+	/* Drain the IRQ thread before taking the lock it also needs. */
+	disable_irq(core->irq);
 	mutex_lock(&core->lock);
 	if (core->state != IRIS_CORE_INIT)
 		goto exit;
@@ -325,6 +327,7 @@ static int __maybe_unused iris_pm_suspend(struct device *dev)
 
 exit:
 	mutex_unlock(&core->lock);
+	enable_irq(core->irq);
 
 	return ret;
 }
@@ -336,6 +339,8 @@ static int __maybe_unused iris_pm_resume(struct device *dev)
 
 	core = dev_get_drvdata(dev);
 
+	/* Keep the IRQ quiesced through power-on and any error unwind. */
+	disable_irq(core->irq);
 	mutex_lock(&core->lock);
 	if (core->state != IRIS_CORE_INIT)
 		goto exit;
@@ -345,6 +350,7 @@ static int __maybe_unused iris_pm_resume(struct device *dev)
 
 exit:
 	mutex_unlock(&core->lock);
+	enable_irq(core->irq);
 
 	return ret;
 }
