@@ -60,6 +60,33 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       separate qcom,videocc-sc8280xp.h to import. Do not skip SC8280XP,
       SA8540P, SA8295P or Dragon Q8B DTBs to conceal missing bindings.
 
+  Initial integration build / review follow-up
+    - The first downstream Nix build exposed an unresolved pil_video_mem
+      phandle and the vendor OTA7290B panel's removed drm_panel_init API.
+      SC8280XP's disabled SoC video node no longer references board-owned
+      memory. Dragon Q8B retains its existing 0x8c600000 firmware carveout,
+      IOVA reservation and enabled Iris node; its obsolete inherited-region
+      deletion is removed. No other board's memory address is inferred.
+    - OTA7290B now uses devm_drm_panel_alloc, matching the upstream refcounted
+      panel lifecycle, with its explicit registration/removal and DSI
+      attach-failure unwind retained.
+    - Qualcomm's hardware SID programmer now follows provider #iommu-cells,
+      including the OF parser's legacy four-cell rule, rather than assuming
+      every iommu-map tuple has four cells. It retains supported RID ranges,
+      map-mask aliases and CRC8 collision chaining without copying the map
+      or scanning the complete RID space.
+    - Iris power transitions synchronously quiesce IRQs before taking
+      core->lock, covering init/deinit as well as suspend/resume. Temporary
+      masking and the persistent powered-off/watchdog reference are balanced
+      separately so shutdown cannot deadlock against the IRQ thread and
+      hardware is not powered down with IRQ work still active. This generic
+      fix is isolated in commit 0d36bc055e78 for other v7.2.10 Iris users.
+    - Successful PAS attachment records its resource lifecycle independently
+      of rproc->state. Stop disables the attached handover IRQ without
+      unpreparing load-state/interconnect resources it never acquired,
+      including subdevice-start unwind and crash recovery. Externally
+      preloaded firmware remains externally owned.
+
   Build / downstream interface
     - Source release is 7.2.10 (EXTRAVERSION empty). Downstream source-archive
       builds must use version/modDirVersion 7.2.10, CONFIG_LOCALVERSION=""
@@ -78,9 +105,11 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       qcom/qcs6490-radxa-dragon-q6a-kvm.dtb. The latter combines the base DTB
       with qcs6490-radxa-dragon-q6a-kvm.dtbo, retaining radxa,enable-kvm,
       EL2 GPU setup, remoteproc broken-reset and SCM shared-memory ownership.
-    - No build or hardware validation was performed during this source
-      migration. Validate both Q6A DTBs, the previously skipped SC8280XP
-      family, kernel/modules, EFI boot, UFS I/O and KVM before deployment.
+    - The initial downstream build failed as recorded above. No build,
+      tests or hardware validation were rerun by the source-migration
+      worker after these fixes. The integration owner must validate both
+      Q6A DTBs, the previously skipped SC8280XP family, kernel/modules,
+      EFI boot, UFS I/O, Iris PM and KVM before deployment.
 
   Manually ported / synced across v7.0.11 → v7.1.y
     Group A: Radxa CM-Q64 board support
