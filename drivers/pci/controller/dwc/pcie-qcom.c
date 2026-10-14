@@ -1117,78 +1117,163 @@ static void qcom_pcie_deinit_2_7_0(struct qcom_pcie *pcie)
 	regulator_bulk_disable(ARRAY_SIZE(res->supplies), res->supplies);
 }
 
+/* Match of_map_id()'s compatibility rule for old one-cell SMMU maps. */
+static bool qcom_pcie_iommu_map_legacy(const __be32 *map, int map_len)
+{
+	int i;
+
+	if (map_len % 4)
+		return false;
+
+	for (i = 0; i < map_len; i += 4) {
+		if (map[i + 1] != map[1] || map[i + 3] != cpu_to_be32(1))
+			return false;
+	}
+
+	return true;
+}
+
+static int qcom_pcie_config_sid_entry_1_9_0(void __iomem *table,
+					  const u8 *crc_table, u16 bdf, u32 sid)
+{
+	__be16 bdf_be = cpu_to_be16(bdf);
+	unsigned int tries = 0;
+	u32 val;
+	u8 hash;
+
+	hash = crc8(crc_table, (u8 *)&bdf_be, sizeof(bdf_be), 0);
+	val = readl(table + hash * sizeof(u32));
+
+	/* Preserve the first mapping when RID ranges overlap. */
+	while (val) {
+		u8 current_hash = hash++;
+		u8 next_mask = 0xff;
+
+		if (val >> 16 == bdf)
+			return 0;
+		if (++tries == CRC8_TABLE_SIZE)
+			return -ENOSPC;
+
+		/* If NEXT field is NULL then update it with next hash */
+		if (!(val & next_mask)) {
+			val |= (u32)hash;
+			writel(val, table + current_hash * sizeof(u32));
+		}
+
+		val = readl(table + hash * sizeof(u32));
+	}
+
+	if (sid > U8_MAX)
+		return -EINVAL;
+
+	/* BDF [31:16] | SID [15:8] | NEXT [7:0] */
+	val = (u32)bdf << 16 | sid << 8;
+	writel(val, table + hash * sizeof(u32));
+
+	return 0;
+}
+
 static int qcom_pcie_config_sid_1_9_0(struct qcom_pcie *pcie)
 {
-	/* iommu map structure */
-	struct {
-		u32 bdf;
-		u32 phandle;
-		u32 smmu_sid;
-		u32 smmu_sid_len;
-	} *map;
 	void __iomem *bdf_to_sid_base = pcie->parf + PARF_BDF_TO_SID_TABLE_N;
 	struct device *dev = pcie->pci->dev;
 	u8 qcom_pcie_crc8_table[CRC8_TABLE_SIZE];
-	int i, nr_map, size = 0;
-	u32 smmu_sid_base;
+	const __be32 *map;
+	int size, map_len, offset = 0;
+	u32 smmu_sid_base, map_mask = U32_MAX;
+	bool legacy = false, rid_zero_mapped = false;
 	u32 val;
 
-	of_get_property(dev->of_node, "iommu-map", &size);
-	if (!size)
+	map = of_get_property(dev->of_node, "iommu-map", &size);
+	if (!map || !size)
 		return 0;
+	if (size % sizeof(*map))
+		return -EINVAL;
+	map_len = size / sizeof(*map);
+	if (map_len < 4)
+		return -EINVAL;
+
+	of_property_read_u32(dev->of_node, "iommu-map-mask", &map_mask);
 
 	/* Enable BDF to SID translation by disabling bypass mode (default) */
 	val = readl(pcie->parf + PARF_BDF_TO_SID_CFG);
 	val &= ~BDF_TO_SID_BYPASS;
 	writel(val, pcie->parf + PARF_BDF_TO_SID_CFG);
 
-	map = kzalloc(size, GFP_KERNEL);
-	if (!map)
-		return -ENOMEM;
-
-	of_property_read_u32_array(dev->of_node, "iommu-map", (u32 *)map,
-				   size / sizeof(u32));
-
-	nr_map = size / (sizeof(*map));
-
+	/* The first output cell is the SID in both SMMU specifier formats. */
+	smmu_sid_base = be32_to_cpup(map + 2);
 	crc8_populate_msb(qcom_pcie_crc8_table, QCOM_PCIE_CRC8_POLYNOMIAL);
 
 	/* Registers need to be zero out first */
 	memset_io(bdf_to_sid_base, 0, CRC8_TABLE_SIZE * sizeof(u32));
 
-	/* Extract the SMMU SID base from the first entry of iommu-map */
-	smmu_sid_base = map[0].smmu_sid;
+	while (offset < map_len) {
+		struct device_node *iommu;
+		u32 cells = 1, rid_base, sid, length, rid;
+		u32 aliases = ~map_mask & U16_MAX;
 
-	/* Look for an available entry to hold the mapping */
-	for (i = 0; i < nr_map; i++) {
-		__be16 bdf_be = cpu_to_be16(map[i].bdf);
-		u32 val;
-		u8 hash;
+		if (map_len - offset < 2)
+			return -EINVAL;
 
-		hash = crc8(qcom_pcie_crc8_table, (u8 *)&bdf_be, sizeof(bdf_be), 0);
+		rid_base = be32_to_cpup(map + offset);
+		if (rid_base & ~map_mask)
+			return -EFAULT;
 
-		val = readl(bdf_to_sid_base + hash * sizeof(u32));
+		iommu = of_find_node_by_phandle(be32_to_cpup(map + offset + 1));
+		if (!iommu)
+			return -ENODEV;
+		of_property_read_u32(iommu, "#iommu-cells", &cells);
+		of_node_put(iommu);
 
-		/* If the register is already populated, look for next available entry */
-		while (val) {
-			u8 current_hash = hash++;
-			u8 next_mask = 0xff;
+		if (!offset && cells == 2)
+			legacy = qcom_pcie_iommu_map_legacy(map, map_len);
+		if (legacy)
+			cells = 1;
+		if (cells < 1 || cells > 2 || map_len - offset < 3 + cells)
+			return -EINVAL;
 
-			/* If NEXT field is NULL then update it with next hash */
-			if (!(val & next_mask)) {
-				val |= (u32)hash;
-				writel(val, bdf_to_sid_base + current_hash * sizeof(u32));
-			}
+		sid = be32_to_cpup(map + offset + 2);
+		length = be32_to_cpup(map + offset + 2 + cells);
+		offset += 3 + cells;
 
-			val = readl(bdf_to_sid_base + hash * sizeof(u32));
+		/*
+		 * The second SMMU cell is a stream-match mask, not a SID or
+		 * a range length. It is consumed by the SMMU, not by PARF.
+		 * Like of_map_id(), only one-cell specifiers support ranges.
+		 */
+		if (length > 1 && cells > 1)
+			return -EINVAL;
+
+		rid = rid_base;
+		while (rid <= U16_MAX && rid - rid_base < length) {
+			u32 alias = 0, next;
+			int ret;
+
+			/*
+			 * PARF matches the raw BDF. Enumerate only aliases of
+			 * mapped RIDs, rather than scanning the PCI RID space.
+			 */
+			do {
+				/* RID 0 / SID offset 0 also looks like an empty slot. */
+				if ((rid | alias) || !rid_zero_mapped) {
+					ret = qcom_pcie_config_sid_entry_1_9_0(bdf_to_sid_base,
+							qcom_pcie_crc8_table, rid | alias,
+							sid + rid - rid_base - smmu_sid_base);
+					if (ret)
+						return ret;
+					if (!(rid | alias))
+						rid_zero_mapped = true;
+				}
+				alias = (alias - aliases) & aliases;
+			} while (alias);
+
+			/* Advance to the next RID with only unmasked bits set. */
+			next = ((rid | ~map_mask) + 1) & map_mask;
+			if (next <= rid)
+				break;
+			rid = next;
 		}
-
-		/* BDF [31:16] | SID [15:8] | NEXT [7:0] */
-		val = map[i].bdf << 16 | (map[i].smmu_sid - smmu_sid_base) << 8 | 0;
-		writel(val, bdf_to_sid_base + hash * sizeof(u32));
 	}
-
-	kfree(map);
 
 	return 0;
 }
