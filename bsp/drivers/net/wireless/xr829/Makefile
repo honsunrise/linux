@@ -47,7 +47,7 @@ ccflags-y += $(DRV_FLAGS)
 # include/linux/stdarg.h and clang-r450784d/lib64/clang/14.0.6/include/stdarg.h
 ccflags-y += -Wno-macro-redefined
 
-NOSTDINC_FLAGS := -I$(srctree)/$(src)/include/
+NOSTDINC_FLAGS := -I$(src)/include/
 #NOSTDINC_FLAGS += -I$(srctree)/$(src)/include/uapi/
 
 ldflags-y += --strip-debug

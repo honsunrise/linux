@@ -85,6 +85,6 @@ else
     endif
 
 export ATBM_WIFI__EXT_CCFLAGS
-include $(srctree)/$(src)/Makefile.build.kernel
+include $(src)/Makefile.build.kernel
 endif
 

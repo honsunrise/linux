@@ -6,7 +6,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-EXTRA_CFLAGS += -I$(srctree)/$(src)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -25,7 +25,7 @@ CONFIG_WAKEUP_TYPE = 0x7 #bit2: deauth, bit1: unicast, bit0: magic pkt.
 
 CONFIG_DRVEXT_MODULE = n
 
-export TopDIR ?= $(srctree)/$(src)
+export TopDIR ?= $(src)
 
 ########### COMMON  #################################
 HCI_NAME = usb
@@ -55,10 +55,10 @@ _HAL_INTFS_FILES :=	hal/hal_intf.o \
 			hal/hal_usb_led.o
 
 
-EXTRA_CFLAGS += -I$(srctree)/$(src)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 _PLATFORM_FILES := platform/platform_ops.o
 
-EXTRA_CFLAGS += -I$(srctree)/$(src)/hal
+EXTRA_CFLAGS += -I$(src)/hal
 
 include $(TopDIR)/hal/phydm/phydm.mk
 ########### HAL_RTL8723D #################################

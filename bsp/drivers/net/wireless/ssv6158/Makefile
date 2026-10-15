@@ -1,4 +1,5 @@
 KMODULE_NAME = ssv6x5x
+BASH ?= bash
 
 ifeq ($(KERNEL_OBJ_PATH),)
 KERNEL_OBJ_PATH := /lib/modules/`uname -r`/build
@@ -8,7 +9,7 @@ ifeq ($(SSV_DRV_PATH),)
 SSV_DRV_PATH := $(PWD)
 endif
 
-KBUILD_TOP := $(srctree)/$(src)
+KBUILD_TOP := $(src)
 ifeq ($(MAKELEVEL),0)
 KBUILD_TOP := .
 endif
@@ -36,7 +37,7 @@ MOD_DEF_H = include/ssv_mod_conf.h
 EXTRA_CFLAGS := -I$(KBUILD_TOP) -I$(KBUILD_TOP)/include
 
 DEF_PARSER_H = $(KBUILD_TOP)/include/ssv_conf_parser.h
-$(shell env ccflags="$(ccflags-y)" $(KBUILD_TOP)/parser-conf.sh $(DEF_PARSER_H))
+$(shell env ccflags="$(ccflags-y)" $(BASH) $(KBUILD_TOP)/parser-conf.sh $(DEF_PARSER_H))
 
 #------------------------------
 # ssvdevice/

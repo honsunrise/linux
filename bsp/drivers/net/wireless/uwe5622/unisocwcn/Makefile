@@ -118,9 +118,9 @@ ccflags-y += -DCONFIG_WCN_BOOT
 ccflags-y += -DCONFIG_WCN_UTILS
 
 #### include path ######
-ccflags-y += -I$(srctree)/$(src)/include/
-ccflags-y += -I$(srctree)/$(src)/platform/
-ccflags-y += -I$(srctree)/$(src)/platform/rf/
+ccflags-y += -I$(src)/include/
+ccflags-y += -I$(src)/platform/
+ccflags-y += -I$(src)/platform/rf/
 
 #### add cflag for Customer ######
 ### ---------- Hisilicon start ---------- ###
@@ -399,7 +399,7 @@ KDIR ?= $(ANDROID_PRODUCT_OUT)/obj/KERNEL_OBJ
 ARCH ?= arm
 CROSS_COMPILE ?= arm-histbv310-linux-
 
-EXTRA_CFLAGS += -I$(srctree)/$(src)/include -D__linux__
+EXTRA_CFLAGS += -I$(src)/include -D__linux__
 
 all: $(all_dependencies)
 

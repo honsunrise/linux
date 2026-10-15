@@ -535,7 +535,7 @@ $(ATBM_MODULES_NAME)-$(CONFIG_MAC80211_ATBM_MESH) += \
 $(ATBM_MODULES_NAME)-$(CONFIG_PM) += mac80211/pm.o
 
 $(ATBM_MODULES_NAME)-$(CONFIG_MAC80211_ATBM_DRIVER_API_TRACER) += mac80211/driver-trace.o
-CFLAGS_driver-trace.o := -I$(srctree)/$(src)
+CFLAGS_driver-trace.o := -I$(src)
 
 # objects for PID algorithm
 rc80211_pid-$(CONFIG_MAC80211_ATBM_DEBUGFS) := mac80211/rc80211_pid_algo.o

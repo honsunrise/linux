@@ -36,7 +36,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-EXTRA_CFLAGS += -I$(srctree)/$(src)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -243,7 +243,7 @@ else
 endif
 
 ifeq ($(CONFIG_PLATFORM_RTL8198D), y)
-DRV_PATH = $(srctree)/$(src)
+DRV_PATH = $(src)
 else
 DRV_PATH = $(TopDIR)
 endif
@@ -674,7 +674,7 @@ endif
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
-EXTRA_CFLAGS += -I$(srctree)/$(src)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
 
@@ -695,7 +695,7 @@ endif
 
 ifneq ($(KERNELRELEASE),)
 ########### COMMON #################################
-include $(srctree)/$(src)/common.mk
+include $(src)/common.mk
 
 EXTRA_CFLAGS += -DPHL_PLATFORM_LINUX
 EXTRA_CFLAGS += -DCONFIG_PHL_ARCH
@@ -716,7 +716,7 @@ ifeq ($(DIRTY_FOR_WORK), y)
 EXTRA_CFLAGS += -DDIRTY_FOR_WORK
 endif
 
-include $(srctree)/$(src)/phl/phl.mk
+include $(src)/phl/phl.mk
 
 
 obj-$(CONFIG_RTL8852BS) := $(MODULE_NAME).o
