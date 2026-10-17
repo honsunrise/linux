@@ -2177,11 +2177,13 @@
 	aw,soc-phy-clk-en;
 	/delete-property/ aw,rgmii-clk-ext;
 	/*
-	 * The vendor "tx-delay = <12>" / "rx-delay = <10>" are in units of
-	 * 100ps but are only read by the vendor glue. dwmac-sun55i reads the
-	 * generic properties, so carry the same 1200ps / 1000ps over.
+	 * Delay fields use 100ps steps. The vendor TX value of 12 has
+	 * insufficient timing margin on Cubie A7A: bidirectional traffic
+	 * collapses despite a 1000/full link and no MAC TX errors.
+	 * Use TX step 9 while preserving the RX step of 10.
+	 * https://github.com/Rabs9/radxa-cubie-a7a-kernel/blob/main/docs/ETHERNET-TX-DELAY.md
 	 */
-	tx-internal-delay-ps = <1200>;
+	tx-internal-delay-ps = <900>;
 	rx-internal-delay-ps = <1000>;
 	/*
 	 * The glue driver asks for the MBUS clock by the name "mbus"
