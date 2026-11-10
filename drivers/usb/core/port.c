@@ -953,7 +953,7 @@ void usb_hub_remove_port_device(struct usb_hub *hub, int port1)
 	if (peer)
 		unlink_peers(port_dev, peer);
 	if (IS_REACHABLE(CONFIG_POWER_SEQUENCING))
-		pwrseq_power_off(port_dev->pwrseq);
+		pwrseq_disable(port_dev->pwrseq);
 	component_del(&port_dev->dev, &connector_ops);
 	sysfs_put(port_dev->state_kn);
 	device_unregister(&port_dev->dev);

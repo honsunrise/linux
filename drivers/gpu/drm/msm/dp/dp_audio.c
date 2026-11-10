@@ -282,7 +282,7 @@ int msm_dp_audio_prepare(struct drm_bridge *bridge,
 	 * programming; jack and ELD state still report sink availability.
 	 */
 	if (!msm_dp_display->power_on)
-		return 0;
+		goto end;
 
 	audio = msm_dp_audio_get_data(msm_dp_display);
 	if (IS_ERR(audio)) {

@@ -205,7 +205,8 @@ static void simple_bridge_upstream_hpd_cb(void *data,
 	schedule_work(&sbridge->hpd_work);
 }
 
-static void simple_bridge_pre_enable(struct drm_bridge *bridge)
+static void simple_bridge_pre_enable(struct drm_bridge *bridge,
+				     struct drm_atomic_commit *commit)
 {
 	struct simple_bridge *sbridge = drm_bridge_to_simple_bridge(bridge);
 
@@ -220,7 +221,8 @@ static void simple_bridge_pre_enable(struct drm_bridge *bridge)
 	mutex_unlock(&sbridge->lock);
 }
 
-static void simple_bridge_post_disable(struct drm_bridge *bridge)
+static void simple_bridge_post_disable(struct drm_bridge *bridge,
+				       struct drm_atomic_commit *commit)
 {
 	struct simple_bridge *sbridge = drm_bridge_to_simple_bridge(bridge);
 
@@ -286,10 +288,13 @@ static void simple_bridge_detach(struct drm_bridge *bridge)
 }
 
 static const struct drm_bridge_funcs simple_bridge_bridge_funcs = {
+	.atomic_create_state = drm_atomic_helper_bridge_create_state,
+	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
+	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
 	.attach		= simple_bridge_attach,
 	.detach		= simple_bridge_detach,
-	.pre_enable	= simple_bridge_pre_enable,
-	.post_disable	= simple_bridge_post_disable,
+	.atomic_pre_enable = simple_bridge_pre_enable,
+	.atomic_post_disable = simple_bridge_post_disable,
 	.hpd_enable	= simple_bridge_hpd_enable,
 	.hpd_disable	= simple_bridge_hpd_disable,
 };

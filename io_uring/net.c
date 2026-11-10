@@ -7,6 +7,7 @@
 #include <linux/un.h>
 #include <linux/compat.h>
 #include <net/compat.h>
+#include <net/ipv6.h>
 #include <linux/io_uring.h>
 
 #include <uapi/linux/io_uring.h>
@@ -236,39 +237,6 @@ static int io_net_import_vec(struct io_kiocb *req, struct io_async_msghdr *iomsg
 	return 0;
 }
 
-static int io_compat_msg_copy_hdr(struct io_kiocb *req,
-				  struct io_async_msghdr *iomsg,
-				  struct compat_msghdr *msg, int ddir,
-				  struct sockaddr __user **save_addr)
-{
-	struct io_sr_msg *sr = io_kiocb_to_cmd(req, struct io_sr_msg);
-	struct compat_iovec __user *uiov;
-	int ret;
-
-	if (copy_from_user(msg, sr->umsg_compat, sizeof(*msg)))
-		return -EFAULT;
-
-	ret = __get_compat_msghdr(&iomsg->msg, msg, save_addr);
-	if (ret)
-		return ret;
-
-	uiov = compat_ptr(msg->msg_iov);
-	if (req->flags & REQ_F_BUFFER_SELECT) {
-		if (msg->msg_iovlen == 0) {
-			sr->len = 0;
-		} else if (msg->msg_iovlen > 1) {
-			return -EINVAL;
-		} else {
-			struct compat_iovec tmp_iov;
-
-			if (copy_from_user(&tmp_iov, uiov, sizeof(tmp_iov)))
-				return -EFAULT;
-			sr->len = tmp_iov.iov_len;
-		}
-	}
-	return 0;
-}
-
 static int io_copy_msghdr_from_user(struct user_msghdr *msg,
 				    struct user_msghdr __user *umsg)
 {
@@ -288,11 +256,10 @@ ua_end:
 }
 
 static int io_msg_copy_hdr(struct io_kiocb *req, struct io_async_msghdr *iomsg,
-			   struct user_msghdr *msg, int ddir,
+			   struct user_msghdr *msg,
 			   struct sockaddr __user **save_addr)
 {
 	struct io_sr_msg *sr = io_kiocb_to_cmd(req, struct io_sr_msg);
-	struct user_msghdr __user *umsg = sr->umsg;
 	int ret;
 
 	iomsg->msg.msg_name = &iomsg->addr;
@@ -301,7 +268,10 @@ static int io_msg_copy_hdr(struct io_kiocb *req, struct io_async_msghdr *iomsg,
 	if (io_is_compat(req->ctx)) {
 		struct compat_msghdr cmsg;
 
-		ret = io_compat_msg_copy_hdr(req, iomsg, &cmsg, ddir, save_addr);
+		if (copy_from_user(&cmsg, sr->umsg_compat, sizeof(cmsg)))
+			return -EFAULT;
+
+		ret = __get_compat_msghdr(&iomsg->msg, &cmsg, save_addr);
 		if (ret)
 			return ret;
 
@@ -310,18 +280,17 @@ static int io_msg_copy_hdr(struct io_kiocb *req, struct io_async_msghdr *iomsg,
 		msg->msg_controllen = cmsg.msg_controllen;
 		msg->msg_iov = compat_ptr(cmsg.msg_iov);
 		msg->msg_iovlen = cmsg.msg_iovlen;
-		return 0;
+	} else {
+		ret = io_copy_msghdr_from_user(msg, sr->umsg);
+		if (unlikely(ret))
+			return ret;
+
+		msg->msg_flags = 0;
+
+		ret = __copy_msghdr(&iomsg->msg, msg, save_addr);
+		if (ret)
+			return ret;
 	}
-
-	ret = io_copy_msghdr_from_user(msg, umsg);
-	if (unlikely(ret))
-		return ret;
-
-	msg->msg_flags = 0;
-
-	ret = __copy_msghdr(&iomsg->msg, msg, save_addr);
-	if (ret)
-		return ret;
 
 	if (req->flags & REQ_F_BUFFER_SELECT) {
 		if (msg->msg_iovlen == 0) {
@@ -329,12 +298,13 @@ static int io_msg_copy_hdr(struct io_kiocb *req, struct io_async_msghdr *iomsg,
 		} else if (msg->msg_iovlen > 1) {
 			return -EINVAL;
 		} else {
-			struct iovec __user *uiov = msg->msg_iov;
-			struct iovec tmp_iov;
+			struct iovec fast_iov, *iov;
 
-			if (copy_from_user(&tmp_iov, uiov, sizeof(tmp_iov)))
-				return -EFAULT;
-			sr->len = tmp_iov.iov_len;
+			iov = iovec_from_user(msg->msg_iov, 1, 1, &fast_iov,
+					      io_is_compat(req->ctx));
+			if (IS_ERR(iov))
+				return PTR_ERR(iov);
+			sr->len = iov->iov_len;
 		}
 	}
 	return 0;
@@ -402,7 +372,7 @@ static int io_sendmsg_setup(struct io_kiocb *req, const struct io_uring_sqe *sqe
 
 	sr->flags |= IORING_SEND_VECTORIZED;
 	sr->umsg = u64_to_user_ptr(READ_ONCE(sqe->addr));
-	ret = io_msg_copy_hdr(req, kmsg, &msg, ITER_SOURCE, NULL);
+	ret = io_msg_copy_hdr(req, kmsg, &msg, NULL);
 	if (unlikely(ret))
 		return ret;
 	/* save msg_control as sys_sendmsg() overwrites it */
@@ -508,6 +478,24 @@ static int io_bundle_nbufs(struct io_async_msghdr *kmsg, int ret)
 	} while (ret);
 
 	return nbufs;
+}
+
+/*
+ * A receive that is retried after a partial transfer keeps writing to what it
+ * has mapped. io_net_kbuf_recyle() only commits what was filled so far, which
+ * takes a buffer out of circulation if it's a single one that is consumed as a
+ * whole. The tail of an incrementally consumed buffer, or the yet unused
+ * buffers of a bundle, would be up for grabs. They can't be committed in
+ * advance either, the CQE has no way to tell if they end up not being used.
+ */
+static bool io_net_kbuf_can_retry(struct io_kiocb *req,
+				  struct io_buffer_list *bl,
+				  struct io_async_msghdr *kmsg)
+{
+	/* not ring provided, or committed at selection time */
+	if (!(req->flags & REQ_F_BUFFERS_COMMIT))
+		return true;
+	return !(bl->flags & IOBL_INC) && iter_is_ubuf(&kmsg->msg.msg_iter);
 }
 
 static int io_net_kbuf_recyle(struct io_kiocb *req, struct io_buffer_list *bl,
@@ -761,7 +749,7 @@ static int io_recvmsg_copy_hdr(struct io_kiocb *req,
 	struct user_msghdr msg;
 	int ret;
 
-	ret = io_msg_copy_hdr(req, iomsg, &msg, ITER_DEST, &iomsg->uaddr);
+	ret = io_msg_copy_hdr(req, iomsg, &msg, &iomsg->uaddr);
 	if (unlikely(ret))
 		return ret;
 
@@ -893,12 +881,15 @@ static inline bool io_recv_finish(struct io_kiocb *req,
 		cflags |= IORING_CQE_F_SOCK_NONEMPTY;
 
 	if (sel->val > 0 && sr->flags & IORING_RECV_MSHOT_LIM) {
+		unsigned int this_len = sel->val - sr->done_io;
+
 		/*
-		 * If sr->len hits zero, the limit has been reached. Mark
-		 * mshot as finished, and flag MSHOT_DONE as well to prevent
-		 * a potential bundle from being retried.
+		 * If sr->mshot_total_len hits zero, the limit has been reached.
+		 * Mark mshot as finished, and flag MSHOT_DONE as well to
+		 * prevent a potential bundle from being retried.
 		 */
-		sr->mshot_total_len -= min_t(int, sel->val, sr->mshot_total_len);
+		sr->mshot_total_len -= min_t(unsigned int, this_len,
+					     sr->mshot_total_len);
 		if (!sr->mshot_total_len) {
 			sr->flags |= IORING_RECV_MSHOT_DONE;
 			mshot_finished = true;
@@ -1080,6 +1071,7 @@ retry_multishot:
 		sel = io_buffer_select(req, &len, sr->buf_group, issue_flags);
 		if (!sel.addr)
 			return -ENOBUFS;
+		len = min_t(size_t, len, MAX_RW_COUNT);
 
 		if (req->flags & REQ_F_APOLL_MULTISHOT) {
 			ret = io_recvmsg_prep_multishot(kmsg, sr, &sel.addr, &len);
@@ -1121,7 +1113,8 @@ retry_multishot:
 			io_kbuf_recycle(req, sel.buf_list, issue_flags);
 			return IOU_RETRY;
 		}
-		if (ret > 0 && io_net_retry(sock, flags)) {
+		if (ret > 0 && io_net_retry(sock, flags) &&
+		    io_net_kbuf_can_retry(req, sel.buf_list, kmsg)) {
 			sr->done_io += ret;
 			return io_net_kbuf_recyle(req, sel.buf_list, kmsg, ret);
 		}
@@ -1208,6 +1201,8 @@ static int io_recv_buf_select(struct io_kiocb *req, struct io_async_msghdr *kmsg
 		*sel = io_buffer_select(req, &len, sr->buf_group, issue_flags);
 		if (!sel->addr)
 			return -ENOBUFS;
+		/* ring provided buffers can be up to 4G, keep len an int */
+		len = min_t(size_t, len, MAX_RW_COUNT);
 		sr->buf = sel->addr;
 		sr->len = len;
 map_ubuf:
@@ -1282,7 +1277,8 @@ retry_multishot:
 			io_kbuf_recycle(req, sel.buf_list, issue_flags);
 			return IOU_RETRY;
 		}
-		if (ret > 0 && io_net_retry(sock, flags)) {
+		if (ret > 0 && io_net_retry(sock, flags) &&
+		    io_net_kbuf_can_retry(req, sel.buf_list, kmsg)) {
 			sr->len -= ret;
 			sr->buf += ret;
 			sr->done_io += ret;
@@ -1498,7 +1494,7 @@ static int io_sg_from_iter(struct sk_buff *skb,
 		return zerocopy_fill_skb_from_iter(skb, from, length);
 
 	bi.bi_size = min(from->count, length);
-	bi.bi_bvec_done = from->iov_offset;
+	bi.bi_offset = from->iov_offset;
 	bi.bi_idx = 0;
 
 	while (bi.bi_size && frag < MAX_SKB_FRAGS) {
@@ -1517,7 +1513,7 @@ static int io_sg_from_iter(struct sk_buff *skb,
 	from->bvec += bi.bi_idx;
 	from->nr_segs -= bi.bi_idx;
 	from->count -= copied;
-	from->iov_offset = bi.bi_bvec_done;
+	from->iov_offset = bi.bi_offset;
 
 	skb->data_len += copied;
 	skb->len += copied;
@@ -1741,7 +1737,7 @@ void io_socket_bpf_populate(struct io_uring_bpf_ctx *bctx, struct io_kiocb *req)
 	struct io_socket *sock = io_kiocb_to_cmd(req, struct io_socket);
 
 	bctx->socket.family = sock->domain;
-	bctx->socket.type = sock->type;
+	bctx->socket.type = sock->type & SOCK_TYPE_MASK;
 	bctx->socket.protocol = sock->protocol;
 }
 
@@ -1772,7 +1768,8 @@ void io_connect_bpf_populate(struct io_uring_bpf_ctx *bctx, struct io_kiocb *req
 	case AF_INET6: {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ss;
 
-		if (conn->addr_len < (int)sizeof(*sin6))
+		/* The IPv6 stack accepts SIN6_LEN_RFC2133; port and addr are in it. */
+		if (conn->addr_len < SIN6_LEN_RFC2133)
 			break;
 		bctx->connect.port = sin6->sin6_port;
 		memcpy(bctx->connect.v6_addr, &sin6->sin6_addr,
@@ -1884,6 +1881,17 @@ int io_connect(struct io_kiocb *req, unsigned int issue_flags)
 			if (connect->seen_econnaborted)
 				goto out;
 			connect->seen_econnaborted = true;
+		} else if (req->file->f_flags & O_NONBLOCK) {
+			/*
+			 * __sys_connect_file() adds O_NONBLOCK from the socket
+			 * to every attempt, so a retry from io-wq fails with
+			 * -EAGAIN as well. A poll on the socket doesn't wait
+			 * until a retry can succeed. For example, an AF_UNIX
+			 * client reports EPOLLOUT right away while the
+			 * listener's backlog is full. Complete the request
+			 * with -EAGAIN, like connect(2) does.
+			 */
+			goto out;
 		}
 		return -EAGAIN;
 	}

@@ -4452,6 +4452,9 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
  * configured at firmware level.
  */
 static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+						   struct net_device *dev,
+#endif
 											 struct cfg80211_chan_def *chandef)
 {
 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
@@ -4921,7 +4924,11 @@ static int rwnx_cfg80211_get_channel(struct wiphy *wiphy,
 
 	if (rwnx_vif->vif_index == rwnx_hw->monitor_vif) {
 		//retrieve channel from firmware
-		rwnx_cfg80211_set_monitor_channel(wiphy, NULL);
+		rwnx_cfg80211_set_monitor_channel(wiphy,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+						  wdev->netdev,
+#endif
+						  NULL);
 	}
 
 	//Check if channel context is valid
@@ -5063,14 +5070,16 @@ send_frame:
 /**
  * @start_radar_detection: Start radar detection in the driver.
  */
-static
-int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
-										struct net_device *dev,
-										struct cfg80211_chan_def *chandef
-									#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
-										, u32 cac_time_ms
-									#endif
-										)
+static int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
+					      struct net_device *dev,
+					      struct cfg80211_chan_def *chandef
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)
+					      , u32 cac_time_ms
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+					      , int link_id
+#endif
+					      )
 {
 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
 	struct rwnx_vif *rwnx_vif = netdev_priv(dev);

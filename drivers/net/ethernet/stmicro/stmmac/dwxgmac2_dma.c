@@ -32,21 +32,13 @@ static void dwxgmac2_dma_init(void __iomem *ioaddr,
 
 	writel(value, ioaddr + XGMAC_DMA_SYSBUS_MODE);
 
-	value = readl(ioaddr + XGMAC_DMA_MODE);
-
-	if (dma_cfg->multi_msi_en)
+	/* Route DMA interrupts to per-channel lines when multi-MSI is enabled. */
+	if (dma_cfg->multi_msi_en) {
+		value = readl(ioaddr + XGMAC_DMA_MODE);
 		value = u32_replace_bits(value, XGMAC_INTM_MODE1,
 					 XGMAC_INTM_MASK);
-
-	/*
-	 * A friendly warning to future adventurers. If Descriptor Posted
-	 * Write support, which is off by default, is ever enabled then be sure
-	 * to make it optional. This is required by errata for at least XGMAC
-	 * 3.01A... and the XGMAC 2.x and 3.x are architecturally similar so we
-	 * use dwxgmac2 support for the 3.x family as well.
-	 */
-
-	writel(value, ioaddr + XGMAC_DMA_MODE);
+		writel(value, ioaddr + XGMAC_DMA_MODE);
+	}
 }
 
 static void dwxgmac2_dma_init_chan(struct stmmac_priv *priv,

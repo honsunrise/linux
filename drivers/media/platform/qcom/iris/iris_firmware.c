@@ -4,6 +4,7 @@
  */
 
 #include <linux/firmware.h>
+#include <linux/firmware/qcom/qcom_pas.h>
 #include <linux/firmware/qcom/qcom_scm.h>
 #include <linux/of_address.h>
 #include <linux/of_reserved_mem.h>
@@ -25,25 +26,39 @@
 
 static bool iris_detect_gen2_from_fwdata(const u8 *data, size_t size)
 {
-	const char *marker = "QC_IMAGE_VERSION_STRING=";
+	static const char *marker = "QC_IMAGE_VERSION_STRING=";
 	const size_t mlen = strlen(marker);
-	int major = 0, minor = 0;
-	char version_buf[64];
-	size_t max;
+	static const char *vfw = "vfw";
+	const size_t vfwlen = strlen(vfw);
+	static const char *vf = "video-firmware.";
+	const size_t vflen = strlen(vf);
 
-	max = (size > mlen) ? size - mlen : 0;
-	for (size_t i = 0; i < max; i++) {
-		if (!memcmp(data + i, marker, mlen)) {
-			const char *found = (const char *)(data + i + mlen);
+	for (size_t i = 0; i + mlen < size; i++) {
+		const char *found;
 
-			strscpy(version_buf, found, sizeof(version_buf));
-			if (!strncmp(version_buf, "vfw", 3))
-				return true;
-			if (sscanf(version_buf, "video-firmware.%d.%d", &major, &minor) == 2 &&
-			    major >= 2)
-				return true;
-			break;
-		}
+		if (memcmp(data + i, marker, mlen))
+			continue;
+
+		found = data + i + mlen;
+		size -= i + mlen;
+
+		/* vfw => Gen2 */
+		if (size > vfwlen && !memcmp(found, vfw, vfwlen))
+			return true;
+
+		if (size < vflen ||
+		    memcmp(found, vf, vflen))
+			return false;
+
+		found += vflen;
+		size -= vflen;
+
+		/*
+		 * video-firmware.1.x is Gen1.
+		 * video-firmware.2.x and video-firmware.10.x are Gen2.
+		 */
+		return size >= 2 &&
+			(*found >= '2' || (*found == '1' && found[1] != '.'));
 	}
 
 	return false;
@@ -151,7 +166,7 @@ int iris_fw_load(struct iris_core *core)
 		return ret;
 	}
 
-	ret = qcom_scm_pas_auth_and_reset(IRIS_PAS_ID);
+	ret = qcom_pas_auth_and_reset(IRIS_PAS_ID);
 	if (ret)  {
 		dev_err(core->dev, "auth and reset failed: %d\n", ret);
 		return ret;
@@ -165,7 +180,7 @@ int iris_fw_load(struct iris_core *core)
 						     cp_config->cp_nonpixel_size);
 		if (ret) {
 			dev_err(core->dev, "qcom_scm_mem_protect_video_var failed: %d\n", ret);
-			qcom_scm_pas_shutdown(IRIS_PAS_ID);
+			qcom_pas_shutdown(IRIS_PAS_ID);
 			return ret;
 		}
 	}
@@ -175,10 +190,10 @@ int iris_fw_load(struct iris_core *core)
 
 int iris_fw_unload(struct iris_core *core)
 {
-	return qcom_scm_pas_shutdown(IRIS_PAS_ID);
+	return qcom_pas_shutdown(IRIS_PAS_ID);
 }
 
 int iris_set_hw_state(struct iris_core *core, bool resume)
 {
-	return qcom_scm_set_remote_state(resume, 0);
+	return qcom_pas_set_remote_state(resume, 0);
 }
