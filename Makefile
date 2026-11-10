@@ -9,6 +9,10 @@ NAME = Baby Opossum Posse
 # builds from a Git checkout. Callers can still request a suffix explicitly.
 export LOCALVERSION ?=
 
+# Keep BSP Kconfig paths valid for every architecture and O= build.
+export BSP_TOP ?= bsp/
+export LICHEE_KERN_DIR ?= ./
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
