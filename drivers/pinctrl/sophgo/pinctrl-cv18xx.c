@@ -333,13 +333,33 @@ static int cv1800_pinconf_compute_config(struct sophgo_pinctrl *pctrl,
 		u32 arg = pinconf_to_config_argument(configs[i]);
 
 		switch (param) {
+		/*
+		 * A bias is exclusive: the pads come out of reset with the
+		 * pull-down on, and writing only the bit that was named left
+		 * both pulls active (bias-pull-up -> 60k up against 62k down,
+		 * a released line parks near half rail).  Pulling one way
+		 * clears the other; bias-disable clears both.
+		 */
 		case PIN_CONFIG_BIAS_PULL_DOWN:
 			FIELD_MODIFY(PIN_IO_PULLDOWN, &v, arg);
 			m |= PIN_IO_PULLDOWN;
+			if (arg) {
+				FIELD_MODIFY(PIN_IO_PULLUP, &v, 0);
+				m |= PIN_IO_PULLUP;
+			}
 			break;
 		case PIN_CONFIG_BIAS_PULL_UP:
 			FIELD_MODIFY(PIN_IO_PULLUP, &v, arg);
 			m |= PIN_IO_PULLUP;
+			if (arg) {
+				FIELD_MODIFY(PIN_IO_PULLDOWN, &v, 0);
+				m |= PIN_IO_PULLDOWN;
+			}
+			break;
+		case PIN_CONFIG_BIAS_DISABLE:
+			FIELD_MODIFY(PIN_IO_PULLUP, &v, 0);
+			FIELD_MODIFY(PIN_IO_PULLDOWN, &v, 0);
+			m |= PIN_IO_PULLUP | PIN_IO_PULLDOWN;
 			break;
 		case PIN_CONFIG_DRIVE_STRENGTH_UA:
 			ret = sophgo_pinctrl_oc2reg(pctrl, sp,

@@ -31,10 +31,18 @@
 #include <linux/param.h>
 #include <linux/bitops.h>
 #include <linux/termios.h>
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of_platform.h>
 #include <linux/pm_wakeirq.h>
+
+/*
+ * del_timer()/del_timer_sync() were renamed to timer_delete()/
+ * timer_delete_sync() in 6.15.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+#define del_timer(timer)		timer_delete(timer)
+#define del_timer_sync(timer)		timer_delete_sync(timer)
+#endif
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
@@ -76,9 +84,9 @@ static void bluesleep_stop(void);
 
 struct bluesleep_info {
 	unsigned int wakeup_enable;
-	unsigned host_wake;
-	unsigned ext_wake;
-	unsigned host_wake_irq;
+	struct gpio_desc *host_wake;
+	struct gpio_desc *ext_wake;
+	int host_wake_irq;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	struct wakeup_source *ws;
 #else
@@ -201,8 +209,8 @@ static inline int bluesleep_can_sleep(void)
 	/* check if HOST_WAKE_BT_GPIO and BT_WAKE_HOST_GPIO
 	 * are both deasserted
 	 */
-	return (gpio_get_value(bsi->ext_wake) != bsi->ext_wake_assert) &&
-		(gpio_get_value(bsi->host_wake) != bsi->host_wake_assert) &&
+	return (!gpiod_get_value(bsi->ext_wake)) &&
+		(!gpiod_get_value(bsi->host_wake)) &&
 		(!test_bit(BT_RXTIMER, &flags)) && (bsi->uport != NULL);
 }
 
@@ -260,7 +268,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 		hsuart_power(1);
 	} else {
 		static int tx_idle_cnt;
-		if (gpio_get_value(bsi->ext_wake) != bsi->ext_wake_assert && test_bit(BT_TXIDLE, &flags))
+		if (!gpiod_get_value(bsi->ext_wake) && test_bit(BT_TXIDLE, &flags))
 			tx_idle_cnt++;
 		else
 			tx_idle_cnt = 0;
@@ -272,18 +280,18 @@ static void bluesleep_sleep_work(struct work_struct *work)
 		if (test_bit(BT_PAUSE, &flags)) {
 			BT_DBG("rx wake du BT_PAUSE:%lx", flags);
 			///enable bt sleep immediately
-			gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
-		} else if ((gpio_get_value(bsi->ext_wake) != bsi->ext_wake_assert
+			gpiod_set_value(bsi->ext_wake, 0);
+		} else if ((!gpiod_get_value(bsi->ext_wake)
 					&& !test_bit(BT_TXIDLE, &flags)) || tx_idle_cnt > 5) {
 #else
-		if ((gpio_get_value(bsi->ext_wake) != bsi->ext_wake_assert
+		if ((!gpiod_get_value(bsi->ext_wake)
 					&& !test_bit(BT_TXIDLE, &flags)) || tx_idle_cnt > 5) {
 #endif
 			tx_idle_cnt = 0;
 			BT_DBG("force retrigger bt wake:%lx", flags);
-			gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+			gpiod_set_value(bsi->ext_wake, 1);
 			msleep(20);
-			gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
+			gpiod_set_value(bsi->ext_wake, 0);
 		}
 	}
 	mutex_unlock(&uart_lock);
@@ -299,7 +307,7 @@ static void bluesleep_hostwake_task(unsigned long data)
 	BT_DBG("hostwake line change");
 	spin_lock(&rw_lock);
 
-	if (gpio_get_value(bsi->host_wake) == bsi->host_wake_assert)
+	if (gpiod_get_value(bsi->host_wake))
 		bluesleep_rx_busy();
 	else
 		bluesleep_rx_idle();
@@ -320,14 +328,14 @@ static void bluesleep_outgoing_data(void)
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	/* if the tx side is sleeping... */
-	if (gpio_get_value(bsi->ext_wake) != bsi->ext_wake_assert) {
+	if (!gpiod_get_value(bsi->ext_wake)) {
 		BT_DBG("tx was sleeping, wakeup it");
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 		__pm_stay_awake(bsi->ws);
 #else
 		wake_lock(&bsi->wake_lock);
 #endif
-		gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+		gpiod_set_value(bsi->ext_wake, 1);
 		clear_bit(BT_ASLEEP, &flags);
 		clear_bit(BT_TXIDLE, &flags);
 		power_on_uart = 1;
@@ -384,7 +392,7 @@ static ssize_t bluesleep_write_proc_lpm(struct file *file,
 		set_bit(BT_TXIDLE, &flags);
 		clear_bit(BT_TXDATA, &flags);
 		/* deassert BT_WAKE */
-		gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
+		gpiod_set_value(bsi->ext_wake, 0);
 #else
 		/* HCI_DEV_UNREG */
 		bluesleep_stop();
@@ -434,7 +442,7 @@ static ssize_t bluesleep_write_proc_btwrite(struct file *file,
 
 	if (!has_lpm_enabled) {
 		BT_DBG("lpm disabled, direct set ext_wake to %c\n", b);
-		gpio_set_value(bsi->ext_wake, b != '0' ? bsi->ext_wake_assert : !bsi->ext_wake_assert);
+		gpiod_set_value(bsi->ext_wake, b != '0' ? 1 : 0);
 		return count;
 	}
 
@@ -532,7 +540,7 @@ static void bluesleep_tx_allow_sleep(void)
 	unsigned long irq_flags;
 	BT_DBG("Tx has been idle\n");
 	spin_lock_irqsave(&rw_lock, irq_flags);
-	gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
+	gpiod_set_value(bsi->ext_wake, 0);
 	set_bit(BT_TXIDLE, &flags);
 	clear_bit(BT_TXDATA, &flags);
 	bluesleep_tx_idle();
@@ -595,11 +603,11 @@ static int bluesleep_start(void)
 	/* start the timer */
 	mod_timer(&rx_timer, jiffies + (RX_TIMER_INTERVAL*HZ));
 	/*deassert BT_WAKE first*/
-	gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
+	gpiod_set_value(bsi->ext_wake, 0);
 	msleep(20);
 
 	/* assert BT_WAKE */
-	gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+	gpiod_set_value(bsi->ext_wake, 1);
 	retval = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
 				bsi->host_wake_assert ? IRQF_TRIGGER_RISING : IRQF_TRIGGER_FALLING,
 				"bluetooth hostwake", &bsi->pdev->dev);
@@ -638,7 +646,7 @@ static __attribute__((unused)) void bluesleep_stop(void)
 	}
 
 	/* assert BT_WAKE */
-	gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+	gpiod_set_value(bsi->ext_wake, 1);
 
 	del_timer(&rx_timer);
 	clear_bit(BT_PROTO, &flags);
@@ -676,7 +684,7 @@ static int bluepower_read_proc_btwake(char *page, char **start, off_t offset,
 {
 	*eof = 1;
 	return sprintf(page, "btwake:%u\n",
-		(gpio_get_value(bsi->ext_wake) == bsi->ext_wake_assert));
+		(gpiod_get_value(bsi->ext_wake)));
 }
 
 /**
@@ -706,9 +714,9 @@ static int bluepower_write_proc_btwake(struct file *file, const char *buffer,
 	}
 
 	if (buf[0] == '0') {
-		gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
+		gpiod_set_value(bsi->ext_wake, 0);
 	} else if (buf[0] == '1') {
-		gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+		gpiod_set_value(bsi->ext_wake, 1);
 	} else {
 		kfree(buf);
 		return -EINVAL;
@@ -735,7 +743,7 @@ static int bluepower_read_proc_hostwake(char *page, char **start, off_t offset,
 {
 	*eof = 1;
 	return sprintf(page, "hostwake: %u\n",
-		(gpio_get_value(bsi->host_wake) == bsi->host_wake_assert));
+		(gpiod_get_value(bsi->host_wake)));
 }
 
 
@@ -830,11 +838,6 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct device *dev = &pdev->dev;
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 2, 0))
-	enum of_gpio_flags config;
-#else
-	u32 config = 0;
-#endif
 	int ret, uart_index;
 	u32 val;
 
@@ -843,47 +846,40 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 	if (!bsi)
 		return -ENOMEM;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 0))
-	bsi->host_wake = of_get_named_gpio(np, "bt_hostwake", 0);
-#else
-	bsi->host_wake = of_get_named_gpio_flags(np, "bt_hostwake", 0, &config);
-#endif
-	if (!gpio_is_valid(bsi->host_wake)) {
-		BT_ERR("get gpio bt_hostwake failed\n");
-		ret = -EINVAL;
+	/*
+	 * The wake lines are described with standard GPIO descriptor
+	 * properties: bt-hostwake-gpios and bt-wake-gpios.  The old
+	 * of_get_named_gpio() based properties (bt_hostwake/bt_wake) were
+	 * tied to the removed <linux/of_gpio.h> API and are no longer
+	 * supported; boards must be updated to the descriptor properties.
+	 */
+	bsi->host_wake = devm_gpiod_get(dev, "bt-hostwake", GPIOD_IN);
+	if (IS_ERR(bsi->host_wake)) {
+		ret = PTR_ERR(bsi->host_wake);
+		BT_ERR("get gpio bt-hostwake failed: %d\n", ret);
 		goto err0;
 	}
 
-	/* set host_wake_assert */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 0))
-	of_property_read_u32_index(np, "bt_hostwake", 3, &config);
-	bsi->host_wake_assert = (config == GPIO_ACTIVE_LOW) ? 0 : 1;
-#else
-	bsi->host_wake_assert = (config == OF_GPIO_ACTIVE_LOW) ? 0 : 1;
-#endif
+	/* set host_wake_assert (logical level returned by gpiod_get_value()) */
+	bsi->host_wake_assert = !gpiod_is_active_low(bsi->host_wake);
 #if IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_HIGH) || IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_RISING)
 	bsi->host_wake_assert = 1;
 #elif IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_LOW) || IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_FALLING)
 	bsi->host_wake_assert = 0;
 #endif
-	BT_DBG("bt_hostwake gpio=%d assert=%d\n", bsi->host_wake, bsi->host_wake_assert);
+	BT_DBG("bt-hostwake assert=%d\n", bsi->host_wake_assert);
 
 	if (assert_level != -1) {
 		bsi->host_wake_assert = (assert_level & 0x02) > 0;
 		BT_DBG("override host_wake assert to %d", bsi->host_wake_assert);
 	}
 
-	ret = devm_gpio_request(dev, bsi->host_wake, "bt_hostwake");
-	if (ret < 0) {
-		BT_ERR("can't request bt_hostwake gpio %d\n",
-			bsi->host_wake);
+	bsi->host_wake_irq = gpiod_to_irq(bsi->host_wake);
+	if (bsi->host_wake_irq < 0) {
+		BT_ERR("map bt-hostwake to virq failed, errno = %d\n",
+				bsi->host_wake_irq);
+		ret = -ENODEV;
 		goto err0;
-	}
-	ret = gpio_direction_input(bsi->host_wake);
-	if (ret < 0) {
-		BT_ERR("can't request input direction bt_wake gpio %d\n",
-			bsi->host_wake);
-		goto err1;
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
@@ -897,67 +893,35 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 		ret = device_init_wakeup(dev, true);
 		if (ret < 0) {
 			BT_ERR("device init wakeup failed!\n");
-			goto err1;
+			goto err0;
 		}
-		ret = dev_pm_set_wake_irq(dev, gpio_to_irq(bsi->host_wake));
+		ret = dev_pm_set_wake_irq(dev, bsi->host_wake_irq);
 		if (ret < 0) {
-			BT_ERR("can't enable wakeup src for bt_hostwake %d\n",
-				bsi->host_wake);
-			goto err2;
+			BT_ERR("can't enable wakeup src for bt-hostwake %d\n",
+				bsi->host_wake_irq);
+			goto err1;
 		}
 		bsi->wakeup_enable = 1;
 	}
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 0))
-	bsi->ext_wake = of_get_named_gpio(np, "bt_wake", 0);
-#else
-	bsi->ext_wake = of_get_named_gpio_flags(np, "bt_wake", 0, &config);
-#endif
-	if (!gpio_is_valid(bsi->ext_wake)) {
-		BT_ERR("get gpio bt_wake failed\n");
-		ret = -EINVAL;
-		goto err2;
-	}
-
-	ret = devm_gpio_request(dev, bsi->ext_wake, "bt_wake");
-	if (ret < 0) {
-		BT_ERR("can't request bt_wake gpio %d\n",
-			bsi->ext_wake);
+	bsi->ext_wake = devm_gpiod_get(dev, "bt-wake", GPIOD_OUT_LOW);
+	if (IS_ERR(bsi->ext_wake)) {
+		ret = PTR_ERR(bsi->ext_wake);
+		BT_ERR("get gpio bt-wake failed: %d\n", ret);
 		goto err2;
 	}
 
 	/* set ext_wake_assert */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 0))
-	of_property_read_u32_index(np, "bt_wake", 3, &config);
-	bsi->ext_wake_assert = (config == GPIO_ACTIVE_LOW) ? 0 : 1;
-#else
-	bsi->ext_wake_assert = (config == OF_GPIO_ACTIVE_LOW) ? 0 : 1;
-#endif
-	BT_DBG("bt_wake gpio=%d assert=%d\n", bsi->ext_wake, bsi->ext_wake_assert);
+	bsi->ext_wake_assert = !gpiod_is_active_low(bsi->ext_wake);
+	BT_DBG("bt-wake assert=%d\n", bsi->ext_wake_assert);
 
 	if (assert_level != -1) {
 		bsi->ext_wake_assert = (assert_level & 0x01) > 0;
 		BT_DBG("override ext_wake assert to %d", bsi->ext_wake_assert);
 	}
 
-	/* 1.set bt_wake as output and the level is assert, assert bt wake */
-	ret = gpio_direction_output(bsi->ext_wake, bsi->ext_wake_assert);
-	if (ret < 0) {
-		BT_ERR("can't request output direction bt_wake gpio %d\n",
-			bsi->ext_wake);
-		goto err3;
-	}
-	/*set ext_wake deassert as default*/
-	gpio_set_value(bsi->ext_wake, !bsi->ext_wake_assert);
-
-	/* 2.get bt_host_wake gpio irq */
-	bsi->host_wake_irq = gpio_to_irq(bsi->host_wake);
-	if (bsi->host_wake_irq < 0) {
-		BT_ERR("map gpio [%d] to virq failed, errno = %d\n",
-				bsi->host_wake, bsi->host_wake_irq);
-		ret = -ENODEV;
-		goto err3;
-	}
+	/* bt-wake is an output, deasserted by default (GPIOD_OUT_LOW above) */
+	gpiod_set_value(bsi->ext_wake, 0);
 
 	uart_index = DEFAULT_UART_INDEX;
 	if (!of_property_read_u32(np, "uart_index", &val)) {
@@ -984,16 +948,10 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 
 	return 0;
 
-err3:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	devm_gpio_free(dev, bsi->ext_wake);
-#endif
 err2:
 	device_init_wakeup(dev, false);
 err1:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	devm_gpio_free(dev, bsi->host_wake);
-#endif
+	dev_pm_clear_wake_irq(dev);
 err0:
 	devm_kfree(dev, bsi);
 
@@ -1004,7 +962,7 @@ err0:
 static void bluesleep_remove(struct platform_device *pdev)
 {
 	/* assert bt wake */
-	gpio_set_value(bsi->ext_wake, bsi->ext_wake_assert);
+	gpiod_set_value(bsi->ext_wake, 1);
 	if (test_bit(BT_PROTO, &flags)) {
 		free_irq(bsi->host_wake_irq, &bsi->pdev->dev);
 		del_timer(&rx_timer);
@@ -1012,10 +970,7 @@ static void bluesleep_remove(struct platform_device *pdev)
 			hsuart_power(1);
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	devm_gpio_free(&pdev->dev, bsi->host_wake);
-	devm_gpio_free(&pdev->dev, bsi->ext_wake);
-#endif
+	/* GPIO descriptors are devres-managed and released automatically. */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	wakeup_source_unregister(bsi->ws);
@@ -1031,14 +986,16 @@ static void bluesleep_remove(struct platform_device *pdev)
 
 static const struct of_device_id sunxi_btlpm_ids[] = {
 	{ .compatible = "allwinner,sunxi-btlpm" },
+	{ .compatible = "aic,aic8800-btlpm" },
 	{ /* Sentinel */ }
 };
+MODULE_DEVICE_TABLE(of, sunxi_btlpm_ids);
 
 static struct platform_driver bluesleep_driver = {
 	.remove	= bluesleep_remove,
 	.driver	= {
 		.owner	= THIS_MODULE,
-		.name	= "sunxi-btlpm",
+		.name	= "aic8800-btlpm",
 		.of_match_table	= sunxi_btlpm_ids,
 	},
 };

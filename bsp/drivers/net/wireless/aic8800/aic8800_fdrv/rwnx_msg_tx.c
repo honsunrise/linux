@@ -3055,7 +3055,13 @@ int rwnx_send_dbg_trigger_req(struct rwnx_hw *rwnx_hw, char *msg)
 		return -ENOMEM;
 
 	/* Set parameters for the MM_DBG_TRIGGER_REQ message */
-	strncpy(req->error, msg, sizeof(req->error));
+	/*
+	 * strncpy() was removed in 7.2. req->error is a fixed-size field of a
+	 * firmware message that is not NUL-terminated, and req came from
+	 * rwnx_msg_zalloc(), so copying at most the field size is all strncpy()
+	 * did here; the tail is already zeroed.
+	 */
+	memcpy(req->error, msg, strnlen(msg, sizeof(req->error)));
 
 	/* Send the MM_DBG_TRIGGER_REQ message to LMAC FW */
 	return rwnx_send_msg(rwnx_hw, req, 0, -1, NULL);

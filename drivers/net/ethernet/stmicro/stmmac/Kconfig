@@ -57,6 +57,16 @@ config DWMAC_GENERIC
 	  platform specific code to function or is using platform
 	  data for setup.
 
+config DWMAC_CVITEK
+	tristate "CVITEK (Sophgo SG200x) DWMAC glue"
+	default ARCH_SOPHGO
+	depends on OF && (ARCH_SOPHGO || COMPILE_TEST)
+	help
+	  Support for the CVITEK ethernet glue found on Sophgo SG200x SoCs.
+
+	  This brings up the internal ePHY before the stmmac MDIO scan and
+	  keeps the MAC clocks enabled. Say Y if the board uses the internal
+	  ePHY of a SG200x (CV1800B/CV181x family).
 config DWMAC_ANARION
 	tristate "Adaptrum Anarion GMAC support"
 	default ARC

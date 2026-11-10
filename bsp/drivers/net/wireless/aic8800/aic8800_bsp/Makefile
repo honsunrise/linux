@@ -1,10 +1,16 @@
+# Only the Allwinner BSP provides the sunxi power/rescan/chipid hooks.
 ifneq ($(CONFIG_AW_BSP),)
-CONFIG_PLATFORM_ALLWINNER := $(CONFIG_AW_BSP)
+CONFIG_PLATFORM_ALLWINNER := y
 else
-CONFIG_PLATFORM_ALLWINNER := $(CONFIG_ARCH_SUNXI)
+CONFIG_PLATFORM_ALLWINNER := n
 endif
 ifeq ($(CONFIG_AIC_INTF_SDIO),y)
+# mmc-pwrseq owns SDIO power sequencing outside the Allwinner BSP.
+ifeq ($(CONFIG_PLATFORM_ALLWINNER),y)
 CONFIG_SDIO_PWRCTRL ?= y
+else
+CONFIG_SDIO_PWRCTRL ?= n
+endif
 endif
 CONFIG_VRF_DCDC_MODE ?=y
 CONFIG_OOB ?= n
@@ -27,7 +33,7 @@ ccflags-$(CONFIG_AMSDU_RX) += -DCONFIG_AMSDU_RX
 ccflags-$(CONFIG_PREALLOC_TXQ) += -DCONFIG_PREALLOC_TXQ
 ccflags-$(CONFIG_SDIO_F1_FLAG) += -DCONFIG_SDIO_F1_FLAG
 
-obj-m := aic8800_bsp.o
+obj-$(CONFIG_AIC_WLAN_SUPPORT) := aic8800_bsp.o
 aic8800_bsp-y := \
 	aic_bsp_main.o \
 	aic_bsp_driver.o \

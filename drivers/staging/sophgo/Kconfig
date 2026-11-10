@@ -1,0 +1,246 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Sophgo SG200x (cv181x) vendor drivers.
+#
+# These are the Sophgo osdrv multimedia drivers, needed for the camera/ISP,
+# scaler, display, hardware video codecs, NPU, IVE and the C906L FreeRTOS
+# mailbox of the SG2000/SG2002. Upstream has no equivalent for any of them;
+# the sources are GPL-2.0 and are imported in-tree (see osdrv/Makefile for
+# provenance). They are staged here because they keep the vendor's private
+# uapi (the MPI ioctls) and are not mainline-quality code.
+
+menu "Sophgo SG200x vendor drivers"
+
+config SOPHGO_VENDOR
+	bool "Sophgo SG200x (cv181x) vendor drivers"
+	depends on ARCH_SOPHGO || COMPILE_TEST
+	help
+	  Vendor kernel drivers for the Sophgo SG2000/SG2002 SoCs
+	  (cv181x): the ION allocator used by the multimedia stack and
+	  the osdrv drivers for camera/ISP, display, codecs, NPU and the
+	  RTOS mailbox.
+
+if SOPHGO_VENDOR
+
+config SOPHGO_ION
+	tristate "Sophgo/Cvitek ION memory allocator"
+	help
+	  The vendor ION allocator (drivers/staging/android/ion of the
+	  Sophgo 5.10 kernel, ported to current kernels) with its cvitek
+	  carveout heap and the cvi_ion_* API. The osdrv multimedia
+	  drivers allocate every frame and bitstream buffer through it.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cvi_ion.
+
+config SOPHGO_OSDRV_BASE
+	tristate "osdrv base (VIP sys registers, video buffer pool)"
+	depends on SOPHGO_ION && SOPHGO_OSDRV_SYS
+	help
+	  The osdrv "base" service: vip_sys register window, the video
+	  buffer (vb) pool shared by all the multimedia drivers, and their
+	  procfs entries. Everything else depends on it.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_base.
+
+config SOPHGO_OSDRV_SYS
+	tristate "osdrv sys (shared memory map for the multimedia stack)"
+	help
+	  The osdrv "sys" service: the shared memory map (rtos, ion and
+	  vb layout) created once and mapped by the other osdrv modules,
+	  /dev/cvi_sys.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_sys.
+
+config SOPHGO_OSDRV_SNSR_I2C
+	tristate "osdrv sensor I2C"
+	depends on SOPHGO_ION
+	help
+	  Sensor I2C writes synchronized with the CSI frame start, used by
+	  the baseband/ISP tools to change exposure while streaming.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called snsr_i2c.
+
+config SOPHGO_OSDRV_MIPI_RX
+	tristate "osdrv MIPI-CSI receiver (cvi_mipi_rx)"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The MIPI-CSI receiver(s) and the sensor clock/power/reset
+	  sequencing of the SG200x camera input.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cvi_mipi_rx.
+
+config SOPHGO_OSDRV_VI
+	tristate "osdrv video input and ISP (cv181x_vi)"
+	depends on SOPHGO_OSDRV_BASE && SOPHGO_OSDRV_MIPI_RX
+	help
+	  The video input pipeline with the ISP (raw -> YUV), the frame
+	  channel DMA engine and the /dev/cvi-vi nodes.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_vi.
+
+config SOPHGO_OSDRV_VPSS
+	tristate "osdrv video processing (scaler, colour conversion)"
+	depends on SOPHGO_OSDRV_VI
+	help
+	  The video post-processing subsystem: scaling, colour space
+	  conversion, and the OSD/RGN blender in front of the output.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_vpss.
+
+config SOPHGO_OSDRV_DWA
+	tristate "osdrv dewarp engine (GDC/LDC)"
+	depends on SOPHGO_OSDRV_VPSS
+	help
+	  The dewarp engine: grid distortion correction, lens
+	  distortion correction and mesh mapping.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_dwa.
+
+config SOPHGO_OSDRV_RGN
+	tristate "osdrv OSD region engine"
+	depends on SOPHGO_OSDRV_VPSS
+	help
+	  The OSD region engine: overlay bitmaps and covers onto the
+	  video frames.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_rgn.
+
+config SOPHGO_OSDRV_VO
+	tristate "osdrv display controller (DSI/BT/LVDS)"
+	depends on SOPHGO_OSDRV_VPSS
+	help
+	  The display controller: panel timing, MIPI DSI, BT and LVDS
+	  output, and the associated panel tables.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_vo.
+
+config SOPHGO_OSDRV_MIPI_TX
+	tristate "osdrv MIPI DSI host and D-PHY"
+	depends on SOPHGO_OSDRV_VO
+	help
+	  The MIPI DSI host controller and D-PHY used by the display
+	  controller for panel output.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_mipi_tx.
+
+config SOPHGO_OSDRV_FB
+	tristate "osdrv framebuffer (cvi_fb)"
+	depends on FB && SOPHGO_OSDRV_VO
+	help
+	  A framebuffer device on top of the display controller and the
+	  scaler, so fbcon and /dev/fb0 work on the MIPI DSI panel.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cvi_fb.
+
+config SOPHGO_OSDRV_IVE
+	tristate "osdrv IVE (image/video acceleration engine)"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The IVE hardware acceleration engine for filter, sobel, canny,
+	  dilate/erode, integral image, LBP and the other CV operations.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_ive.
+
+config SOPHGO_OSDRV_MON
+	tristate "osdrv monitor (DDR and PC monitor)"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The DDR bandwidth and system monitor, exported through procfs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_mon.
+
+config SOPHGO_OSDRV_CLOCK_COOLING
+	tristate "osdrv clock throttling cooling device"
+	depends on THERMAL
+	help
+	  A thermal cooling device that lowers the CPU and NPU clocks in
+	  steps when the SoC gets hot (the vendor's clock_cooling).
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_clock_cooling.
+
+config SOPHGO_OSDRV_RTOS_CMDQU
+	tristate "osdrv RTOS command queue (C906L mailbox)"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The mailbox and command queue used to talk to the C906L core
+	  running the FastRTOS image.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_rtos_cmdqu.
+
+config SOPHGO_OSDRV_FAST_IMAGE
+	tristate "osdrv FastRTOS image loader"
+	depends on SOPHGO_OSDRV_RTOS_CMDQU
+	help
+	  Loads the FastRTOS image into the C906L core and starts it.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_fast_image.
+
+config SOPHGO_OSDRV_WIEGAND
+	tristate "osdrv Wiegand interface controllers"
+	help
+	  The three hardware Wiegand interface controllers.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cvi_wiegand.
+
+config SOPHGO_OSDRV_TPU
+	tristate "osdrv NPU (TPU)"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The neural processing unit: TDMA and TIU command processor,
+	  /dev/cvi-tpu0. The user space runtime (cviruntime) drives it.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_tpu.
+
+config SOPHGO_OSDRV_VCODEC
+	tristate "osdrv H.264/H.265 codec front end"
+	depends on SOPHGO_OSDRV_BASE
+	help
+	  The register and interrupt front end of the hardware H.264 and
+	  H.265 codecs (coda980 / monet cores).
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_vcodec.
+
+config SOPHGO_OSDRV_JPEG
+	tristate "osdrv JPEG codec front end"
+	depends on SOPHGO_OSDRV_VCODEC
+	help
+	  The register and interrupt front end of the hardware JPEG
+	  encoder/decoder.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cv181x_jpeg.
+
+config SOPHGO_OSDRV_VC_DRIVER
+	tristate "osdrv Chips&Media VPU/JPU API (venc/vdec nodes)"
+	depends on SOPHGO_OSDRV_JPEG
+	help
+	  The Chips&Media VPU/JPU driver on top of the vcodec and jpeg
+	  front ends: bitstream buffer management, rate control and the
+	  /dev/cvi-venc and /dev/cvi-vdec nodes used by the MPI.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called cvi_vc_driver.
+
+endif # SOPHGO_VENDOR
+
+endmenu

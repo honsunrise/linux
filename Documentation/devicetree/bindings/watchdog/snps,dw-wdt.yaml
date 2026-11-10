@@ -38,6 +38,9 @@ properties:
               - rockchip,rv1108-wdt
               - rockchip,rv1126-wdt
           - const: snps,dw-wdt
+      - items:
+          - const: sophgo,cv1800-wdt
+          - const: snps,dw-wdt
 
   reg:
     maxItems: 1

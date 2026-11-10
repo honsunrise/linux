@@ -1,0 +1,328 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Sophgo SG2002 multimedia blocks: MIPI-CSI receivers, VI + ISP, VPSS, DWA,
+ * RGN, the display controller and its MIPI DSI host, framebuffer, NPU (TPU),
+ * IVE, the H.264/H.265 and JPEG codecs, the DDR/PC monitor, the C906L RTOS
+ * mailbox and its fast-image loader, the Wiegand controllers and the thermal
+ * sensor with its clock-throttling cooling device.
+ *
+ * Mainline has no driver for any of them; these nodes are for the Sophgo
+ * osdrv modules ported to 7.2 (drivers/staging/sophgo), so they keep the
+ * vendor compatibles and the clock/reset/reg/interrupt NAMES the drivers
+ * request. Nodes and resources taken from the vendor SDK
+ * (build/boards/default/dts/{cv181x,sg200x}_base*.dtsi), with:
+ *  - clocks: CV181X_CLK_<X> -> the mainline clk-cv18xx CLK_<X> (same names,
+ *    include/dt-bindings/clock/sophgo,cv1800.h);
+ *  - resets: same bit indices in the same controller (0x3003000), so the
+ *    vendor numbers are valid on the mainline "sophgo,cv1800b-reset"; the
+ *    CSI PHY bits (vendor RST_CSIPHY0/_APB/1/_APB = 70..73) have no name in
+ *    cv18xx-reset.h and are written as numbers;
+ *  - interrupts: vendor raw PLIC numbers N -> SOC_PERIPHERAL_IRQ(N - 16).
+ *
+ * Every node is off by default; a board turns on the blocks it wires up.
+ *
+ * Credits: the cif/vi/vpss/tpu/vcodec/jpu/cvi_vc_drv nodes are the ones
+ * validated on the reCamera (Seeed SG2002) by djairjr/recamera-linux-kernel7
+ * @ 240adcc6164d7ff50995c0119f29a1ba570ea57d, external/board/seeed/
+ * sg2002_recamera_emmc/dts/sophgo/sg2002-recamera-multimedia.dtsi.
+ */
+
+#include <dt-bindings/clock/sophgo,cv1800.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	soc {
+		/* Under soc: inherits dma-noncoherent, used by the cache ioctls. */
+		cvitek_ion: cvitek-ion {
+			compatible = "cvitek,cvitek-ion";
+			status = "disabled";
+
+			heap-carveout {
+				compatible = "cvitek,carveout";
+				memory-region = <&ion_reserved>;
+			};
+		};
+
+		mipi_rx: cif@a0c2000 {
+			compatible = "cvitek,cif";
+			reg = <0x0a0c2000 0x2000>, <0x0a0d0000 0x1000>,
+			      <0x0a0c4000 0x2000>, <0x0a0c6000 0x2000>,
+			      <0x03001c30 0x30>;
+			reg-names = "csi_mac0", "csi_wrap0", "csi_mac1",
+				    "csi_mac2", "pad_ctrl";
+			interrupts = <SOC_PERIPHERAL_IRQ(10) IRQ_TYPE_LEVEL_HIGH>,
+				     <SOC_PERIPHERAL_IRQ(11) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "csi0", "csi1";
+			resets = <&rst 70>, <&rst 72>, <&rst 71>, <&rst 73>;
+			reset-names = "phy0", "phy1", "phy-apb0", "phy-apb1";
+			clocks = <&clk CLK_CAM0>, <&clk CLK_CAM1>,
+				 <&clk CLK_SRC_VIP_SYS_2>, <&clk CLK_MIPIMPLL>,
+				 <&clk CLK_DISPPLL>, <&clk CLK_FPLL>;
+			clock-names = "clk_cam0", "clk_cam1", "clk_sys_2",
+				      "clk_mipimpll", "clk_disppll", "clk_fpll";
+			status = "disabled";
+		};
+
+		vi: vi@a000000 {
+			compatible = "cvitek,vi";
+			reg = <0x0a000000 0x80000>;
+			interrupts = <SOC_PERIPHERAL_IRQ(8) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "isp";
+			clocks = <&clk CLK_SRC_VIP_SYS_0>, <&clk CLK_SRC_VIP_SYS_1>,
+				 <&clk CLK_SRC_VIP_SYS_2>, <&clk CLK_SRC_VIP_SYS_3>,
+				 <&clk CLK_AXI_VIP>, <&clk CLK_CSI_BE_VIP>,
+				 <&clk CLK_RAW_VIP>, <&clk CLK_ISP_TOP_VIP>,
+				 <&clk CLK_CSI_MAC0_VIP>, <&clk CLK_CSI_MAC1_VIP>,
+				 <&clk CLK_CSI_MAC2_VIP>;
+			clock-names = "clk_sys_0", "clk_sys_1", "clk_sys_2",
+				      "clk_sys_3", "clk_axi", "clk_csi_be",
+				      "clk_raw", "clk_isp_top", "clk_csi_mac0",
+				      "clk_csi_mac1", "clk_csi_mac2";
+			clock-freq-vip-sys1 = <300000000>;
+			status = "disabled";
+		};
+
+		vpss: vpss@a080000 {
+			compatible = "cvitek,vpss";
+			reg = <0x0a080000 0x10000>, <0x0a0d1000 0x100>;
+			reg-names = "sc";
+			interrupts = <SOC_PERIPHERAL_IRQ(9) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "sc";
+			clocks = <&clk CLK_SRC_VIP_SYS_0>, <&clk CLK_SRC_VIP_SYS_1>,
+				 <&clk CLK_SRC_VIP_SYS_2>, <&clk CLK_IMG_D_VIP>,
+				 <&clk CLK_IMG_V_VIP>, <&clk CLK_SC_TOP_VIP>,
+				 <&clk CLK_SC_D_VIP>, <&clk CLK_SC_V1_VIP>,
+				 <&clk CLK_SC_V2_VIP>, <&clk CLK_SC_V3_VIP>;
+			clock-names = "clk_sys_0", "clk_sys_1", "clk_sys_2",
+				      "clk_img_d", "clk_img_v", "clk_sc_top",
+				      "clk_sc_d", "clk_sc_v1", "clk_sc_v2",
+				      "clk_sc_v3";
+			clock-freq-vip-sys1 = <300000000>;
+			status = "disabled";
+		};
+
+		dwa: dwa@a0c0000 {
+			compatible = "cvitek,dwa";
+			reg = <0x0a0c0000 0x1000>;
+			reg-names = "dwa";
+			interrupts = <SOC_PERIPHERAL_IRQ(12) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "dwa";
+			clocks = <&clk CLK_SRC_VIP_SYS_0>, <&clk CLK_SRC_VIP_SYS_1>,
+				 <&clk CLK_SRC_VIP_SYS_2>, <&clk CLK_SRC_VIP_SYS_3>,
+				 <&clk CLK_SRC_VIP_SYS_4>, <&clk CLK_DWA_VIP>;
+			clock-names = "clk_sys_0", "clk_sys_1", "clk_sys_2",
+				      "clk_sys_3", "clk_sys_4", "clk_dwa";
+			clock-freq-vip-sys1 = <300000000>;
+			status = "disabled";
+		};
+
+		rgn: rgn {
+			compatible = "cvitek,rgn";
+			status = "disabled";
+		};
+
+		ive: ive@a0a0000 {
+			compatible = "cvitek,ive";
+			reg = <0x0a0a0000 0x3100>;
+			reg-names = "ive_base";
+			interrupts = <SOC_PERIPHERAL_IRQ(81) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "ive_irq";
+			status = "disabled";
+		};
+
+		vo: vo@a080000 {
+			compatible = "cvitek,vo";
+			reg = <0x0a080000 0x10000>, <0x0a0c8000 0xa0>,
+			      <0x0a0d1000 0x100>;
+			reg-names = "sc", "vip_sys", "dphy";
+			clocks = <&clk CLK_DISP_VIP>, <&clk CLK_DSI_MAC_VIP>,
+				 <&clk CLK_BT_VIP>;
+			clock-names = "clk_disp", "clk_dsi", "clk_bt";
+			status = "disabled";
+		};
+
+		/* The DSI host + D-PHY; the panel reset and backlight lines are
+		 * board wiring, added by the board DTS.
+		 */
+		mipi_tx: mipi-tx {
+			compatible = "cvitek,mipi_tx";
+			clocks = <&clk CLK_DISP_VIP>, <&clk CLK_DSI_MAC_VIP>;
+			clock-names = "clk_disp", "clk_dsi";
+			status = "disabled";
+		};
+
+		mon: mon@1040000 {
+			compatible = "cvitek,mon";
+			reg-names = "pcmon", "ddr_ctrl", "ddr_phyd", "ddr_aximon",
+				    "ddr_top";
+			reg = <0x01040000 0x1000>, <0x08004000 0x1000>,
+			      <0x08006000 0x1000>, <0x08008000 0x1000>,
+			      <0x0800a000 0x1000>;
+			interrupts = <SOC_PERIPHERAL_IRQ(77) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "mon_irq";
+			status = "disabled";
+		};
+
+		rtos_cmdqu: rtos-cmdqu@1900000 {
+			compatible = "cvitek,rtos_cmdqu";
+			reg = <0x01900000 0x1000>;
+			reg-names = "mailbox";
+			interrupts = <SOC_PERIPHERAL_IRQ(85) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "mailbox";
+			status = "disabled";
+		};
+
+		wiegand0: wiegand@3030000 {
+			compatible = "cvitek,wiegand";
+			reg = <0x03030000 0x1000>;
+			reg-names = "wiegand";
+			interrupts = <SOC_PERIPHERAL_IRQ(48) IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk CLK_WGN>, <&clk CLK_WGN0>;
+			clock-names = "clk_wgn", "clk_wgn1";
+			resets = <&rst RST_WGN0>;
+			reset-names = "res_wgn";
+			status = "disabled";
+		};
+
+		wiegand1: wiegand@3031000 {
+			compatible = "cvitek,wiegand";
+			reg = <0x03031000 0x1000>;
+			reg-names = "wiegand";
+			interrupts = <SOC_PERIPHERAL_IRQ(49) IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk CLK_WGN>, <&clk CLK_WGN1>;
+			clock-names = "clk_wgn", "clk_wgn1";
+			resets = <&rst RST_WGN1>;
+			reset-names = "res_wgn";
+			status = "disabled";
+		};
+
+		wiegand2: wiegand@3032000 {
+			compatible = "cvitek,wiegand";
+			reg = <0x03032000 0x1000>;
+			reg-names = "wiegand";
+			interrupts = <SOC_PERIPHERAL_IRQ(50) IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk CLK_WGN>, <&clk CLK_WGN2>;
+			clock-names = "clk_wgn", "clk_wgn1";
+			resets = <&rst RST_WGN2>;
+			reset-names = "res_wgn";
+			status = "disabled";
+		};
+
+		tpu: tpu@c100000 {
+			compatible = "cvitek,tpu";
+			reg = <0x0c100000 0x1000>, <0x0c101000 0x1000>;
+			reg-names = "tdma", "tiu";
+			interrupts = <SOC_PERIPHERAL_IRQ(59) IRQ_TYPE_LEVEL_HIGH>,
+				     <SOC_PERIPHERAL_IRQ(60) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "tiu_irq", "tdma_irq";
+			clocks = <&clk CLK_TPU>, <&clk CLK_TPU_FAB>;
+			clock-names = "clk_tpu_axi", "clk_tpu_fab";
+			resets = <&rst RST_TDMA>, <&rst RST_TPU>, <&rst RST_TPUSYS>;
+			reset-names = "res_tdma", "res_tpu", "res_tpusys";
+			status = "disabled";
+		};
+
+		vcodec: vcodec@b020000 {
+			compatible = "cvitek,asic-vcodec";
+			reg = <0x0b020000 0x10000>, <0x0b010000 0x10000>,
+			      <0x0b030000 0x100>, <0x0b058000 0x100>,
+			      <0x0b050000 0x400>;
+			reg-names = "h265", "h264", "vc_ctrl", "vc_sbm",
+				    "vc_addr_remap";
+			interrupts = <SOC_PERIPHERAL_IRQ(6) IRQ_TYPE_LEVEL_HIGH>,
+				     <SOC_PERIPHERAL_IRQ(5) IRQ_TYPE_LEVEL_HIGH>,
+				     <SOC_PERIPHERAL_IRQ(7) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "h265", "h264", "sbm";
+			clocks = <&clk CLK_AXI_VIDEO_CODEC>, <&clk CLK_H264C>,
+				 <&clk CLK_APB_H264C>, <&clk CLK_H265C>,
+				 <&clk CLK_APB_H265C>, <&clk CLK_VC_SRC0>,
+				 <&clk CLK_VC_SRC1>, <&clk CLK_VC_SRC2>,
+				 <&clk CLK_CFG_REG_VC>;
+			clock-names = "clk_axi_video_codec", "clk_h264c",
+				      "clk_apb_h264c", "clk_h265c",
+				      "clk_apb_h265c", "clk_vc_src0",
+				      "clk_vc_src1", "clk_vc_src2",
+				      "clk_cfg_reg_vc";
+			status = "disabled";
+		};
+
+		jpu: jpu@b000000 {
+			compatible = "cvitek,asic-jpeg";
+			reg = <0x0b000000 0x300>, <0x0b030000 0x100>,
+			      <0x0b058000 0x100>;
+			reg-names = "jpeg", "vc_ctrl", "vc_sbm";
+			interrupts = <SOC_PERIPHERAL_IRQ(4) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "jpeg";
+			clocks = <&clk CLK_AXI_VIDEO_CODEC>, <&clk CLK_JPEG>,
+				 <&clk CLK_APB_JPEG>, <&clk CLK_VC_SRC0>,
+				 <&clk CLK_VC_SRC1>, <&clk CLK_VC_SRC2>,
+				 <&clk CLK_CFG_REG_VC>;
+			clock-names = "clk_axi_video_codec", "clk_jpeg",
+				      "clk_apb_jpeg", "clk_vc_src0", "clk_vc_src1",
+				      "clk_vc_src2", "clk_cfg_reg_vc";
+			resets = <&rst RST_JPEG>;
+			reset-names = "jpeg";
+			status = "disabled";
+		};
+
+		cvi_vc_drv: cvi-vc-drv@b030000 {
+			compatible = "cvitek,cvi_vc_drv";
+			reg = <0x0b030000 0x100>, <0x0b058000 0x100>,
+			      <0x0b050000 0x400>;
+			reg-names = "vc_ctrl", "vc_sbm", "vc_addr_remap";
+			status = "disabled";
+		};
+
+		/* SoC temperature sensor (drivers/thermal/cv181x_thermal.c) */
+		tempsen: thermal-sensor@30e0000 {
+			compatible = "cvitek,cv181x-thermal";
+			reg = <0x030e0000 0x10000>;
+			clocks = <&clk CLK_TEMPSEN>;
+			clock-names = "clk_tempsen";
+			#thermal-sensor-cells = <1>;
+			status = "disabled";
+		};
+	};
+
+	/* Clock throttling cooling device (osdrv clock_cooling). */
+	cooling: clock-cooling {
+		compatible = "cvitek,cv181x-cooling";
+		clocks = <&clk CLK_C906_0>, <&clk CLK_TPU>;
+		clock-names = "clk_cpu", "clk_tpu_axi";
+		dev-freqs = <850000000 500000000>,
+			    <425000000 375000000>,
+			    <425000000 300000000>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+
+	thermal-zones {
+		soc_thermal: soc-thermal {
+			polling-delay-passive = <1000>;
+			polling-delay = <1000>;
+			thermal-sensors = <&tempsen 0>;
+			status = "disabled";
+
+			trips {
+				cpu_alert: cpu-alert {
+					temperature = <85000>;
+					hysteresis = <5000>;
+					type = "passive";
+				};
+
+				cpu_crit: cpu-crit {
+					temperature = <115000>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&cpu_alert>;
+					cooling-device = <&cooling 0 2>;
+				};
+			};
+		};
+	};
+};

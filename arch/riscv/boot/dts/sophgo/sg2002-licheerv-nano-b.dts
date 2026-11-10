@@ -5,7 +5,15 @@
 
 /dts-v1/;
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input-event-codes.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 #include "sg2002.dtsi"
+/*
+ * The multimedia blocks have no mainline driver: they are described for the
+ * Sophgo osdrv modules ported in-tree (drivers/staging/sophgo).
+ */
+#include "sg2002-multimedia.dtsi"
 
 / {
 	model = "LicheeRV Nano B";
@@ -16,6 +24,9 @@
 		gpio1 = &gpio1;
 		gpio2 = &gpio2;
 		gpio3 = &gpio3;
+		gpio4 = &gpio4;
+		mmc0 = &sdhci0;
+		mmc1 = &sdhci1;
 		serial0 = &uart0;
 		serial1 = &uart1;
 		serial2 = &uart2;
@@ -25,6 +36,108 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+	};
+
+	/*
+	 * The buffer layout is the one the Sipeed fip/U-Boot sets up and the
+	 * C906L FreeRTOS image expects (vendor memmap.py:
+	 * DRAM 256 MiB, FreeRTOS 2 MiB at the top, ION right below it and the
+	 * framebuffer below ION, everything at fixed addresses).
+	 */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/* 8 MiB framebuffer, directly below the ION heap. */
+		fb_reserved: framebuffer@88d30000 {
+			reg = <0x88d30000 0x7d0000>;
+		};
+
+		/* 105 MiB of multimedia buffers (frames, bitstreams, NPU). */
+		ion_reserved: ion@89500000 {
+			reg = <0x89500000 0x6900000>;
+		};
+
+		/* 2 MiB for the C906L FreeRTOS image, at the top of DRAM. */
+		rtos_image: rtos@8fe00000 {
+			reg = <0x8fe00000 0x200000>;
+		};
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 2 50000 0>;
+		brightness-levels = <0 2 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+		power-supply = <&reg_3v3>;
+		status = "okay";
+	};
+
+	reg_3v3: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		status = "okay";
+
+		key-user {
+			label = "User Key";
+			linux,code = <KEY_DISPLAYTOGGLE>;
+			debounce-interval = <1>;
+			gpios = <&porta 30 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		led-user {
+			gpios = <&porta 14 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "activity";
+		};
+	};
+
+	/*
+	 * The internal codecs are clocked from I2S3's MCLK output (I2S3 is the
+	 * TDM controller wired to the DAC, and the ADC takes its MCLK from it).
+	 */
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "licheerv-nano";
+		status = "okay";
+
+		simple-audio-card,dai-link@0 {
+			link-name = "dac";
+
+			cpu {
+				sound-dai = <&i2s3>;
+				dai-format = "i2s";
+			};
+
+			codec {
+				sound-dai = <&dac>;
+			};
+		};
+
+		simple-audio-card,dai-link@1 {
+			link-name = "adc";
+
+			cpu {
+				sound-dai = <&i2s0>;
+				dai-format = "i2s";
+			};
+
+			codec {
+				sound-dai = <&adc>;
+			};
+		};
 	};
 };
 
@@ -75,6 +188,18 @@
 			power-source = <3300>;
 		};
 	};
+
+	/*
+	 * The backlight is PWM_10 on the RTC-domain pad PWR_GPIO2 (bank E
+	 * line 2, function 4). The vendor's board init leaves it to
+	 * userspace; with a real PWM driver we can let the kernel mux it.
+	 */
+	backlight_pins: backlight-pins {
+		backlight-pin {
+			pinmux = <PINMUX(PIN_PWR_GPIO2, 4)>;
+			power-source = <1800>;
+		};
+	};
 };
 
 &sdhci0 {
@@ -88,6 +213,23 @@
 	disable-wp;
 };
 
+/*
+ * The on-board AIC8800 WiFi/BT is an SDIO device on SD1. Its pads and its
+ * power sequence are programmed by the Sipeed fip (U-Boot), exactly as the
+ * vendor kernel relies on; the node only describes the bus.
+ */
+&sdhci1 {
+	status = "okay";
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	no-mmc;
+	no-sd;
+	disable-wp;
+	max-frequency = <25000000>;
+	keep-power-in-suspend;
+};
+
 &uart0 {
 	pinctrl-0 = <&uart0_cfg>;
 	pinctrl-names = "default";
@@ -95,6 +237,177 @@
 };
 
 &usb {
-	dr_mode = "host";
+	dr_mode = "otg";
 	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&backlight_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&watchdog0 {
+	status = "okay";
+};
+
+/* Restart and power-off through the RTC block (drivers/power/reset). */
+&soc {
+	restart@5025000 {
+		compatible = "cvitek,restart";
+		reg = <0x05025000 0x2000>;
+	};
+};
+
+&i2c4 {
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/*
+	 * The touch controller of the MIPI panels: GT911 at 0x14. The pads
+	 * (PWR_SEQ1/PWR_SEQ2 as GPIOE3/E4, the I2C4 pads on PWR_WAKEUP0/
+	 * PWR_BUTTON1) are muxed by the Sipeed fip.
+	 *
+	 * The vendor kits with a Hynitron part (hyn_ts, "hyn,7xx") are not
+	 * covered: the mainline hynitron driver only knows the CST340, and the
+	 * vendor driver (sophgo/linux_5.10 drivers/input/touchscreen/
+	 * hynitron_*) has not been ported.
+	 */
+	touchscreen@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+		interrupt-parent = <&porte>;
+		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&porte 3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&porte 4 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <640>;
+		status = "okay";
+	};
+};
+
+/* --- multimedia: the osdrv stack ---------------------------------------- */
+
+&i2s0 {
+	status = "okay";
+};
+
+&i2s3 {
+	status = "okay";
+};
+
+&dac {
+	status = "okay";
+};
+
+&adc {
+	clocks = <&clk CLK_SDMA_AUD3>;
+	clock-names = "mclk";
+	sophgo,mclk-source = <&i2s3>;
+	status = "okay";
+};
+
+&cvitek_ion {
+	status = "okay";
+};
+
+&cvi_vc_drv {
+	status = "okay";
+};
+
+&mipi_rx {
+	/* Camera module reset line: bank E line 1 (vendor: snsr-reset). */
+	snsr-reset-gpios = <&porte 1 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&vi {
+	status = "okay";
+};
+
+&vpss {
+	status = "okay";
+};
+
+&dwa {
+	status = "okay";
+};
+
+&rgn {
+	status = "okay";
+};
+
+&ive {
+	status = "okay";
+};
+
+&mon {
+	status = "okay";
+};
+
+&rtos_cmdqu {
+	status = "okay";
+};
+
+&fast_image {
+	status = "okay";
+};
+
+&tpu {
+	status = "okay";
+};
+
+&vcodec {
+	status = "okay";
+};
+
+&jpu {
+	status = "okay";
+};
+
+&tempsen {
+	status = "okay";
+};
+
+&cooling {
+	status = "okay";
+};
+
+&soc_thermal {
+	status = "okay";
+};
+
+/*
+ * Display: the panel timing, the DSI PLL and the panel's own registers are
+ * set up by the Sipeed fip from "panel=" in uEnv.txt, and the vo/mipi_tx
+ * drivers inherit that, as on the vendor kernel. Only the panel reset line
+ * (bank E line 0) and the backlight PWM pin are ours.
+ */
+&vo {
+	status = "okay";
+};
+
+&mipi_tx {
+	reset-gpio = <&porte 0 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&soc {
+	cvi_fb: framebuffer@a088000 {
+		compatible = "cvitek,fb";
+		reg = <0x0a088000 0x1000>;
+		reg-names = "disp";
+		memory-region = <&fb_reserved>;
+		status = "okay";
+	};
+};
+
+/* The FreeRTOS image region (loaded by the fip) and the ION heap. */
+&soc {
+	fast_image: rtos-image@8fe00000 {
+		compatible = "cvitek,rtos_image";
+		reg = <0x8fe00000 0x200000>;
+		reg-names = "rtos_region";
+		status = "okay";
+	};
 };

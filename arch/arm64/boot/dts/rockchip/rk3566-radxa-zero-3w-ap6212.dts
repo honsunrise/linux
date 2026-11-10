@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Radxa ZERO 3W with the original AP6212 (BCM43438) module.
+ *
+ * WiFi is probed by brcmfmac over SDIO; Bluetooth is a serdev child of
+ * UART1.  The board wiring comes from the vendor
+ * rk3566-radxa-zero-3w-ap6212.dts.
+ */
+
+/dts-v1/;
+
+#include "rk3566-radxa-zero-3w.dtsi"
+
+/ {
+	model = "Radxa ZERO 3W (AP6212)";
+	compatible = "radxa,zero3w-ap6212", "radxa,zero-3w", "rockchip,rk3566";
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_reg_on_h>;
+		reset-gpios = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
+	};
+
+	board_antenna: board-antenna {
+		compatible = "regulator-fixed";
+		enable-active-low;
+		gpio = <&gpio3 RK_PD3 GPIO_ACTIVE_LOW>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-name = "board_antenna";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ant_1>;
+	};
+};
+
+&sdmmc1 {
+	supports-sdio;
+	disable-wp;
+	rockchip,default-sample-phase = <180>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	brcmf: wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PB7 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_wake_host_h>;
+	};
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn &uart1m0_rtsn>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm43438-bt";
+		clocks = <&rk817 1>;
+		clock-names = "lpo";
+		device-wakeup-gpios = <&gpio0 RK_PB4 GPIO_ACTIVE_HIGH>;
+		host-wakeup-gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+		max-speed = <1500000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_wake_host_h &host_wake_bt_h &bt_reg_on_h>;
+		vbat-supply = <&vcc3v3_sys>;
+		vddio-supply = <&vcc_1v8>;
+	};
+};

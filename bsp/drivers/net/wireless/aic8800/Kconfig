@@ -1,8 +1,23 @@
 config AIC_WLAN_SUPPORT
 	bool "AIC wireless Support"
-	default n
 	help
-	  This is support for aic wireless chip.
+	  Support for AIC8800/AIC8801 wireless chips.  This single driver
+	  tree is shared between the Allwinner BSP, Rockchip boards and
+	  RISC-V boards; it does not require CONFIG_AW_BSP.
+
+	  The BSP part of the driver loads the firmware with
+	  request_firmware() from these paths below /lib/firmware:
+
+	    aic8800d80/fw_adid_8800d80_u02.bin
+	    aic8800d80/fw_patch_8800d80_u02.bin
+	    aic8800d80/fw_patch_table_8800d80_u02.bin
+	    aic8800d80/fmacfw_8800d80_u02.bin
+	    aic8800dc/... (AIC8800DC/DW variants)
+
+	  The firmware is a vendor binary and is not part of this source
+	  tree.  Distributions that install the files as
+	  /lib/firmware/aic8800_fw/SDIO/aic8800D80/ can provide a symlink
+	  /lib/firmware/aic8800d80 -> aic8800_fw/SDIO/aic8800D80.
 
 choice
 	prompt "Enable Chip Interface"

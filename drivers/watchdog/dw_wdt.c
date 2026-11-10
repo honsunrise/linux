@@ -21,11 +21,13 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/limits.h>
+#include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/watchdog.h>
 
@@ -592,6 +594,22 @@ static int dw_wdt_drv_probe(struct platform_device *pdev)
 	if (IS_ERR(dw_wdt->rst))
 		return PTR_ERR(dw_wdt->rst);
 
+	/*
+	 * Sophgo CV18xx/SG2002: a timeout resets the chip only with bit 8 of
+	 * the TOP block's watchdog control (TOP + 0x8) set, as the Sophgo
+	 * cvi_wdt.c does; no boot stage sets it (read 0 on the reCamera).
+	 */
+	if (of_device_is_compatible(dev->of_node, "sophgo,cv1800-wdt")) {
+		struct regmap *top;
+
+		top = syscon_regmap_lookup_by_phandle(dev->of_node, "sophgo,top-syscon");
+		if (IS_ERR(top))
+			return dev_err_probe(dev, PTR_ERR(top), "no sophgo,top-syscon\n");
+		ret = regmap_set_bits(top, 0x8, BIT(8));
+		if (ret)
+			return ret;
+	}
+
 	/* Enable normal reset without pre-timeout by default. */
 	dw_wdt_update_mode(dw_wdt, DW_WDT_RMOD_RESET);
 
@@ -679,6 +697,7 @@ static void dw_wdt_drv_remove(struct platform_device *pdev)
 #ifdef CONFIG_OF
 static const struct of_device_id dw_wdt_of_match[] = {
 	{ .compatible = "snps,dw-wdt", },
+	{ .compatible = "sophgo,cv1800-wdt", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, dw_wdt_of_match);

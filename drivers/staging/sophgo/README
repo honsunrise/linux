@@ -1,0 +1,84 @@
+Sophgo SG200x (cv181x) vendor drivers, imported in-tree
+======================================================
+
+Provenance
+----------
+
+  osdrv/  sophgo/osdrv @ f35ca075cc022aac97f5d22238c1e46caf8276bd, interdrv/
+          (GPL-2.0). Includes include/, cif, vi, vpss, vo, fb, ive, dwa,
+          rgn, mon, snsr_i2c, sys, base, tpu, vcodec, jpeg, cvi_vc_drv,
+          rtos_cmdqu, fast_image, wiegand, clock_cooling, plus the vendor
+          pinctrl headers (kernel-5.10-headers/, GPL-2.0) which cif and vo
+          include.
+
+          Linux 7.2 port of sys/base/snsr_i2c/cif/vi/vpss/vcodec/jpeg/
+          cvi_vc_drv/tpu taken from djairjr/recamera-linux-kernel7 @
+          240adcc6164d7ff50995c0119f29a1ba570ea57d,
+          external/package/sophgo-osdrv/000{1,2,3}-*.patch. Every change is
+          marked "7.2 port". The other modules use the same port: void
+          platform remove, one-argument class_create, pde_data, the gpiod
+          descriptor API, the 5-argument thermal_of_cooling_device_register,
+          the descriptor-based IRQ-less probe paths the vendor uses, and the
+          module-visible DMA-buf namespace.
+
+  ion/    The vendor ION allocator: sophgo/linux_5.10 @ d0486a96,
+          drivers/staging/android/ion (GPL-2.0), with the cvitek carveout
+          heap and /dev/ion glue; 7.2 port from the reCamera package
+          external/package/sophgo-ion/0001-port-to-linux-7.2.patch.
+
+Vendor modules superseded by mainline drivers (not imported)
+------------------------------------------------------------
+
+  rtc/   -> drivers/rtc/rtc-cv1800.c                        (sophgo,cv1800b-rtc)
+  saradc/-> drivers/iio/adc/sophgo-cv1800b-adc.c            (sophgo,cv1800b-saradc)
+  pwm/   -> drivers/pwm/pwm-cv1800.c                        (sophgo,cv1800-pwm)
+  wdt/   -> drivers/watchdog/dw_wdt.c + sophgo,cv1800-wdt   (chip reset bits)
+
+Device tree
+-----------
+
+  Multimedia nodes: arch/riscv/boot/dts/sophgo/sg2002-multimedia.dtsi
+  Board:            arch/riscv/boot/dts/sophgo/sg2002-licheerv-nano-b.dts
+
+  The nodes keep the vendor compatibles and the clock/reset/reg/interrupt
+  names the drivers request; the interrupt numbers are the vendor PLIC
+  numbers converted with SOC_PERIPHERAL_IRQ(). The DT bindings in
+  Documentation/devicetree/bindings are only written for the drivers that
+  were brought to mainline style (pwm, thermal, restart, dw-wdt); the
+  staging drivers keep the vendor ABI documented by this file.
+
+Userspace and firmware dependencies (not kernel side)
+-----------------------------------------------------
+
+  * sophgo/cvi_mpi @ 6dbbbb8bed877cd3a08f76ce4aed61645c38bbe1 -- the MPI
+    library the applications link against (ion_fd based). Without it the
+    /dev/cvi-* nodes are unusable.
+  * cviruntime @ 3f4938648950a7f3bf9a19c320ca9fae7c52de20, cvikernel @
+    9f1f57a19c3c281a931dfc71b318494487193d56, cvibuilder @
+    4309f2a649fc7cfe7160389d52a81c469dbdd7bc -- NPU model runtime.
+  * sophgo/ramdisk @ f855ea377c886aae094e224f4dffebcffaedc4ad
+    usr/share/fw_vcodec/{coda980.bin,monet.bin} -- codec MCU firmware read
+    by cvi_vc_driver when the first H.264/H.265 channel is created.
+  * 3A/ISP tuning bins and the sensor drivers live in the sensor support
+    list and in the MPI (SensorSupportList @
+    86b0708e0101dfd4b60abafe98fef28c92773dbb), not in the kernel.
+  * CV_MPI needs the fip's pinmux (the Sipeed U-Boot sets the display,
+    touch, camera and SDIO pads), and the C906L FreeRTOS image for
+    rtos_cmdqu/fast_image.
+  * C906 + fence.tso: userspace must be built with -mno-fence-tso or against
+    an OpenSBI >= 1.7, else any __atomic_thread_fence(ACQ_REL) SIGILLs.
+
+Known gaps (no source obtained / not ported)
+--------------------------------------------
+
+  * Hynitron touch (vendor hyn_ts, "hyn,7xx", sopgo/linux_5.10
+    drivers/input/touchscreen/hynitron_*): mainline only has CST340. The
+    GT911 panels work through drivers/input/touchscreen/goodix.c.
+  * The vendor dwc2 fork interface /proc/cviusb/otg_role and the
+    "cvitek,wifi-pin"/"cvitek,bt-pin" power-sequencing drivers are not
+    ported; the USB role is set through the DT dr_mode, and the wireless
+    power sequence is done by the fip.
+  * rtl8733bs: no public source found in sophgo/linux_5.10,
+    sophgo/osdrv or the LicheeRV-Nano-Build; the binary shipped in the
+    Sipeed image (3rd/8733bs.ko) cannot be rebuilt. The AIC8800 variant is
+    the one with a source (deepin-community/aic8800).

@@ -1087,6 +1087,18 @@ properties:
               - radxa,zero-3w
           - const: rockchip,rk3566
 
+      - description: Radxa ZERO 3W with AIC8800DS2 module
+        items:
+          - const: radxa,zero3w-aic8800ds2
+          - const: radxa,zero-3w
+          - const: rockchip,rk3566
+
+      - description: Radxa ZERO 3W with AP6212 module
+        items:
+          - const: radxa,zero3w-ap6212
+          - const: radxa,zero-3w
+          - const: rockchip,rk3566
+
       - description: Relfor SAIB board
         items:
           - const: relfor,saib

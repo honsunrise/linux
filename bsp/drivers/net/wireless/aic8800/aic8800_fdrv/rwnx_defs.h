@@ -393,7 +393,25 @@ struct rwnx_roc_elem {
 	bool mgmt_roc;
 	/* Indicate if we have switch on the RoC channel */
 	bool on_chan;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+	/* Assigned by cfg80211; 0 for the RoC that mgmt_tx starts itself */
+	u64 cookie;
+#endif
 };
+
+/*
+ * Cookie for cfg80211_ready_on_channel() and
+ * cfg80211_remain_on_channel_expired(). Up to 7.2 the driver chose it
+ * (roc_cookie_cnt). From 7.3 on cfg80211 assigns it before calling
+ * remain_on_channel, and the driver has to report that value back. It is
+ * kept in the RoC element, which is filled in before the RoC is sent to the
+ * firmware, so the events can never see a stale one.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+#define RWNX_ROC_COOKIE(rwnx_hw, roc_elem) ((roc_elem)->cookie)
+#else
+#define RWNX_ROC_COOKIE(rwnx_hw, roc_elem) ((u64)((rwnx_hw)->roc_cookie_cnt))
+#endif
 
 /* Structure containing channel survey information received from MAC */
 struct rwnx_survey_info {

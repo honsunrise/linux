@@ -536,6 +536,18 @@ static int cv1800b_i2s_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id,
 	bool output_enable = (dir == SND_SOC_CLOCK_OUT) ? true : false;
 
 	dev_dbg(i2s->dev, "%s called with %u\n", __func__, freq);
+
+	/*
+	 * freq == 0 is the machine driver releasing the clock at the end of a
+	 * stream (simple-audio-card does this when mclk-fs is set).  Forget
+	 * the rate but leave the MCLK output as it is: on SG2002 the MCLK of
+	 * I2S3 also clocks the internal ADC, which may be capturing.
+	 */
+	if (!freq) {
+		i2s->mclk_rate = 0;
+		return 0;
+	}
+
 	ret = cv1800b_i2s_set_rate_for_mclk(i2s, freq);
 	if (ret)
 		return ret;

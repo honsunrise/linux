@@ -115,12 +115,21 @@ rwnx_prep_tdls_direct(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
 
 	switch (action_code) {
 	case WLAN_PUB_ACTION_TDLS_DISCOVER_RES:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+		skb_put(skb, 2 + sizeof(mgmt->u.action.tdls_discover_resp));
+		mgmt->u.action.category = WLAN_CATEGORY_PUBLIC;
+		mgmt->u.action.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;
+		mgmt->u.action.tdls_discover_resp.dialog_token = dialog_token;
+		mgmt->u.action.tdls_discover_resp.capability =
+			cpu_to_le16(rwnx_get_tdls_sta_capab(rwnx_vif, status_code));
+#else
 		skb_put(skb, 1 + sizeof(mgmt->u.action.u.tdls_discover_resp));
 		mgmt->u.action.category = WLAN_CATEGORY_PUBLIC;
 		mgmt->u.action.u.tdls_discover_resp.action_code = WLAN_PUB_ACTION_TDLS_DISCOVER_RES;
 		mgmt->u.action.u.tdls_discover_resp.dialog_token = dialog_token;
 		mgmt->u.action.u.tdls_discover_resp.capability =
 			cpu_to_le16(rwnx_get_tdls_sta_capab(rwnx_vif, status_code));
+#endif
 		break;
 	default:
 		return -EINVAL;
@@ -746,7 +755,12 @@ rwnx_tdls_send_mgmt_packet_data(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_v
 					  initiator, extra_ies, extra_ies_len, oper_class, chandef);
 
 	if (action_code == WLAN_PUB_ACTION_TDLS_DISCOVER_RES) {
-		u64 cookie;
+		/*
+		 * Written by rwnx_start_mgmt_xmit() up to 7.2 and read by it from
+		 * 7.3 on. cfg80211 has no pending transmission to match this frame
+		 * against, so 0, which also keeps its TX status from being reported.
+		 */
+		u64 cookie = 0;
 		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 		struct cfg80211_mgmt_tx_params params;
 

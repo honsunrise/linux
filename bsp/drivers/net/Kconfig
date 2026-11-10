@@ -3,10 +3,7 @@
 menu "Network Device Drivers"
 	depends on NET
 
-if NETDEVICES
-
-source "$(BSP_TOP)drivers/net/wireless/Kconfig"
-
-endif
+# Wireless LAN drivers are sourced from bsp/Kconfig so that the shared
+# AIC8800 subtree remains available when AW_BSP is disabled.
 
 endmenu

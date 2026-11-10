@@ -29,6 +29,20 @@ properties:
   "#sound-dai-cells":
     const: 0
 
+  clocks:
+    maxItems: 1
+
+  clock-names:
+    const: mclk
+
+  sophgo,mclk-source:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: |
+      Phandle of the I2S/TDM controller whose MCLK output clocks this codec.
+      The internal ADC has no clock of its own: it takes the MCLK output of
+      another I2S block (I2S3 on the SG2002). When present, the driver turns
+      that output on and programs MCLK = 256 fs before capturing.
+
 required:
   - compatible
   - reg

@@ -574,7 +574,13 @@ static void dw_axi_dma_set_hw_channel(struct axi_dma_chan *chan, bool set)
 	unsigned long reg_value, val;
 
 	if (!chip->apb_regs) {
-		dev_err(chip->dev, "apb_regs not initialized\n");
+		/*
+		 * With the handshake used as the channel number (Sophgo
+		 * CV18xx: the dmamux ties each request to a fixed channel)
+		 * there is no handshake select register to program.
+		 */
+		if (!chip->dw->hdata->use_handshake_as_channel_number)
+			dev_err(chip->dev, "apb_regs not initialized\n");
 		return;
 	}
 

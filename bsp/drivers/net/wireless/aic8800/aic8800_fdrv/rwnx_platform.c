@@ -595,7 +595,12 @@ static int parse_key_val(const char *str, const char *key, char *val)
 		p--;
 
 	p++;
-	strncpy(val, dst, p -dst);
+	/*
+	 * strncpy() was removed in 7.2. dst..p is a known-length run inside a
+	 * longer string, so strncpy() never reached its NUL and never padded;
+	 * the terminator is the line below. That is a plain memcpy().
+	 */
+	memcpy(val, dst, p - dst);
 	val[p - dst] = 0;
 	return 0;
 }

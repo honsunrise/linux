@@ -1,10 +1,28 @@
 # SPDX-License-Identifier: GPL-2.0
 
-menu "Allwinner BSP"
+menu "Vendor BSP support"
 
+config AW_BSP
+	bool "Allwinner Platform"
+	select ARCH_SUNXI
+	select ARCH_HAS_RESET_CONTROLLER
+	select GENERIC_IRQ_CHIP
+	select PINCTRL
+	select RESET_CONTROLLER
+	help
+	  This enables support for Allwinner sunxi based SoCs like the A64.
+
+if AW_BSP
 source "$(BSP_TOP)platform/Kconfig"
 source "$(BSP_TOP)platform/Kconfig.debug"
 source "$(BSP_TOP)drivers/Kconfig"
 source "$(BSP_TOP)modules/gpu/Kconfig"
+endif
 
 endmenu
+
+# The AIC8800 driver is shared by Allwinner, Rockchip and RISC-V boards.
+# It is the only BSP wireless subtree that is usable without AW_BSP.
+if NETDEVICES
+source "$(BSP_TOP)drivers/net/wireless/Kconfig"
+endif

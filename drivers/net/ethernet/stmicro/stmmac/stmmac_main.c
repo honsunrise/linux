@@ -4207,17 +4207,24 @@ static int stmmac_open(struct net_device *dev)
 	if (!priv->tx_lpi_timer)
 		priv->tx_lpi_timer = eee_timer * 1000;
 
-	dma_conf = stmmac_setup_dma_desc(priv, dev->mtu);
-	if (IS_ERR(dma_conf))
-		return PTR_ERR(dma_conf);
-
 	ret = pm_runtime_resume_and_get(priv->device);
 	if (ret < 0)
-		goto err_dma_resources;
+		return ret;
 
 	ret = stmmac_init_phy(dev);
 	if (ret)
 		goto err_runtime_pm;
+
+	/* Vendor bring-up order: the vendor glue attaches the PHY before the
+	 * DMA rings are allocated and initialised (5.10 stmmac_open() calls
+	 * stmmac_init_phy() first, then alloc_dma_desc_resources() and
+	 * init_dma_desc_rings()). Keep that sequence here.
+	 */
+	dma_conf = stmmac_setup_dma_desc(priv, dev->mtu);
+	if (IS_ERR(dma_conf)) {
+		ret = PTR_ERR(dma_conf);
+		goto err_disconnect_phy;
+	}
 
 	if (!(priv->plat->flags & STMMAC_FLAG_SERDES_UP_AFTER_PHY_LINKUP)) {
 		ret = stmmac_legacy_serdes_power_up(priv);

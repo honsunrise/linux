@@ -4,6 +4,11 @@ menu "Wireless LAN"
 
 if WLAN
 
+# AIC8800 is shared by Allwinner, Rockchip and RISC-V boards, so it stays
+# selectable when AW_BSP is disabled.
+source "$(BSP_TOP)drivers/net/wireless/aic8800/Kconfig"
+
+if AW_BSP
 source "$(BSP_TOP)drivers/net/wireless/bcmdhd/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/rtl8188fu/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/rtl8723cs/Kconfig"
@@ -15,9 +20,10 @@ source "$(BSP_TOP)drivers/net/wireless/rtl8852bs/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/xr819/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/xr829/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/uwe5622/Kconfig"
-source "$(BSP_TOP)drivers/net/wireless/aic8800/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/atbm6023is/Kconfig"
 source "$(BSP_TOP)drivers/net/wireless/ssv6158/Kconfig"
+endif
+
 endif
 
 endmenu

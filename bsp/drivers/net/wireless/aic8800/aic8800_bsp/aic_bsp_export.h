@@ -1,6 +1,23 @@
 #ifndef __AIC_BSP_EXPORT_H
 #define __AIC_BSP_EXPORT_H
 
+#include <linux/version.h>
+
+/*
+ * del_timer()/del_timer_sync() were renamed to timer_delete()/
+ * timer_delete_sync() in 6.15.  Keep the vendor call sites unchanged.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+#define del_timer(timer)		timer_delete(timer)
+#define del_timer_sync(timer)		timer_delete_sync(timer)
+#endif
+
+/* from_timer() was renamed to timer_container_of() in 6.16. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+#define from_timer(var, callback_timer, timer_fieldname) \
+	timer_container_of(var, callback_timer, timer_fieldname)
+#endif
+
 #define AICBSP_RESV_MEM_SUPPORT
 
 enum aicbsp_subsys {

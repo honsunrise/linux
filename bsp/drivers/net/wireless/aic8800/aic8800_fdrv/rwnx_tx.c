@@ -1478,7 +1478,9 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
 		return -ENOMEM;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 3, 0)
 	*cookie = (unsigned long)skb;
+#endif
 
 	/*
 	 * Move skb->data pointer in order to reserve room for rwnx_txhdr
@@ -1537,6 +1539,13 @@ int rwnx_start_mgmt_xmit(struct rwnx_vif *vif, struct rwnx_sta *sta,
 	sw_txhdr->rwnx_sta = sta;
 	sw_txhdr->rwnx_vif = vif;
 	sw_txhdr->skb = skb;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+	/*
+	 * 7.3 hands the cookie in instead of asking for one, so it has to
+	 * survive until rwnx_txdatacfm(), which reports it to cfg80211.
+	 */
+	sw_txhdr->mgmt_cookie = *cookie;
+#endif
 	sw_txhdr->headroom = headroom;
 	sw_txhdr->map_len = skb->len - offsetof(struct rwnx_txhdr, hw_hdr);
 #ifdef CONFIG_RWNX_AMSDUS_TX
@@ -1647,8 +1656,20 @@ int rwnx_txdatacfm(void *pthis, void *host_id)
 					   rwnx_txst.acknowledged);
 #endif
 		/* Confirm transmission to CFG80211 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+		/*
+		 * cfg80211 never assigns 0, so a zero cookie means the frame did
+		 * not come through mgmt_tx and there is no pending transmission
+		 * to report.
+		 */
+		if (sw_txhdr->mgmt_cookie)
+#endif
 		cfg80211_mgmt_tx_status(&sw_txhdr->rwnx_vif->wdev,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 3, 0)
+								sw_txhdr->mgmt_cookie,
+#else
 								(unsigned long)skb,
+#endif
 								(skb->data + sw_txhdr->headroom),
 								sw_txhdr->frame_len,
 								rwnx_txst.acknowledged,

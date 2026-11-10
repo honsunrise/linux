@@ -5,6 +5,8 @@
 
 #include <linux/module.h>
 #include <linux/clk-provider.h>
+#include <linux/clkdev.h>
+#include <linux/string.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/spinlock.h>
@@ -414,18 +416,29 @@ static CV1800_GATE(clk_apb_gpio_intr, clk_axi6_bus_parents,
 		   REG_CLK_EN_0, 30,
 		   CLK_IS_CRITICAL);
 
-/* ETH */
+/* ETH
+ *
+ * Both ETH0 clocks are CLK_IS_CRITICAL, as they are in the vendor clock
+ * driver that runs the working system: drivers/clk/cvitek/clk-cv181x.c
+ * declares clk_500m_eth0 (REG_CLK_EN_0 bit 25) and clk_axi4_eth0
+ * (REG_CLK_EN_0 bit 26) with CLK_IS_CRITICAL, so the clock framework never
+ * gates them and the MAC is never touched with its clocks closed. The same
+ * two clocks are the ones the MAC takes as "stmmaceth" (CLK_AXI4_ETH0) and
+ * "ptp_ref" (CLK_ETH0_500M) in the device tree, and the 7.2 stmmac enables
+ * the PTP reference clock only in stmmac_setup_ptp(), after
+ * stmmac_hw_setup() has already reset the DMA engine.
+ */
 static CV1800_BYPASS_DIV(clk_eth0_500m, clk_bypass_fpll_parents,
 			 REG_CLK_EN_0, 25,
-			 REG_DIV_CLK_GPIO_DB, 16, 4, 3, CV1800_DIV_FLAG,
+			 REG_DIV_CLK_ETH0_500M, 16, 4, 3, CV1800_DIV_FLAG,
 			 REG_CLK_BYP_0, 9,
-			 0);
+			 CLK_IS_CRITICAL);
 static CV1800_GATE(clk_axi4_eth0, clk_axi4_bus_parents,
 		   REG_CLK_EN_0, 26,
-		   0);
+		   CLK_IS_CRITICAL);
 static CV1800_BYPASS_DIV(clk_eth1_500m, clk_bypass_fpll_parents,
 			 REG_CLK_EN_0, 27,
-			 REG_DIV_CLK_GPIO_DB, 16, 4, 3, CV1800_DIV_FLAG,
+			 REG_DIV_CLK_ETH1_500M, 16, 4, 3, CV1800_DIV_FLAG,
 			 REG_CLK_BYP_0, 10,
 			 0);
 static CV1800_GATE(clk_axi4_eth1, clk_axi4_bus_parents,
@@ -1480,6 +1493,19 @@ static int cv1800_clk_init_ctrl(struct device *dev, void __iomem *reg,
 				i, name);
 			return ret;
 		}
+
+		/*
+		 * Publica um lookup clkdev para os gates do efuse, como o driver de
+		 * clock do fabricante faz para todos os clocks dele
+		 * (clk-cv181x.c: clk_hw_register_clkdev(hw, name, NULL)). Quem
+		 * consome o nome e' a leitura do efuse em
+		 * drivers/net/phy/cvitek.c, que resolve "clk_efuse" e liga o gate
+		 * em volta da leitura. Só esses dois nomes sao publicados: publicar
+		 * todo clock faria lookups por nome passarem a resolver para
+		 * perifericos cujos clocks ja funcionam nesta placa.
+		 */
+		if (!strcmp(name, "clk_efuse") || !strcmp(name, "clk_apb_efuse"))
+			clk_hw_register_clkdev(hw, name, NULL);
 	}
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,

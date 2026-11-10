@@ -19,7 +19,7 @@
 		#clock-cells = <0>;
 	};
 
-	soc {
+	soc: soc {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -458,6 +458,130 @@
 			clocks = <&clk CLK_RTC_25M>,
 				 <&clk CLK_SRC_RTC_SYS_0>;
 			clock-names = "rtc", "mcu";
+		};
+
+		/*
+		 * The fifth GPIO bank, in the RTC domain. It is what the
+		 * display, touch and wireless control lines of several SG200x
+		 * boards are wired to; the pads keep working while the rest of
+		 * the SoC is off.
+		 */
+		gpio4: gpio@5021000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x05021000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			porte: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupts = <SOC_PERIPHERAL_IRQ(54)
+					      IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		pwm0: pwm@3060000 {
+			compatible = "sophgo,cv1800-pwm";
+			reg = <0x03060000 0x1000>;
+			clocks = <&clk CLK_PWM>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
+		pwm1: pwm@3061000 {
+			compatible = "sophgo,cv1800-pwm";
+			reg = <0x03061000 0x1000>;
+			clocks = <&clk CLK_PWM>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
+		pwm2: pwm@3062000 {
+			compatible = "sophgo,cv1800-pwm";
+			reg = <0x03062000 0x1000>;
+			clocks = <&clk CLK_PWM>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
+		pwm3: pwm@3063000 {
+			compatible = "sophgo,cv1800-pwm";
+			reg = <0x03063000 0x1000>;
+			clocks = <&clk CLK_PWM>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
+		watchdog0: watchdog@3010000 {
+			compatible = "sophgo,cv1800-wdt", "snps,dw-wdt";
+			reg = <0x03010000 0x1000>;
+			clocks = <&clk CLK_APB_WDT>;
+			clock-names = "pclk";
+			resets = <&rst RST_WDT>;
+			status = "disabled";
+		};
+
+		i2s0: i2s@4100000 {
+			compatible = "sophgo,cv1800b-i2s";
+			reg = <0x04100000 0x1000>;
+			clocks = <&clk CLK_APB_I2S0>, <&clk CLK_SDMA_AUD0>;
+			clock-names = "i2s", "mclk";
+			dmas = <&dmamux 0 1>;
+			dma-names = "rx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2s1: i2s@4110000 {
+			compatible = "sophgo,cv1800b-i2s";
+			reg = <0x04110000 0x1000>;
+			clocks = <&clk CLK_APB_I2S1>, <&clk CLK_SDMA_AUD1>;
+			clock-names = "i2s", "mclk";
+			dmas = <&dmamux 2 1>, <&dmamux 3 1>;
+			dma-names = "rx", "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2s2: i2s@4120000 {
+			compatible = "sophgo,cv1800b-i2s";
+			reg = <0x04120000 0x1000>;
+			clocks = <&clk CLK_APB_I2S2>, <&clk CLK_SDMA_AUD2>;
+			clock-names = "i2s", "mclk";
+			dmas = <&dmamux 6 1>, <&dmamux 1 1>;
+			dma-names = "rx", "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2s3: i2s@4130000 {
+			compatible = "sophgo,cv1800b-i2s";
+			reg = <0x04130000 0x1000>;
+			clocks = <&clk CLK_APB_I2S3>, <&clk CLK_SDMA_AUD3>;
+			clock-names = "i2s", "mclk";
+			dmas = <&dmamux 7 1>;
+			dma-names = "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		dac: audio-codec@300a000 {
+			compatible = "sophgo,cv1800b-sound-dac";
+			reg = <0x0300a000 0x100>;
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		adc: audio-codec@300a100 {
+			compatible = "sophgo,cv1800b-sound-adc";
+			reg = <0x0300a100 0x100>;
+			#sound-dai-cells = <0>;
+			status = "disabled";
 		};
 	};
 };

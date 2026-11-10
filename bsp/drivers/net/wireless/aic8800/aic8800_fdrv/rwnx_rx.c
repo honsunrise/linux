@@ -380,7 +380,7 @@ static void rwnx_rx_data_skb_forward(struct rwnx_hw *rwnx_hw, struct rwnx_vif *r
 	* If the receive is not processed inside an ISR, the softirqd must be woken explicitly to service the NET_RX_SOFTIRQ.
 	* * In 2.6 kernels, this is handledby netif_rx_ni(), but in earlier kernels, we need to do it manually.
 	*/
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
 		netif_rx_ni(rx_skb);
 	#else
 		ulong flags;
@@ -414,8 +414,19 @@ static bool rwnx_rx_data_skb(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
 		rwnx_rxdata_process_amsdu(rwnx_hw, skb, rxhdr->flags_vif_idx, &list); //rxhdr not used below since skb free!
 #else
 		int count;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+		ieee80211_amsdu_to_8023s(skb, &list, rwnx_vif->ndev->dev_addr,
+								 RWNX_VIF_TYPE(rwnx_vif), 0, NULL, NULL, 0);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+		ieee80211_amsdu_to_8023s(skb, &list, rwnx_vif->ndev->dev_addr,
+								 RWNX_VIF_TYPE(rwnx_vif), 0, NULL, NULL, false);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 107) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+		ieee80211_amsdu_to_8023s(skb, &list, rwnx_vif->ndev->dev_addr,
+								 RWNX_VIF_TYPE(rwnx_vif), 0, NULL, NULL, false);
+#else
 		ieee80211_amsdu_to_8023s(skb, &list, rwnx_vif->ndev->dev_addr,
 								 RWNX_VIF_TYPE(rwnx_vif), 0, NULL, NULL);
+#endif
 
 		count = skb_queue_len(&list);
 		if (count > ARRAY_SIZE(rwnx_hw->stats.amsdus_rx))
@@ -529,7 +540,7 @@ static bool rwnx_rx_data_skb(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif,
 			* If the receive is not processed inside an ISR, the softirqd must be woken explicitly to service the NET_RX_SOFTIRQ.
 			* * In 2.6 kernels, this is handledby netif_rx_ni(), but in earlier kernels, we need to do it manually.
 			*/
-			#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+			#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
 				netif_rx_ni(rx_skb);
 			#else
 				ulong flags;
@@ -1367,7 +1378,7 @@ int reord_single_frame_ind(struct aicwf_rx_priv *rx_priv, struct recv_msdu *prfr
 		 * If the receive is not processed inside an ISR, the softirqd must be woken explicitly to service the NET_RX_SOFTIRQ.
 		 * * In 2.6 kernels, this is handledby netif_rx_ni(), but in earlier kernels, we need to do it manually.
 		 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
 			netif_rx_ni(rx_skb);
 #else
 			ulong flags;

@@ -476,4 +476,11 @@ config XILINX_GMII2RGMII
 	  the Reduced Gigabit Media Independent Interface(RGMII) between
 	  Ethernet physical media devices and the Gigabit Ethernet controller.
 
+config CVITEK_PHY
+	tristate "CVITEK PHYs"
+	help
+	  Enable support for RMII PHYs manufactured by CVITEK.
+	  This is the internal ethernet phy of the CVITEK/CV180x SoCs
+	  (the SG2002 ePHY at 0x03009000), 100 Mbps full duplex.
+
 endif # PHYLIB
