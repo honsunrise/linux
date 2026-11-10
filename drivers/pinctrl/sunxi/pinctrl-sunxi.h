@@ -15,6 +15,7 @@
 
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
+#include <linux/pinctrl/pinctrl.h>
 
 #define PA_BASE	0
 #define PB_BASE	32

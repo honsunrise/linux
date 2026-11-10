@@ -5,6 +5,10 @@ SUBLEVEL = 10
 EXTRAVERSION =
 NAME = Baby Opossum Posse
 
+# Keep the BSP release stable with CONFIG_LOCALVERSION_AUTO=n, including
+# builds from a Git checkout. Callers can still request a suffix explicitly.
+export LOCALVERSION ?=
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
@@ -598,6 +602,7 @@ LINUXINCLUDE    := \
 		-I$(objtree)/arch/$(SRCARCH)/include/generated \
 		-I$(srctree)/include \
 		-I$(objtree)/include \
+		-I$(srctree)/bsp/include \
 		$(USERINCLUDE)
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
@@ -826,6 +831,7 @@ ifeq ($(KBUILD_EXTMOD),)
 # Objects we will link into vmlinux / subdirs we need to visit
 core-y		:=
 drivers-y	:=
+drivers-y	+= bsp/
 libs-y		:= lib/
 endif # KBUILD_EXTMOD
 
@@ -1505,6 +1511,13 @@ PHONY += headers_install
 headers_install: headers
 	$(call cmd,headers_install)
 
+IS_AOSP = $(shell if [ -d "$(srctree)/android" ] && [ -n "$(KBUILD_EXTMOD)" ]; then echo "y"; fi)
+ifneq ($(IS_AOSP), y)
+	hdr-inst-bsp := -f $(srctree)/bsp/scripts/Makefile.headersinst obj
+else
+	hdr-inst-bsp := -f $(srctree)/bsp/scripts/Makefile.headersinst dst=$(KBUILD_EXTMOD)/usr/include/bsp obj
+endif
+
 PHONY += archheaders archscripts
 
 hdr-inst := -f $(srctree)/scripts/Makefile.headersinst obj
@@ -1516,6 +1529,9 @@ ifdef HEADER_ARCH
 else
 	$(Q)$(MAKE) $(hdr-inst)=include/uapi
 	$(Q)$(MAKE) $(hdr-inst)=arch/$(SRCARCH)/include/uapi
+ifneq ($(wildcard $(srctree)/bsp/scripts/Makefile.headersinst),)
+	$(Q)$(MAKE) $(hdr-inst-bsp)=bsp/include/uapi
+endif
 endif
 
 ifdef CONFIG_HEADERS_INSTALL

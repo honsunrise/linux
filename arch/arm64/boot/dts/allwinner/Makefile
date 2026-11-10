@@ -4,6 +4,9 @@ DTC_FLAGS_sun50i-a64-pine64-lts := -@
 DTC_FLAGS_sun50i-a64-pine64 := -@
 DTC_FLAGS_sun50i-a64-pine64-plus := -@
 DTC_FLAGS_sun50i-a64-sopine-baseboard := -@
+DTC_FLAGS_sun60i-a733-cubie-a7a := -@
+DTC_FLAGS_sun60i-a733-cubie-a7s := -@
+DTC_FLAGS_sun60i-a733-cubie-a7z := -@
 
 dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a64-amarula-relic.dtb
 dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a64-bananapi-m64.dtb
@@ -66,3 +69,6 @@ dtb-$(CONFIG_ARCH_SUNXI) += sun55i-a527-cubie-a5e.dtb
 dtb-$(CONFIG_ARCH_SUNXI) += sun55i-h728-x96qpro+.dtb
 dtb-$(CONFIG_ARCH_SUNXI) += sun55i-t527-avaota-a1.dtb
 dtb-$(CONFIG_ARCH_SUNXI) += sun55i-t527-orangepi-4a.dtb
+dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-cubie-a7a.dtb
+dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-cubie-a7s.dtb
+dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-cubie-a7z.dtb
