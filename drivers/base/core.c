@@ -2241,23 +2241,8 @@ static int fw_devlink_create_devlink(struct device *con,
 		}
 
 		if (con != sup_dev && !device_link_add(con, sup_dev, flags)) {
-			/*
-			 * device_link_add() refuses a SYNC_STATE_ONLY link once
-			 * the consumer has probed, by design ("useless once a
-			 * consumer device has probed").  That is the normal
-			 * outcome when a child node of an already bound device
-			 * references a supplier that registers later (e.g. the
-			 * reset GPIO of an SDIO card node under an MMC host), so
-			 * it is not an error.  Same return value as before.
-			 */
-			if ((flags & DL_FLAG_SYNC_STATE_ONLY) &&
-			    con->links.status != DL_DEV_NO_DRIVER &&
-			    con->links.status != DL_DEV_PROBING)
-				dev_dbg(con, "Not creating sync-state-only link with %s for %pfwf: consumer already bound\n",
-					dev_name(sup_dev), link->consumer);
-			else
-				dev_err(con, "Failed to create device link (0x%x) with supplier %s for %pfwf\n",
-					flags, dev_name(sup_dev), link->consumer);
+			dev_err(con, "Failed to create device link (0x%x) with supplier %s for %pfwf\n",
+				flags, dev_name(sup_dev), link->consumer);
 			ret = -EINVAL;
 		}
 

@@ -1,6 +1,6 @@
 #include <linux/slab.h>
 #include <linux/string.h>
-#include <generated/utsversion.h>	/* 7.2: UTS_VERSION */
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 
@@ -173,7 +173,7 @@ int vpss_ctx_proc_show(struct seq_file *m, void *v)
 	struct cvi_vpss_ctx **pVpssCtx = vpss_get_shdw_ctx();
 
 	// Module Param
-	seq_printf(m, "\nModule: [VPSS], Build Time[%s]\n", UTS_VERSION);
+	seq_printf(m, "\nModule: [VPSS], Kernel Release[%s]\n", UTS_RELEASE);
 	seq_puts(m, "\n-------------------------------MODULE PARAM-------------------------------\n");
 	seq_printf(m, "%25s%25s\n", "vpss_vb_source", "vpss_split_node_num");
 	seq_printf(m, "%18d%25d\n", 0, 1);

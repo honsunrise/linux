@@ -1,0 +1,526 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Shared description of the Sipeed LicheeRV Nano (SG2002, QFN package).
+ *
+ * The four board variants differ only in the wired connectivity:
+ *
+ *   B   - base board, no Ethernet, no WiFi/BT
+ *   E   - base board + 100M RJ45 (internal ePHY, ETH_TX/RX pads)
+ *   W   - base board + WiFi6/BT5 (SDIO WiFi, UART Bluetooth)
+ *   WE  - base board + Ethernet + WiFi/BT
+ *
+ * (Sipeed wiki, LicheeRV Nano introduction, "Version Comparison".)
+ * The common parts live here; sg2002-licheerv-nano-eth.dtsi and
+ * sg2002-licheerv-nano-wifi.dtsi are included by the variants that have
+ * the corresponding hardware, and must not be included by the others.
+ *
+ * The boards ship with the Sipeed fip (BL2 + OpenSBI + U-Boot).  That fip
+ * selects the MIPI panel from "panel=" in uEnv.txt and sets up the DSI PLL,
+ * the panel registers and the camera sensor; the vo/mipi_tx driver inherits
+ * that, as on the vendor kernel.  The same fip sets the fixed DRAM layout
+ * below and muxes the touch/reset lines, which this DT re-asserts.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "sg2002.dtsi"
+/*
+ * The multimedia blocks have no mainline driver: they are described for the
+ * Sophgo osdrv modules ported in-tree (drivers/staging/sophgo).
+ */
+#include "sg2002-multimedia.dtsi"
+
+/ {
+	aliases {
+		gpio0 = &gpio0;
+		gpio1 = &gpio1;
+		gpio2 = &gpio2;
+		gpio3 = &gpio3;
+		gpio4 = &gpio4;
+		mmc0 = &sdhci0;
+		mmc1 = &sdhci1;
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	/*
+	 * The buffer layout is the one the Sipeed fip/U-Boot sets up and the
+	 * C906L FreeRTOS image expects.  These are the exact numbers of the
+	 * board memmap (build/boards/sg200x/sg2002_licheervnano_sd/memmap.py):
+	 * DRAM 256 MiB, FreeRTOS 2 MiB at the top, ION 105 MiB right below it
+	 * and the framebuffer (boot logo) below ION, at fixed addresses.
+	 * None of them is no-map: the vendor ION heap and the osdrv modules
+	 * use the linear map of these buffers.
+	 */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/* 8000 KiB boot logo / framebuffer, directly below ION. */
+		fb_reserved: framebuffer@88d30000 {
+			reg = <0x88d30000 0x7d0000>;
+		};
+
+		/* 105 MiB of multimedia buffers (frames, bitstreams, NPU). */
+		ion_reserved: ion@89500000 {
+			reg = <0x89500000 0x6900000>;
+		};
+
+		/* 2 MiB for the C906L FreeRTOS image, at the top of DRAM. */
+		rtos_image: rtos@8fe00000 {
+			reg = <0x8fe00000 0x200000>;
+		};
+	};
+
+	reg_3v3: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	/*
+	 * The 70415 board drives the backlight with PWM_10 on the RTC-domain
+	 * pad PWR_GPIO2 (bank E line 2, function 4); pwm2 channel 2 is
+	 * PWM_10.  The vendor's board init leaves this to userspace, but a
+	 * real PWM driver can let the kernel mux and drive it.
+	 */
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 2 50000 0>;
+		brightness-levels = <0 2 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+		power-supply = <&reg_3v3>;
+		status = "okay";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		status = "okay";
+
+		key-user {
+			label = "User Key";
+			linux,code = <KEY_DISPLAYTOGGLE>;
+			debounce-interval = <1>;
+			gpios = <&porta 30 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		led-user {
+			gpios = <&porta 14 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "activity";
+		};
+	};
+
+	i2c5: i2c-gpio {
+		compatible = "i2c-gpio";
+		scl-gpios = <&porta 15 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		sda-gpios = <&porta 27 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <5>;
+		pinctrl-0 = <&i2c5_cfg>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
+
+	spi4: spi-gpio {
+		compatible = "spi-gpio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		sck-gpios = <&porta 22 GPIO_ACTIVE_HIGH>;
+		miso-gpios = <&porta 23 GPIO_ACTIVE_HIGH>;
+		mosi-gpios = <&porta 25 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&porta 24 GPIO_ACTIVE_LOW>;
+		num-chipselects = <1>;
+		pinctrl-0 = <&spi4_cfg>;
+		pinctrl-names = "default";
+		status = "okay";
+
+		spidev@0 {
+			compatible = "rohm,dh2228fv";
+			reg = <0>;
+			spi-max-frequency = <1000000>;
+		};
+	};
+
+	/*
+	 * The internal codecs are clocked from I2S3's MCLK output (I2S3 is the
+	 * TDM controller wired to the DAC, and the ADC takes its MCLK from it).
+	 */
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "licheerv-nano";
+		status = "okay";
+
+		simple-audio-card,dai-link@0 {
+			link-name = "dac";
+			format = "i2s";
+
+			cpu {
+				sound-dai = <&i2s3>;
+			};
+
+			codec {
+				sound-dai = <&dac>;
+			};
+		};
+
+		simple-audio-card,dai-link@1 {
+			link-name = "adc";
+			format = "i2s";
+
+			cpu {
+				sound-dai = <&i2s0>;
+			};
+
+			codec {
+				sound-dai = <&adc>;
+			};
+		};
+	};
+};
+
+&osc {
+	clock-frequency = <25000000>;
+};
+
+&pinctrl {
+	uart0_cfg: uart0-cfg {
+		uart0-pins {
+			pinmux = <PINMUX(PIN_UART0_TX, 0)>,
+				 <PINMUX(PIN_UART0_RX, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+
+	sdhci0_cfg: sdhci0-cfg {
+		sdhci0-clk-pins {
+			pinmux = <PINMUX(PIN_SD0_CLK, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <16100>;
+			power-source = <3300>;
+		};
+
+		sdhci0-cmd-pins {
+			pinmux = <PINMUX(PIN_SD0_CMD, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+
+		sdhci0-data-pins {
+			pinmux = <PINMUX(PIN_SD0_D0, 0)>,
+				 <PINMUX(PIN_SD0_D1, 0)>,
+				 <PINMUX(PIN_SD0_D2, 0)>,
+				 <PINMUX(PIN_SD0_D3, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+
+		sdhci0-cd-pins {
+			pinmux = <PINMUX(PIN_SD0_CD, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+
+	/*
+	 * I2C4 is the camera/touch bus on PWR_WAKEUP0/PWR_BUTTON1 (the fip
+	 * muxes them to function 5).  The touch reset/IRQ lines are the RTC
+	 * pads PWR_SEQ1/PWR_SEQ2 used as GPIOE3/GPIOE4 (function 3), also as
+	 * the fip leaves them; the touch nodes below own those lines.
+	 */
+	i2c4_cfg: i2c4-cfg {
+		i2c4-pins {
+			pinmux = <PINMUX(PIN_PWR_WAKEUP0, 5)>,
+				 <PINMUX(PIN_PWR_BUTTON1, 5)>;
+			bias-pull-up;
+			drive-strength-microamp = <7800>;
+			power-source = <1800>;
+		};
+
+		touch-gpio-pins {
+			pinmux = <PINMUX(PIN_PWR_SEQ1, 3)>,
+				 <PINMUX(PIN_PWR_SEQ2, 3)>;
+			power-source = <1800>;
+		};
+	};
+
+	backlight_pins: backlight-pins {
+		backlight-pin {
+			pinmux = <PINMUX(PIN_PWR_GPIO2, 4)>;
+			power-source = <1800>;
+		};
+	};
+
+	/*
+	 * The 28-pin headers expose a bit-banged I2C bus and a bit-banged SPI
+	 * bus (vendor DT "i2c5@gpio"/"spi4@gpio", muxed as GPIO by the fip).
+	 */
+	i2c5_cfg: i2c5-cfg {
+		i2c5-pins {
+			pinmux = <PINMUX(PIN_SPK_EN, 3)>,
+				 <PINMUX(PIN_EMMC_DAT3, 3)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+
+	spi4_cfg: spi4-cfg {
+		spi4-pins {
+			pinmux = <PINMUX(PIN_EMMC_CLK, 3)>,
+				 <PINMUX(PIN_EMMC_DAT0, 3)>,
+				 <PINMUX(PIN_EMMC_CMD, 3)>,
+				 <PINMUX(PIN_EMMC_DAT1, 3)>;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+};
+
+&sdhci0 {
+	pinctrl-0 = <&sdhci0_cfg>;
+	pinctrl-names = "default";
+	status = "okay";
+	bus-width = <4>;
+	no-1-8-v;
+	no-mmc;
+	no-sdio;
+	disable-wp;
+};
+
+&uart0 {
+	pinctrl-0 = <&uart0_cfg>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&usb {
+	dr_mode = "otg";
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&backlight_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&watchdog0 {
+	status = "okay";
+};
+
+/* Audio I2S and the osdrv stacks use the AXI DMA controller. */
+&dmac {
+	status = "okay";
+};
+
+/* ADC1 (and the other channels) on the 28-pin header. */
+&saradc {
+	status = "okay";
+};
+
+/* Restart and power-off through the RTC block (drivers/power/reset). */
+&soc {
+	restart@5025000 {
+		compatible = "cvitek,restart";
+		reg = <0x05025000 0x2000>;
+	};
+};
+
+&i2c4 {
+	pinctrl-0 = <&i2c4_cfg>;
+	pinctrl-names = "default";
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/*
+	 * Optional panels share the reset and interrupt lines. Enable only the
+	 * fitted controller with a touch overlay, matching the fip's panel=:
+	 * GT911: zct2133v1/mtd700920b; CST7xx: st7701_lct024bsi20;
+	 * CST3240: st7701_hd228001c31. Probing absent controllers could drive
+	 * the control lines of the fitted panel with the wrong protocol.
+	 */
+	touchscreen@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+		interrupt-parent = <&porte>;
+		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&porte 3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&porte 4 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <640>;
+		status = "disabled";
+	};
+
+	touchscreen@15 {
+		compatible = "hyn,7xx";
+		reg = <0x15>;
+		interrupt-parent = <&porte>;
+		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&porte 4 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <640>;
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+		status = "disabled";
+	};
+
+	touchscreen@5a {
+		compatible = "hyn,3240";
+		reg = <0x5a>;
+		interrupt-parent = <&porte>;
+		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&porte 4 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <368>;
+		touchscreen-size-y = <552>;
+		status = "disabled";
+	};
+};
+
+/* --- multimedia: the osdrv stack ---------------------------------------- */
+
+&i2s0 {
+	status = "okay";
+};
+
+&i2s3 {
+	status = "okay";
+};
+
+&dac {
+	status = "okay";
+};
+
+&adc {
+	clocks = <&clk CLK_SDMA_AUD3>;
+	clock-names = "mclk";
+	sophgo,mclk-source = <&i2s3>;
+	status = "okay";
+};
+
+&cvitek_ion {
+	status = "okay";
+};
+
+&cvi_vc_drv {
+	status = "okay";
+};
+
+&mipi_rx {
+	/* Camera module reset line: bank E line 1 (vendor: snsr-reset). */
+	snsr-reset-gpios = <&porte 1 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&vi {
+	status = "okay";
+};
+
+&vpss {
+	status = "okay";
+};
+
+&dwa {
+	status = "okay";
+};
+
+&rgn {
+	status = "okay";
+};
+
+&ive {
+	status = "okay";
+};
+
+&mon {
+	status = "okay";
+};
+
+&rtos_cmdqu {
+	status = "okay";
+};
+
+&tpu {
+	status = "okay";
+};
+
+&vcodec {
+	status = "okay";
+};
+
+&jpu {
+	status = "okay";
+};
+
+&tempsen {
+	status = "okay";
+};
+
+&cooling {
+	status = "okay";
+};
+
+&soc_thermal {
+	status = "okay";
+};
+
+/*
+ * Display: the panel timing, the DSI PLL and the panel's own registers are
+ * set up by the Sipeed fip from "panel=" in uEnv.txt, and the vo/mipi_tx
+ * drivers inherit that, as on the vendor kernel.  Only the panel reset line
+ * (bank E line 0) and the backlight PWM pin are ours.
+ */
+&vo {
+	status = "okay";
+};
+
+&mipi_tx {
+	reset-gpio = <&porte 0 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&soc {
+	cvi_fb: framebuffer@a088000 {
+		compatible = "cvitek,fb";
+		reg = <0x0a088000 0x1000>;
+		reg-names = "disp";
+		memory-region = <&fb_reserved>;
+		status = "okay";
+	};
+};
+
+/* The FreeRTOS image region (loaded by the fip) and the ION heap. */
+&soc {
+	fast_image: rtos-image@8fe00000 {
+		compatible = "cvitek,rtos_image";
+		reg = <0x8fe00000 0x200000>;
+		reg-names = "rtos_region";
+		/*
+		 * The first 22 MiB of the ION heap are the C906L FreeRTOS
+		 * buffers (H26X bitstream 2 MiB + encoder 0 + ISP 20 MiB, see
+		 * the board memmap.py).  The cvitek carveout heap must not
+		 * allocate there before the RTOS has run.
+		 */
+		ion-size = <0x1600000>;
+		status = "okay";
+	};
+};

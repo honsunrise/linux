@@ -12,7 +12,7 @@
 #include <linux/irq.h>
 #include <linux/reset.h>
 #include <generated/compile.h>
-#include <generated/utsversion.h>	/* 7.2: UTS_VERSION */
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/cvi_defines.h>
@@ -3135,8 +3135,8 @@ static int proc_cif_show(struct seq_file *m, void *v)
 	struct cvi_cif_dev *dev = (struct cvi_cif_dev *)m->private;
 	int i;
 
-	seq_printf(m, "\nModule: [MIPI_RX], Build Time[%s]\n",
-			UTS_VERSION);
+	seq_printf(m, "\nModule: [MIPI_RX], Kernel Release[%s]\n",
+			UTS_RELEASE);
 	seq_puts(m, "\n------------Combo DEV ATTR--------------\n");
 	for (i = 0; i < MAX_LINK_NUM; i++)
 		if (dev->link[i].is_on)

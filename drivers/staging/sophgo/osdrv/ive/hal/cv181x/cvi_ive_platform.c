@@ -17,6 +17,7 @@
 #include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 
 #include "sys.h"
 #include "vip_common.h"

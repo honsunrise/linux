@@ -18,9 +18,9 @@ CVIARCH_L := cv181x
 
 # Vendor build switches (Makefile.interdrv.param and the vendor Kconfigs).
 ccflags-y += -D__CV181X__
-# The ION Kconfig symbols: they change the layout of struct ion_buffer
-# (name, paddr, ...) which is shared with cvi_ion.
-ccflags-y += -DCONFIG_ION=1 -DCONFIG_ION_CARVEOUT_HEAP=1 -DCONFIG_ION_CVITEK=1
+# CONFIG_ION / CONFIG_ION_CARVEOUT_HEAP / CONFIG_ION_CVITEK are set once, for
+# ion/ and all of osdrv/, by the subdir-ccflags-y in ../Makefile: they define
+# the layout of struct ion_buffer, which must be identical on both sides.
 
 # Paths shared by every module.
 ccflags-y += -I$(src)/include/common/uapi \
@@ -100,7 +100,11 @@ $(foreach o,$(cv181x_vpss-y),$(eval CFLAGS_$(o) += \
 # --- dwa: cv181x_dwa, the dewarp engine (GDC / LDC / mesh) -----------------
 dwa-dir := dwa/chip/$(CVIARCH_L)
 obj-$(CONFIG_SOPHGO_OSDRV_DWA) += $(CVIARCH_L)_dwa.o
-$(CVIARCH_L)_dwa-y := common/dwa_platform.o common/cvi_vip_gdc_proc.o \
+# dwa/common/reg.o provides _reg_write_mask() (declared in dwa/common/reg.h,
+# called by dwa_platform.c); the vendor chip Makefile forgot it, so it has to
+# be listed here or the module does not link.
+$(CVIARCH_L)_dwa-y := dwa/common/dwa_platform.o dwa/common/cvi_vip_gdc_proc.o \
+	dwa/common/reg.o \
 	$(dwa-dir)/cmdq.o $(dwa-dir)/vip_dwa.o $(dwa-dir)/gdc.o $(dwa-dir)/ldc.o \
 	$(dwa-dir)/mesh.o $(dwa-dir)/ldc_test.o
 $(foreach o,$($(CVIARCH_L)_dwa-y),$(eval CFLAGS_$(o) += \
@@ -111,7 +115,7 @@ $(foreach o,$($(CVIARCH_L)_dwa-y),$(eval CFLAGS_$(o) += \
 # --- rgn: cv181x_rgn, the OSD region (overlay) engine ----------------------
 rgn-dir := rgn/chip/$(CVIARCH_L)
 obj-$(CONFIG_SOPHGO_OSDRV_RGN) += $(CVIARCH_L)_rgn.o
-$(CVIARCH_L)_rgn-y := common/rgn_core.o $(rgn-dir)/rgn.o \
+$(CVIARCH_L)_rgn-y := rgn/common/rgn_core.o $(rgn-dir)/rgn.o \
 	$(rgn-dir)/vip/rgn_drv.o $(rgn-dir)/proc/rgn_proc.o
 $(foreach o,$($(CVIARCH_L)_rgn-y),$(eval CFLAGS_$(o) += \
 	-I$(src)/$(rgn-dir) -I$(src)/rgn/common -I$(src)/rtos_cmdqu \
@@ -121,7 +125,7 @@ $(foreach o,$($(CVIARCH_L)_rgn-y),$(eval CFLAGS_$(o) += \
 # --- vo: cv181x_vo, the display controller (DSI / BT / LVDS) --------------
 vo-dir := vo/chip/$(CVIARCH_L)
 obj-$(CONFIG_SOPHGO_OSDRV_VO) += $(CVIARCH_L)_vo.o
-$(CVIARCH_L)_vo-y := common/vo_core.o common/vo_rgn_ctrl.o \
+$(CVIARCH_L)_vo-y := vo/common/vo_core.o vo/common/vo_rgn_ctrl.o \
 	$(vo-dir)/vo.o $(vo-dir)/vo_sdk_layer.o \
 	$(vo-dir)/proc/vo_disp_proc.o $(vo-dir)/proc/vo_proc.o
 $(foreach o,$($(CVIARCH_L)_vo-y),$(eval CFLAGS_$(o) += \

@@ -1,4 +1,4 @@
-#include <generated/utsversion.h>	/* 7.2: UTS_VERSION lives here */
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include "cvi_sys_proc.h"
 
 #define SYS_PROC_NAME			"sys"
@@ -62,7 +62,7 @@ static void _show_sys_status(struct seq_file *m)
 	mmfVersion = (MMF_VERSION_S *)(shared_mem + BASE_VERSION_INFO_OFFSET);
 	bindNodes = bind_nodes;
 
-	seq_printf(m, "\nModule: [SYS], Version[%s], Build Time[%s]\n", mmfVersion->version, UTS_VERSION);
+	seq_printf(m, "\nModule: [SYS], Version[%s], Kernel Release[%s]\n", mmfVersion->version, UTS_RELEASE);
 	seq_puts(m, "-----BIND RELATION TABLE-----------------------------------------------------------------------------------------------------------\n");
 	seq_printf(m, "%-10s%-10s%-10s%-10s%-10s%-10s%-10s%-10s%-10s\n",
 		"1stMod", "1stDev", "1stChn", "2ndMod", "2ndDev", "2ndChn", "3rdMod", "3rdDev", "3rdChn");

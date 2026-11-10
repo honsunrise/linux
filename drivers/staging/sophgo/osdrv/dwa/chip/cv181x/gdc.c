@@ -4,7 +4,6 @@
 #include <linux/vmalloc.h>
 #include <linux/clk.h>
 #include <linux/mm.h>
-#include <uapi/linux/sched/types.h>
 
 #include <linux/cvi_comm_video.h>
 #include <linux/cvi_comm_gdc.h>
@@ -598,9 +597,6 @@ void gdc_job_worker(struct kthread_work *work)
 
 int cvi_gdc_init(struct cvi_dwa_vdev *wdev)
 {
-	struct sched_param tsk;
-	int ret;
-
 	INIT_LIST_HEAD(&wdev->event_list);
 	INIT_LIST_HEAD(&wdev->jobq);
 	init_waitqueue_head(&wdev->cond_queue);
@@ -611,17 +607,13 @@ int cvi_gdc_init(struct cvi_dwa_vdev *wdev)
 	kthread_init_worker(&wdev->worker);
 	wdev->thread = kthread_run(kthread_worker_fn, &wdev->worker,
 				   "gdc_work");
-
-	// Same as sched_set_fifo in linux 5.x
-	tsk.sched_priority = MAX_USER_RT_PRIO / 2;
-	ret = sched_setscheduler(wdev->thread, SCHED_FIFO, &tsk);
-	if (ret)
-		CVI_TRACE_DWA(CVI_DBG_WARN, "gdc thread priority update failed: %d\n", ret);
-
 	if (IS_ERR(wdev->thread)) {
 		CVI_TRACE_DWA(CVI_DBG_ERR, "failed to create gdc kthread\n");
 		return -1;
 	}
+
+	/* MAX_USER_RT_PRIO / 2 became sched_set_fifo() upstream. */
+	sched_set_fifo(wdev->thread);
 
 	gdc_proc_ctx = wdev->shared_mem;
 
@@ -972,7 +964,6 @@ s32 dwa_stop_handler(struct cvi_dwa_vdev *wdev_dwa)
 s32 dwa_start_handler(struct cvi_dwa_vdev *wdev_dwa)
 {
 	s32 ret = CVI_SUCCESS;
-	struct sched_param tsk;
 
 	if(wdev_dwa->thread){
 		CVI_TRACE_DWA(CVI_DBG_ERR, "dwa thread has been initialized\n");
@@ -981,17 +972,13 @@ s32 dwa_start_handler(struct cvi_dwa_vdev *wdev_dwa)
 
 	wdev_dwa->thread = kthread_run(kthread_worker_fn, &wdev_dwa->worker,
 				   "gdc_work");
-
-	// Same as sched_set_fifo in linux 5.x
-	tsk.sched_priority = MAX_USER_RT_PRIO / 2;
-	ret = sched_setscheduler(wdev_dwa->thread, SCHED_FIFO, &tsk);
-	if (ret)
-		CVI_TRACE_DWA(CVI_DBG_WARN, "gdc thread priority update failed: %d\n", ret);
-
 	if (IS_ERR(wdev_dwa->thread)) {
 		CVI_TRACE_DWA(CVI_DBG_ERR, "failed to create gdc kthread\n");
 		return -1;
 	}
+
+	/* MAX_USER_RT_PRIO / 2 became sched_set_fifo() upstream. */
+	sched_set_fifo(wdev_dwa->thread);
 
 	return ret;
 }

@@ -280,6 +280,11 @@
 	};
 
 	reserved-memory {
+		pil_video_mem: video-region@86700000 {
+			reg = <0 0x86700000 0 0x500000>;
+			no-map;
+		};
+
 		linux,cma {
 			compatible = "shared-dma-pool";
 			size = <0x0 0x8000000>;
@@ -931,6 +936,12 @@
 
 		wakeup-source;
 	};
+};
+
+&iris {
+	firmware-name = "qcom/sc8280xp/LENOVO/21BX/qcvss8280.mbn";
+	memory-region = <&pil_video_mem>;
+	status = "okay";
 };
 
 &pcie2a {

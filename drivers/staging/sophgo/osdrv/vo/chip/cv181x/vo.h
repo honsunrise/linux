@@ -10,7 +10,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/streamline_annotate.h>
+/* 7.2 port: <linux/streamline_annotate.h> (ARM Streamline, vendor kernel only) unused */
 #include <linux/version.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
 #include <uapi/linux/sched/types.h>

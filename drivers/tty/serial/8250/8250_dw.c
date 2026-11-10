@@ -759,12 +759,8 @@ static int dw8250_probe(struct platform_device *pdev)
 	if (!data->skip_autocfg)
 		dw8250_setup_port(p);
 
-	/*
-	 * If we have a valid fifosize and the firmware describes DMA channels,
-	 * try hooking up DMA.  Without "dmas" the request can only fail, and
-	 * every open logged "failed to request DMA" before falling back to PIO.
-	 */
-	if (p->fifosize && device_property_present(p->dev, "dmas")) {
+	/* If we have a valid fifosize, try hooking up DMA */
+	if (p->fifosize) {
 		data->data.dma.rxconf.src_maxburst = p->fifosize / 4;
 		data->data.dma.txconf.dst_maxburst = p->fifosize / 4;
 		up->dma = &data->data.dma;

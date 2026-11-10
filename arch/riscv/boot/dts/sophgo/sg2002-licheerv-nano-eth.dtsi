@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * LicheeRV Nano E/WE: 100M Ethernet.
+ *
+ * The board does not carry an external PHY: the SG2002 internal ePHY is
+ * brought out on the dedicated EPHY_TX_P/N and EPHY_RX_P/N pads, which go
+ * through the common-mode chokes and AC coupling to the RJ45 (Sipeed
+ * LicheeRV Nano 70415 schematic, "10/100M PHY" and "EPHY_CON_*" nets).
+ * The MAC therefore uses the internal PHY at MDIO address 1.
+ *
+ * The vendor glue initialises the ePHY by writing the ePHY wrap and base
+ * registers (0x03009800 / 0x03009000) before stmmac scans the bus; that is
+ * what "cvitek,ethernet" in drivers/net/ethernet/stmicro/stmmac/
+ * dwmac-cvitek.c does.  MAC clocks come from the SoC clock controller
+ * (CLK_AXI4_ETH0 as stmmaceth, CLK_ETH0_500M as ptp_ref), interrupt is
+ * PLIC 15 and reset is RST_ETH0, all from sg2002.dtsi/cv180x.dtsi.
+ */
+
+&gmac0 {
+	compatible = "cvitek,ethernet", "snps,dwmac-3.70a";
+	ephy_base_reg = <0x03009000>;
+	ephy_top_reg = <0x03009800>;
+	status = "okay";
+};
+
+/*
+ * Selects between the internal ePHY (mux value 0) and an external PHY
+ * (mux value 0x80); the reset value selects the internal one, matching the
+ * board wiring.  The internal PHY node itself is in cv180x.dtsi.
+ */
+&mdio {
+	status = "okay";
+};

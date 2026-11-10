@@ -2318,6 +2318,7 @@ static int rwnx_do_ioctl(struct net_device *net, struct ifreq *req, int cmd)
 static int rwnx_do_ioctl(struct net_device *net, struct ifreq *req, void __user *data, int cmd)
 #endif
 {
+	struct rwnx_vif *vif = netdev_priv(net);
 	int ret = 0;
 	///TODO: add ioctl command handler later
 	switch (cmd) {
@@ -2332,9 +2333,9 @@ static int rwnx_do_ioctl(struct net_device *net, struct ifreq *req, void __user 
 		break;
 	case (SIOCDEVPRIVATE+1):
 		printk("IOCTL PRIVATE\n");
-		rwnx_wakeup_lock(g_rwnx_plat->sdiodev->rwnx_hw->ws_irqrx);
+		rwnx_wakeup_lock(vif->rwnx_hw->ws_irqrx);
 		ret = android_priv_cmd(net, req, cmd);
-		rwnx_wakeup_unlock(g_rwnx_plat->sdiodev->rwnx_hw->ws_irqrx);
+		rwnx_wakeup_unlock(vif->rwnx_hw->ws_irqrx);
 		break;
 	default:
 		ret = -EOPNOTSUPP;

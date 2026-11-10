@@ -3,7 +3,10 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/sys.h>
-#include <linux/of_gpio.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio/legacy.h>	/* devm_gpio_request_one() for numeric GPIOs */
+#include <linux/vmalloc.h>
+#include <uapi/linux/sched/types.h>
 
 #include <linux/cvi_base.h>
 #include <linux/cvi_common.h>
@@ -245,44 +248,64 @@ static void _disp_sel_pinmux(enum cvi_disp_intf intf_type, void *param)
 	}
 }
 
+/*
+ * The vendor ioctl passes a raw global GPIO number and the raw level that
+ * asserts the line (enum GPIO_ACTIVE_E): there is no firmware lookup here, so
+ * request the number through the legacy helper and then drive the descriptor
+ * with raw values, exactly like the vendor's numeric gpio_set_value().
+ */
+static struct gpio_desc *vo_gpio_request(unsigned int gpio_num,
+					 enum GPIO_ACTIVE_E active,
+					 const char *name)
+{
+	struct gpio_desc *desc;
+	int rc;
+
+	desc = gpio_to_desc(gpio_num);
+	if (!desc)
+		return NULL;
+
+	rc = devm_gpio_request_one(&g_pdev->dev, gpio_num,
+				   active ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+				   name);
+	if (rc)
+		return NULL;
+
+	return desc;
+}
+
 void _disp_ctrlpin_set(unsigned int gpio_num, enum GPIO_ACTIVE_E active)
 {
-	enum of_gpio_flags flags;
 	static int count;
+	struct gpio_desc *desc;
 	char name[16] = "";
-	int rc = 0;
 
-	if (gpio_is_valid(gpio_num)) {
-		flags = GPIOF_DIR_OUT | (active ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW);
-		snprintf(name, sizeof(name), "disp_ctrl_pin_%d", count++);
-		rc = devm_gpio_request_one(&g_pdev->dev, gpio_num, flags, name);
-		if (rc) {
-			CVI_TRACE_VO(CVI_DBG_ERR, "gpio_num(%d) failed\n",  gpio_num);
-			return;
-		}
-		gpio_set_value(gpio_num, active);
+	snprintf(name, sizeof(name), "disp_ctrl_pin_%d", count++);
+	desc = vo_gpio_request(gpio_num, active, name);
+	if (!desc) {
+		CVI_TRACE_VO(CVI_DBG_ERR, "gpio_num(%u) failed\n", gpio_num);
+		return;
 	}
+
+	gpiod_set_raw_value(desc, active);
 }
 
 static void _disp_resetpin_set(unsigned int gpio_num, enum GPIO_ACTIVE_E active)
 {
-	enum of_gpio_flags flags;
-	int rc = 0;
+	struct gpio_desc *desc;
 
-	if (gpio_is_valid(gpio_num)) {
-		flags = GPIOF_DIR_OUT | (active ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW);
-		rc = devm_gpio_request_one(&g_pdev->dev, gpio_num, flags, NULL);
-		if (rc) {
-			CVI_TRACE_VO(CVI_DBG_ERR, "reset gpio_num(%d) failed\n",  gpio_num);
-		} else {
-			gpio_set_value(gpio_num, !active);
-			usleep_range(5 * 1000, 10 * 1000);
-			gpio_set_value(gpio_num, active);
-			usleep_range(5 * 1000, 10 * 1000);
-			gpio_set_value(gpio_num, !active);
-			msleep(100);
-		}
+	desc = vo_gpio_request(gpio_num, active, "disp_reset_pin");
+	if (!desc) {
+		CVI_TRACE_VO(CVI_DBG_ERR, "reset gpio_num(%u) failed\n", gpio_num);
+		return;
 	}
+
+	gpiod_set_raw_value(desc, !active);
+	usleep_range(5 * 1000, 10 * 1000);
+	gpiod_set_raw_value(desc, active);
+	usleep_range(5 * 1000, 10 * 1000);
+	gpiod_set_raw_value(desc, !active);
+	msleep(100);
 }
 
 const struct vo_disp_pattern patterns[CVI_VIP_PAT_MAX] = {
@@ -1285,19 +1308,23 @@ int vo_destroy_thread(struct cvi_vo_dev *vdev, enum E_VO_TH th_id)
 
 int vo_create_thread(struct cvi_vo_dev *vdev, enum E_VO_TH th_id)
 {
-	struct sched_param param;
+	struct sched_attr attr = {
+		.size = sizeof(attr),
+		.sched_policy = SCHED_FIFO,
+		.sched_priority = MAX_RT_PRIO - 10,
+	};
 	int rc = 0;
 
 	if (th_id < 0 || th_id >= E_VO_TH_MAX) {
 		CVI_TRACE_VO(CVI_DBG_ERR, "_vo_create_thread fail\n");
 		return -1;
 	}
-	param.sched_priority = MAX_USER_RT_PRIO - 10;
 
 	if (vdev->vo_th[th_id].w_thread == NULL) {
 		switch (th_id) {
 		case E_VO_TH_DISP:
-			memcpy(vdev->vo_th[th_id].th_name, "cvitask_disp", sizeof(vdev->vo_th[th_id].th_name));
+			strscpy(vdev->vo_th[th_id].th_name, "cvitask_disp",
+				sizeof(vdev->vo_th[th_id].th_name));
 			vdev->vo_th[th_id].th_handler = _vo_disp_thread;
 			break;
 
@@ -1310,10 +1337,17 @@ int vo_create_thread(struct cvi_vo_dev *vdev, enum E_VO_TH th_id)
 								(void *)vdev,
 								vdev->vo_th[th_id].th_name);
 		if (IS_ERR(vdev->vo_th[th_id].w_thread)) {
+			rc = PTR_ERR(vdev->vo_th[th_id].w_thread);
+			vdev->vo_th[th_id].w_thread = NULL;
 			CVI_TRACE_VO(CVI_DBG_ERR, "Unable to start %s.\n", vdev->vo_th[th_id].th_name);
-			return -1;
+			return rc;
 		}
-		sched_setscheduler(vdev->vo_th[th_id].w_thread, SCHED_FIFO, &param);
+		rc = sched_setattr_nocheck(vdev->vo_th[th_id].w_thread, &attr);
+		if (rc) {
+			kthread_stop(vdev->vo_th[th_id].w_thread);
+			vdev->vo_th[th_id].w_thread = NULL;
+			return rc;
+		}
 		vdev->vo_th[th_id].flag = 0;
 		atomic_set(&vdev->vo_th[th_id].thread_exit, 0);
 		init_waitqueue_head(&vdev->vo_th[th_id].wq);
@@ -2086,9 +2120,9 @@ int vo_open(struct inode *inode, struct file *file)
 
 		file->private_data = vdev;
 
-		if (vdev->clk_sc_top)
-			clk_prepare_enable(vdev->clk_sc_top);
-		if (vdev->clk_disp)
+		/* The SC/VIP bus gates are held by vpss from its probe; vo only
+		 * owns the display engine gate. */
+		if (vdev->clk_disp && !__clk_is_enabled(vdev->clk_disp))
 			clk_prepare_enable(vdev->clk_disp);
 
 		_vo_sw_init(vdev);
@@ -2141,9 +2175,8 @@ int vo_release(struct inode *inode, struct file *file)
 
 		_vo_sdk_release(vdev);
 
-		if (!(debug & BIT(2)) && vdev->clk_disp && __clk_is_enabled(vdev->clk_disp))
-			clk_disable_unprepare(vdev->clk_sc_top);
-		if (!(debug & BIT(2)) && vdev->clk_sc_top && __clk_is_enabled(vdev->clk_sc_top))
+		if (!(debug & BIT(2)) && vdev->clk_disp &&
+		    __clk_is_enabled(vdev->clk_disp))
 			clk_disable_unprepare(vdev->clk_disp);
 	}
 
@@ -2447,6 +2480,14 @@ int vo_create_instance(struct platform_device *pdev)
 	dphy_set_base_addr(vdev->reg_base[2]);
 #endif
 
+	/* sclr_disp_mux_get()/sclr_disp_check_*() read SC block registers: the
+	 * display gate must be clocked for the reads (the SC bus gates are held
+	 * by vpss). If a display is already running, keep the reference until
+	 * vo_release(); otherwise drop it again below.
+	 */
+	if (vdev->clk_disp && !__clk_is_enabled(vdev->clk_disp))
+		clk_prepare_enable(vdev->clk_disp);
+
 	if (sclr_disp_mux_get() == SCLR_VO_SEL_I80) {
 		smooth = sclr_disp_check_i80_enable();
 	} else {
@@ -2454,6 +2495,7 @@ int vo_create_instance(struct platform_device *pdev)
 	}
 
 	if (!smooth) {
+		/* nothing is being displayed: do not hold the display clocks */
 		if (vdev->clk_disp && __clk_is_enabled(vdev->clk_disp))
 			clk_disable_unprepare(vdev->clk_disp);
 		if (vdev->clk_bt && __clk_is_enabled(vdev->clk_bt))

@@ -927,7 +927,8 @@ static int lt8712sx_attach(struct drm_bridge *bridge,
 	return 0;
 }
 
-static void lt8712sx_enable(struct drm_bridge *bridge)
+static void lt8712sx_enable(struct drm_bridge *bridge,
+			   struct drm_atomic_commit *commit)
 {
 	struct lt8712sx *lt8712sx = bridge_to_lt8712sx(bridge);
 
@@ -935,7 +936,8 @@ static void lt8712sx_enable(struct drm_bridge *bridge)
 		gpiod_set_value_cansleep(lt8712sx->enable_gpio, 1);
 }
 
-static void lt8712sx_disable(struct drm_bridge *bridge)
+static void lt8712sx_disable(struct drm_bridge *bridge,
+			    struct drm_atomic_commit *commit)
 {
 	struct lt8712sx *lt8712sx = bridge_to_lt8712sx(bridge);
 
@@ -945,8 +947,8 @@ static void lt8712sx_disable(struct drm_bridge *bridge)
 
 static const struct drm_bridge_funcs lt8712sx_bridge_funcs = {
 	.attach = lt8712sx_attach,
-	.enable = lt8712sx_enable,
-	.disable = lt8712sx_disable,
+	.atomic_enable = lt8712sx_enable,
+	.atomic_disable = lt8712sx_disable,
 };
 
 static int lt8712sx_probe(struct i2c_client *client)

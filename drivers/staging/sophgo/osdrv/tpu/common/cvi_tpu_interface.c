@@ -51,7 +51,7 @@
 #include "cvi_tpu_ioctl.h"
 #include "tpu_platform.h"
 
-#include "ion.h"
+#include "ion/ion.h"
 
 #define CVI_TPU_CDEV_NAME "cvi-tpu"
 #define CVI_TPU_CLASS_NAME "cvi-tpu"

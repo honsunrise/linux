@@ -125,6 +125,8 @@
 			compatible = "cvitek,ive";
 			reg = <0x0a0a0000 0x3100>;
 			reg-names = "ive_base";
+			clocks = <&clk CLK_IVE_VIP>;
+			clock-names = "clk_ive";
 			interrupts = <SOC_PERIPHERAL_IRQ(81) IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ive_irq";
 			status = "disabled";

@@ -1,3 +1,4 @@
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include "rgn_proc.h"
 
 #define GENERATE_STRING(STRING)	(#STRING),
@@ -12,19 +13,19 @@ static void _pixFmt_to_String(enum _PIXEL_FORMAT_E PixFmt, char *str, int len)
 {
 	switch (PixFmt) {
 	case PIXEL_FORMAT_8BIT_MODE:
-		strncpy(str, "256LUT", len);
+		strscpy(str, "256LUT", len);
 		break;
 	case PIXEL_FORMAT_ARGB_1555:
-		strncpy(str, "ARGB_1555", len);
+		strscpy(str, "ARGB_1555", len);
 		break;
 	case PIXEL_FORMAT_ARGB_4444:
-		strncpy(str, "ARGB_4444", len);
+		strscpy(str, "ARGB_4444", len);
 		break;
 	case PIXEL_FORMAT_ARGB_8888:
-		strncpy(str, "ARGB_8888", len);
+		strscpy(str, "ARGB_8888", len);
 		break;
 	default:
-		strncpy(str, "Unknown Fmt", len);
+		strscpy(str, "Unknown Fmt", len);
 		break;
 	}
 }
@@ -40,7 +41,7 @@ static int rgn_proc_show(struct seq_file *m, void *v)
 		return -1;
 	}
 
-	seq_printf(m, "\nModule: [RGN], Build Time[%s]\n", UTS_VERSION);
+	seq_printf(m, "\nModule: [RGN], Kernel Release[%s]\n", UTS_RELEASE);
 	// Region status of overlay
 	seq_puts(m, "\n------REGION STATUS OF OVERLAY--------------------------------------------\n");
 	seq_printf(m, "%10s%10s%10s%20s%10s%10s%10s%20s%20s%10s%10s%7s%12s\n",

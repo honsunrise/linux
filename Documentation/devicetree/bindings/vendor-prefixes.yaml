@@ -401,6 +401,8 @@ patternProperties:
     description: Shenzhen Cudy Technology Co., Ltd.
   "^cui,.*":
     description: CUI Devices
+  "^cvitek,.*":
+    description: CVITEK (Beijing Cvitek Technology Co., Ltd.)
   "^cypress,.*":
     description: Cypress Semiconductor Corporation
   "^cyx,.*":
@@ -779,6 +781,8 @@ patternProperties:
     description: Hycon Technology Corp.
   "^hydis,.*":
     description: Hydis Technologies
+  "^hyn,.*":
+    description: Hynitron (prefix used by the Hynitron vendor touch driver)
   "^hynetek,.*":
     description: Hynetek Semiconductor Co., Ltd.
   "^hynitron,.*":

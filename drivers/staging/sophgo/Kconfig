@@ -13,7 +13,7 @@ menu "Sophgo SG200x vendor drivers"
 
 config SOPHGO_VENDOR
 	bool "Sophgo SG200x (cv181x) vendor drivers"
-	depends on ARCH_SOPHGO || COMPILE_TEST
+	depends on ARCH_SOPHGO && MMU
 	help
 	  Vendor kernel drivers for the Sophgo SG2000/SG2002 SoCs
 	  (cv181x): the ION allocator used by the multimedia stack and
@@ -24,6 +24,7 @@ if SOPHGO_VENDOR
 
 config SOPHGO_ION
 	tristate "Sophgo/Cvitek ION memory allocator"
+	select DMA_SHARED_BUFFER
 	help
 	  The vendor ION allocator (drivers/staging/android/ion of the
 	  Sophgo 5.10 kernel, ported to current kernels) with its cvitek
@@ -46,6 +47,7 @@ config SOPHGO_OSDRV_BASE
 
 config SOPHGO_OSDRV_SYS
 	tristate "osdrv sys (shared memory map for the multimedia stack)"
+	depends on SOPHGO_ION
 	help
 	  The osdrv "sys" service: the shared memory map (rtos, ion and
 	  vb layout) created once and mapped by the other osdrv modules,
@@ -56,7 +58,7 @@ config SOPHGO_OSDRV_SYS
 
 config SOPHGO_OSDRV_SNSR_I2C
 	tristate "osdrv sensor I2C"
-	depends on SOPHGO_ION
+	depends on SOPHGO_OSDRV_BASE
 	help
 	  Sensor I2C writes synchronized with the CSI frame start, used by
 	  the baseband/ISP tools to change exposure while streaming.
@@ -126,7 +128,7 @@ config SOPHGO_OSDRV_VO
 
 config SOPHGO_OSDRV_MIPI_TX
 	tristate "osdrv MIPI DSI host and D-PHY"
-	depends on SOPHGO_OSDRV_VO
+	depends on SOPHGO_OSDRV_BASE && SOPHGO_OSDRV_VPSS
 	help
 	  The MIPI DSI host controller and D-PHY used by the display
 	  controller for panel output.
@@ -156,7 +158,6 @@ config SOPHGO_OSDRV_IVE
 
 config SOPHGO_OSDRV_MON
 	tristate "osdrv monitor (DDR and PC monitor)"
-	depends on SOPHGO_OSDRV_BASE
 	help
 	  The DDR bandwidth and system monitor, exported through procfs.
 
@@ -202,7 +203,7 @@ config SOPHGO_OSDRV_WIEGAND
 
 config SOPHGO_OSDRV_TPU
 	tristate "osdrv NPU (TPU)"
-	depends on SOPHGO_OSDRV_BASE
+	depends on SOPHGO_ION && SOPHGO_OSDRV_BASE
 	help
 	  The neural processing unit: TDMA and TIU command processor,
 	  /dev/cvi-tpu0. The user space runtime (cviruntime) drives it.
@@ -232,7 +233,7 @@ config SOPHGO_OSDRV_JPEG
 
 config SOPHGO_OSDRV_VC_DRIVER
 	tristate "osdrv Chips&Media VPU/JPU API (venc/vdec nodes)"
-	depends on SOPHGO_OSDRV_JPEG
+	depends on SOPHGO_OSDRV_BASE && SOPHGO_OSDRV_SYS && SOPHGO_OSDRV_JPEG
 	help
 	  The Chips&Media VPU/JPU driver on top of the vcodec and jpeg
 	  front ends: bitstream buffer management, rate control and the

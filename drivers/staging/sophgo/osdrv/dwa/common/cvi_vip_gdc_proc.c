@@ -1,3 +1,4 @@
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include "cvi_vip_gdc_proc.h"
 
 #define GENERATE_STRING(STRING)	(#STRING),
@@ -20,7 +21,7 @@ static int gdc_proc_show(struct seq_file *m, void *v)
 		return -1;
 	}
 
-	seq_printf(m, "\nModule: [GDC], Build Time[%s]\n", UTS_VERSION);
+	seq_printf(m, "\nModule: [GDC], Kernel Release[%s]\n", UTS_RELEASE);
 	// recent job info
 	seq_puts(m, "\n-------------------------------RECENT JOB INFO----------------------------\n");
 	seq_printf(m, "%10s%10s%10s%10s%20s%20s%20s%20s\n",
@@ -34,13 +35,13 @@ static int gdc_proc_show(struct seq_file *m, void *v)
 
 		memset(c, 0, sizeof(c));
 		if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_SUCCESS)
-			strncpy(c, "SUCCESS", sizeof(c));
+			strscpy(c, "SUCCESS", sizeof(c));
 		else if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_FAIL)
-			strncpy(c, "FAIL", sizeof(c));
+			strscpy(c, "FAIL", sizeof(c));
 		else if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_WORKING)
-			strncpy(c, "WORKING", sizeof(c));
+			strscpy(c, "WORKING", sizeof(c));
 		else
-			strncpy(c, "UNKNOWN", sizeof(c));
+			strscpy(c, "UNKNOWN", sizeof(c));
 
 		seq_printf(m, "%8s%2d%10s%10d%10s%20d%20d%20d%20d\n",
 				"#",
@@ -76,13 +77,13 @@ static int gdc_proc_show(struct seq_file *m, void *v)
 	if (pgdcCtx->stJobInfo[idx].hHandle) {
 		memset(c, 0, sizeof(c));
 		if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_SUCCESS)
-			strncpy(c, "SUCCESS", sizeof(c));
+			strscpy(c, "SUCCESS", sizeof(c));
 		else if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_FAIL)
-			strncpy(c, "FAIL", sizeof(c));
+			strscpy(c, "FAIL", sizeof(c));
 		else if (pgdcCtx->stJobInfo[idx].eState == GDC_JOB_WORKING)
-			strncpy(c, "WORKING", sizeof(c));
+			strscpy(c, "WORKING", sizeof(c));
 		else
-			strncpy(c, "UNKNOWN", sizeof(c));
+			strscpy(c, "UNKNOWN", sizeof(c));
 
 		seq_printf(m, "%10s%10d%10s%20d%20d%20d%20d\n",
 					MOD_STRING[pgdcCtx->stJobInfo[idx].enModId],

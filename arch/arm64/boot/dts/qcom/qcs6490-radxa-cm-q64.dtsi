@@ -1096,6 +1096,12 @@
 	status = "okay";
 };
 
+/* IPA is disabled on this board and has no firmware carveout. */
+&ipa {
+	/delete-property/ memory-region;
+	/delete-property/ qcom,gsi-loader;
+};
+
 &venus {
 	firmware-name = "qcom/vpu/vpu20_p1_gen2_s6.mbn";
 	memory-region = <&video_mem>, <&iris_iova>;

@@ -137,8 +137,8 @@ static void cvi_mon_bw_profile_timer_remove(void)
 
 static int __init cvi_mon_bw_profile_timer_init(void)
 {
-	hrtimer_init(&mon_bw_info.hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	mon_bw_info.hr_timer.function = &cvi_mon_bw_profile_timer_handler;
+	hrtimer_setup(&mon_bw_info.hr_timer, cvi_mon_bw_profile_timer_handler,
+		      CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	hrtimer_start(&mon_bw_info.hr_timer, ms_to_ktime(mon_window_ms), HRTIMER_MODE_REL);
 	return 0;
 }

@@ -20,11 +20,9 @@
 #include <linux/platform_device.h>
 #include <linux/fb.h>
 #include <linux/dma-buf.h>
+#include <linux/dma-mapping.h>
 #include <linux/version.h>
 #include <asm/cacheflush.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
-#include <linux/dma-map-ops.h>
-#endif
 
 #include <linux/cvi_comm_vo.h>
 
@@ -397,11 +395,13 @@ static int cvifb_set_par(struct fb_info *info)
 	pitch = FB_LINE_SIZE(info->var.xres_virtual, info->var.bits_per_pixel);
 	len = pitch * info->var.yres * (1 + double_buffer);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) && defined(__riscv)
-	arch_sync_dma_for_device(info->fix.smem_start, info->fix.smem_len, DMA_TO_DEVICE);
-#else
-	__dma_map_area(info->screen_base, info->fix.smem_len, DMA_TO_DEVICE);
-#endif
+	/* 7.3 port: publish the (non-coherent) framebuffer through the DMA API.
+	 * arch_sync_dma_for_device() is not exported to modules, and the
+	 * reserved-memory carveout is described by dma-noncoherent on the SoC, so
+	 * this is the same cache clean on the same physical range.
+	 */
+	dma_sync_single_for_device(info->device, info->fix.smem_start,
+				   info->fix.smem_len, DMA_TO_DEVICE);
 
 	smp_mb();	/*memory barrier*/
 
@@ -517,11 +517,13 @@ static int cvifb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info
 
 	cfg->ow_cfg[0].addr = par->mem_base + par->mem_offset;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) && defined(__riscv)
-	arch_sync_dma_for_device(info->fix.smem_start, info->fix.smem_len, DMA_TO_DEVICE);
-#else
-	__dma_map_area(info->screen_base, info->fix.smem_len, DMA_TO_DEVICE);
-#endif
+	/* 7.3 port: publish the (non-coherent) framebuffer through the DMA API.
+	 * arch_sync_dma_for_device() is not exported to modules, and the
+	 * reserved-memory carveout is described by dma-noncoherent on the SoC, so
+	 * this is the same cache clean on the same physical range.
+	 */
+	dma_sync_single_for_device(info->device, info->fix.smem_start,
+				   info->fix.smem_len, DMA_TO_DEVICE);
 
 	smp_mb();	/*memory barrier*/
 	ow_number = 0;
@@ -656,7 +658,7 @@ int cvifb_probe(struct platform_device *pdev)
 	info->fix.mmio_len = par->reg_len;
 	info->fix.smem_start = par->mem_base;
 	info->fix.smem_len = par->mem_len;
-	info->flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
+	info->flags = FBINFO_HWACCEL_YPAN;
 
 	info->var.activate = FB_ACTIVATE_NOW;
 	info->var.bits_per_pixel = 8;
@@ -727,11 +729,13 @@ int cvifb_probe(struct platform_device *pdev)
 
 	// clear the framebuffer.
 	memset_io(info->screen_base, 0x00, info->screen_size);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) && defined(__riscv)
-	arch_sync_dma_for_device(info->fix.smem_start, info->fix.smem_len, DMA_TO_DEVICE);
-#else
-	__dma_map_area(info->screen_base, info->fix.smem_len, DMA_TO_DEVICE);
-#endif
+	/* 7.3 port: publish the (non-coherent) framebuffer through the DMA API.
+	 * arch_sync_dma_for_device() is not exported to modules, and the
+	 * reserved-memory carveout is described by dma-noncoherent on the SoC, so
+	 * this is the same cache clean on the same physical range.
+	 */
+	dma_sync_single_for_device(info->device, info->fix.smem_start,
+				   info->fix.smem_len, DMA_TO_DEVICE);
 
 	smp_mb();	/*memory barrier*/
 

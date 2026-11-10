@@ -1301,7 +1301,7 @@ static irqreturn_t sunxi_mmc_irq(int irq, void *dev_id)
 	/* cqhci recovery processing interrupt for halt and clear task */
 	/* which halt clear in cqhci_recovery_finish */
 	} else if (!msk_int && sunxi_is_recovery_halt(host->mmc)) {
-		cqhci_irq(host->mmc, 0, 0, 0);
+		cqhci_irq(host->mmc, 0, 0);
 	}
 #endif
 	mrq = host->mrq;
@@ -3303,7 +3303,7 @@ static u32 sunxi_mmc_cqhci_irq(struct sunxi_mmc_host *host, u32 intmask)
 	if (!sunxi_mmc_cqe_irq(host, intmask, &cmd_error, &data_error))
 		return intmask;
 
-	cqhci_irq(host->mmc, intmask, cmd_error, data_error);
+	cqhci_irq(host->mmc, cmd_error, data_error);
 
 	return 0;
 }

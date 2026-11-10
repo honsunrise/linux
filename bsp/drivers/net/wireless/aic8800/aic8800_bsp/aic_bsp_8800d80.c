@@ -399,7 +399,6 @@ static int aicwifi_patch_config(struct priv_dev *aicdev)
 	}
 	rd_version_val = rd_patch_addr_cfm.memdata;
 	printk("rd_version_val=%08X\n", rd_version_val);
-	aicdev->fw_version_uint = rd_version_val;
 	if (rd_version_val > 0x06090100) {
 		patch_buff_addr = rd_patch_addr + 12;
 		ret = rwnx_send_dbg_mem_read_req(aicdev, patch_buff_addr, &rd_patch_addr_cfm);

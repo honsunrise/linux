@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Sipeed LicheeRV Nano WE (SG2002).
+ *
+ * The WE variant has both the 100M RJ45 connector (internal ePHY) and the
+ * SDIO WiFi6/BT module.
+ */
+
+/dts-v1/;
+
+#include "sg2002-licheerv-nano.dtsi"
+#include "sg2002-licheerv-nano-eth.dtsi"
+#include "sg2002-licheerv-nano-wifi.dtsi"
+
+/ {
+	model = "Sipeed LicheeRV Nano WE";
+	compatible = "sipeed,licheerv-nano-we", "sipeed,licheerv-nano", "sophgo,sg2002";
+};

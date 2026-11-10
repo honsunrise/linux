@@ -33,6 +33,7 @@
 #include <linux/termios.h>
 #include <linux/gpio/consumer.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/pm_wakeirq.h>
 
 /*

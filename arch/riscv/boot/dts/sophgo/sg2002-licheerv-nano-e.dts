@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Sipeed LicheeRV Nano E (SG2002).
+ *
+ * The E variant is the base board plus the 100M RJ45 connector wired to the
+ * internal ePHY; there is no WiFi/BT, so SDIO1 remains disabled.
+ */
+
+/dts-v1/;
+
+#include "sg2002-licheerv-nano.dtsi"
+#include "sg2002-licheerv-nano-eth.dtsi"
+
+/ {
+	model = "Sipeed LicheeRV Nano E";
+	compatible = "sipeed,licheerv-nano-e", "sipeed,licheerv-nano", "sophgo,sg2002";
+};

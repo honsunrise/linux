@@ -98,7 +98,6 @@ struct priv_dev {
 	spinlock_t pwrctl_lock;
 	struct semaphore pwrctl_wakeup_sema;
 #endif
-	u32 fw_version_uint;
 	struct aic_sdio_reg sdio_reg;
 };
 

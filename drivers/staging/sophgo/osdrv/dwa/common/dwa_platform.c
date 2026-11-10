@@ -483,7 +483,14 @@ static int cvi_dwa_probe(struct platform_device *pdev)
 		goto err_dwa_reg;
 	}
 
+	/* ldc has no open/close of its own: the engine and its register bank
+	 * are gated by CLK_DWA_VIP. The job path enables it per job, but the
+	 * interrupt mask programmed here must not be written with the gate
+	 * off (the write would be lost), so clock it for the access.
+	 */
+	ldc_clk_enable(wdev);
 	ldc_intr_ctrl(0x01);
+	ldc_clk_disable(wdev);
 
 	if (devm_request_irq(&pdev->dev, wdev->irq_num_dwa, dwa_isr,
 			     IRQF_SHARED, "CVI_VIP_DWA", wdev)) {
@@ -621,5 +628,7 @@ static struct platform_driver cvi_dwa_driver = {
 
 module_platform_driver(cvi_dwa_driver);
 
+/* ldc_test.c drives the engine from a dma-buf (dma_buf_get/begin_cpu_access) */
+MODULE_IMPORT_NS("DMA_BUF");
 MODULE_DESCRIPTION("Cvitek dwa driver");
 MODULE_LICENSE("GPL");

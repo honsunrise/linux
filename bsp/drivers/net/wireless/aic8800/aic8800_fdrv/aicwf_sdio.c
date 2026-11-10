@@ -16,6 +16,9 @@
 #include <linux/debugfs.h>
 #include <linux/kthread.h>
 #include <linux/pm_wakeirq.h>
+#include <linux/irq.h>
+#include <linux/of.h>
+#include <linux/of_irq.h>
 #include "aicwf_txrxif.h"
 #include "aicwf_sdio.h"
 #include "sdio_host.h"
@@ -208,11 +211,13 @@ int aicwf_sdio_recv_pkt(struct aic_sdio_dev *sdiodev, struct sk_buff *skbbuf,
 }
 #endif
 
+#ifdef CONFIG_PLATFORM_ALLWINNER
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 extern int sunxi_wlan_get_oob_irq(int *, int *);
 #else
 extern int sunxi_wlan_get_oob_irq(void);
 extern int sunxi_wlan_get_oob_irq_flags(void);
+#endif
 #endif
 
 static irqreturn_t rwnx_hostwake_irq_handler(int irq, void *para)
@@ -230,15 +235,29 @@ static irqreturn_t rwnx_hostwake_irq_handler(int irq, void *para)
 
 static int rwnx_register_hostwake_irq(struct device *dev)
 {
-	int ret = -1;
+	int ret = 0;
 	int irq_flags;
 	int wakeup_enable;
-	u32 hostwake_irq_num;
+	int hostwake_irq_num;
+#ifdef CONFIG_PLATFORM_ALLWINNER
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 	hostwake_irq_num = sunxi_wlan_get_oob_irq(&irq_flags, &wakeup_enable);
 #else
 	hostwake_irq_num = sunxi_wlan_get_oob_irq();
 	irq_flags = sunxi_wlan_get_oob_irq_flags();
+	wakeup_enable = 1;
+#endif
+#else
+	struct device_node *np = dev_of_node(dev);
+
+	/* Without an optional host-wake IRQ, data uses the native SDIO IRQ. */
+	if (!np || (!of_property_present(np, "interrupts") &&
+		    !of_property_present(np, "interrupts-extended")))
+		return 0;
+	hostwake_irq_num = of_irq_get(np, 0);
+	if (hostwake_irq_num <= 0)
+		return hostwake_irq_num < 0 ? hostwake_irq_num : -EINVAL;
+	irq_flags = irq_get_trigger_type(hostwake_irq_num);
 	wakeup_enable = 1;
 #endif
 
@@ -255,7 +274,11 @@ static int rwnx_register_hostwake_irq(struct device *dev)
 			goto fail1;
 		}
 
+#ifdef CONFIG_PLATFORM_ALLWINNER
 		irq_flags = IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND;
+#else
+		irq_flags |= IRQF_NO_SUSPEND;
+#endif
 #if IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_HIGH)
 		irq_flags = IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND;
 #elif IS_ENABLED(CONFIG_AIC_IRQ_ACTIVE_RISING)

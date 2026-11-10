@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Sipeed LicheeRV Nano W (SG2002).
+ *
+ * The W variant is the base board plus the SDIO WiFi6/BT module; there is
+ * no Ethernet, so the internal ePHY stays disabled.
+ */
+
+/dts-v1/;
+
+#include "sg2002-licheerv-nano.dtsi"
+#include "sg2002-licheerv-nano-wifi.dtsi"
+
+/ {
+	model = "Sipeed LicheeRV Nano W";
+	compatible = "sipeed,licheerv-nano-w", "sipeed,licheerv-nano", "sophgo,sg2002";
+};

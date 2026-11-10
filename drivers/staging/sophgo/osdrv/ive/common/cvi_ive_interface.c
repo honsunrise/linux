@@ -12,6 +12,7 @@
  */
 
 #include <linux/device.h>
+#include <linux/clk.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -24,6 +25,7 @@
 #endif
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/vmalloc.h>
 
 #include "cvi_ive_interface.h"
 #include "cvi_ive_platform.h"
@@ -852,6 +854,22 @@ static int cvi_ive_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	ndev->dev = dev;
 
+	/* IVE sits behind CLK_IVE_VIP. Nobody else enables it, and
+	 * clk_disable_unused() gates it off during boot, so every register
+	 * access - including the workaround below - needs this reference.
+	 */
+	ndev->clk = devm_clk_get(dev, "clk_ive");
+	if (IS_ERR(ndev->clk)) {
+		dev_err(dev, "failed to get clk_ive\n");
+		return PTR_ERR(ndev->clk);
+	}
+
+	ret = clk_prepare_enable(ndev->clk);
+	if (ret) {
+		dev_err(dev, "failed to enable clk_ive\n");
+		return ret;
+	}
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	ndev->ive_base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(ndev->ive_base))
@@ -925,7 +943,7 @@ static void cvi_ive_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	vfree(g_kdata);
-	// clk_disable_unprepare(ndev->clk);
+	clk_disable_unprepare(ndev->clk);
 
 	// remove ive proc
 	proc_remove(ndev->proc_dir);

@@ -1,3 +1,4 @@
+#include <generated/utsrelease.h>	/* UTS_VERSION is generated at link time only */
 #include <proc/vo_mipi_tx_proc.h>
 #include <linux/version.h>
 
@@ -57,7 +58,7 @@ static int mipi_tx_proc_show(struct seq_file *m, void *v)
 		phy_data_rate = phy_data_rate % 10 ? phy_data_rate / 10 + 1 : phy_data_rate / 10;
 	}
 
-	seq_printf(m, "\nModule: [MIPI_TX], Build Time[%s]\n", UTS_VERSION);
+	seq_printf(m, "\nModule: [MIPI_TX], Kernel Release[%s]\n", UTS_RELEASE);
 	// MIPI_Tx DEV CONFIG
 	seq_puts(m, "\n------MIPI_Tx DEV CONFIG----------------------------------------------\n");
 	seq_printf(m, "%10s%10s%10s%10s%10s%15s%15s%15s%15s%15s\n",

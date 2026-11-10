@@ -77,9 +77,12 @@ static void ion_plist_add(struct plist_node *node, struct plist_head *head)
 ins_node:
 	list_add_tail(&node->node_list, node_next);
 }
-#ifdef CONFIG_COMPAT
-#include "compat_ion.h"
-#endif
+/*
+ * 7.2 port: the 32-bit compat ioctl is left out together with the rest of the
+ * vendor's compat layer (see ion/Makefile). The imported source has neither
+ * compat_ion.h nor compat_ion.c, so ion_fops registers no compat_ioctl and a
+ * 32-bit caller gets -ENOTTY instead of a partly translated ION_IOC_CUSTOM.
+ */
 
 #include "ion.h"
 static struct ion_device *internal_dev;
@@ -513,7 +516,7 @@ static const struct dma_buf_ops dma_buf_ops = {
 static void *_ion_alloc(size_t len, unsigned int heap_id_mask, unsigned int flags)
 {
 	struct ion_device *dev = internal_dev;
-	struct ion_buffer *buffer;
+	struct ion_buffer *buffer = NULL;
 	struct ion_heap *heap;
 
 	pr_debug("%s: len %zu heap_id_mask %u flags %x\n", __func__,
@@ -835,6 +838,9 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_ION_CVITEK
 		char *name = vmalloc(MAX_ION_BUFFER_NAME);
 
+		if (!name)
+			return -ENOMEM;
+
 		fd = ion_alloc(data.allocation.len,
 			       data.allocation.heap_id_mask,
 			       data.allocation.flags, &buffer);
@@ -896,9 +902,6 @@ static long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 static const struct file_operations ion_fops = {
 	.owner          = THIS_MODULE,
 	.unlocked_ioctl = ion_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = compat_ion_ioctl,
-#endif
 };
 
 static int debug_shrink_set(void *data, u64 val)

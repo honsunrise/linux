@@ -5,7 +5,7 @@
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <generated/compile.h>
-#include <generated/utsversion.h> /* 7.2 port: UTS_VERSION moved here */
+#include <generated/utsrelease.h> /* UTS_VERSION is generated at link time only */
 
 #include <base_ctx.h>
 #include <linux/cvi_comm_venc.h>
@@ -244,7 +244,7 @@ static void getFrameRate(VENC_CHN_ATTR_S *pstChnAttr, CVI_U32 *pu32SrcFrameRate,
 
 static int venc_proc_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "Module: [VENC] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [VENC] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle != NULL) {
 		int idx = 0;
@@ -699,7 +699,7 @@ static int h265e_proc_show(struct seq_file *m, void *v)
 	int idx = 0;
 	CVI_VENC_PARAM_MOD_S *pVencModParam;
 
-	seq_printf(m, "Module: [H265E] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [H265E] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle == NULL)
 		return 0;
@@ -807,7 +807,7 @@ static int codecinst_proc_show(struct seq_file *m, void *v)
 	venc_enc_ctx *pEncCtx;
 	PAYLOAD_TYPE_E enType;
 
-	seq_printf(m, "Module: [CodecInst] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [CodecInst] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle == NULL)
 		return 0;
@@ -902,7 +902,7 @@ static int h264e_proc_show(struct seq_file *m, void *v)
 	CVI_VENC_PARAM_MOD_S *pVencModParam;
 	CVI_U32 u32Profile;
 
-	seq_printf(m, "Module: [H264E] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [H264E] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle == NULL)
 		return 0;
@@ -1028,7 +1028,7 @@ static int jpege_proc_show(struct seq_file *m, void *v)
 	int idx = 0;
 	CVI_VENC_PARAM_MOD_S *pVencModParam;
 
-	seq_printf(m, "Module: [JPEGE] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [JPEGE] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle == NULL)
 		return 0;
@@ -1172,7 +1172,7 @@ static int rc_proc_show(struct seq_file *m, void *v)
 {
 	int idx = 0;
 
-	seq_printf(m, "Module: [RC] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [RC] Kernel Release [%s]\n", UTS_RELEASE);
 
 	if (handle == NULL)
 		return 0;
@@ -1799,7 +1799,7 @@ int rc_proc_deinit(void)
 #ifdef ENABLE_DEC
 static int vdec_proc_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "Module: [VDEC] System Build Time [%s]\n", UTS_VERSION);
+	seq_printf(m, "Module: [VDEC] Kernel Release [%s]\n", UTS_RELEASE);
 	if (vdec_handle != NULL && MaxVdecChnNum > 0) {
 		int idx;
 		VDEC_MOD_PARAM_S *pVdecModParam = &vdec_handle->g_stModParam;

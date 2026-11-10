@@ -632,13 +632,13 @@ static void axi_mon_get_dram_type(struct cvi_mon_device *ndev)
 	reg = readl(ndev->ddr_ctrl_vaddr);
 
 	if (reg & 0x1)
-		strncpy(dram_info.type, "DDR3", DRAMTYPE_STRLEN);
+		strscpy(dram_info.type, "DDR3", DRAMTYPE_STRLEN);
 	else if (reg & 0x10)
-		strncpy(dram_info.type, "DDR4", DRAMTYPE_STRLEN);
+		strscpy(dram_info.type, "DDR4", DRAMTYPE_STRLEN);
 	else if (reg & 0x20)
-		strncpy(dram_info.type, "LPDDR4", DRAMTYPE_STRLEN);
+		strscpy(dram_info.type, "LPDDR4", DRAMTYPE_STRLEN);
 	else
-		strncpy(dram_info.type, "DDR2", DRAMTYPE_STRLEN);
+		strscpy(dram_info.type, "DDR2", DRAMTYPE_STRLEN);
 }
 
 #define DDR_TOP 0x0800A000

@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/input/touchscreen/hynitron,hyn_ts.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Hynitron CST3xx, CST3240 and CST7xx I2C touch controllers
+
+maintainers:
+  - Honsun Zhu <honsun@linux.com>
+
+description: |
+  Hynitron mutual capacitance (CST3xx, CST3240) and self capacitance
+  (CST7xx) touch controllers.  They are found on the optional MIPI touch
+  panels of boards such as the Sipeed LicheeRV Nano, where the fitted panel
+  decides which of the families is present:
+
+    - "hyn,3xx":  CST340, CST348 and compatible parts, at I2C address 0x1a
+    - "hyn,3240": CST3240, at I2C address 0x5a
+    - "hyn,7xx":  CST716, CST726, CST736 and compatible parts, at 0x15
+
+  The compatible string selects the register protocol, so the family string
+  is mandatory.  "hynitron,hyn_ts" is the generic name used by the Hynitron
+  vendor driver and, when present, must be followed by the family string.
+
+properties:
+  compatible:
+    oneOf:
+      - enum:
+          - hyn,3xx
+          - hyn,3240
+          - hyn,7xx
+      - items:
+          - const: hynitron,hyn_ts
+          - enum:
+              - hyn,3xx
+              - hyn,3240
+              - hyn,7xx
+
+  reg:
+    maxItems: 1
+    description: I2C address of the controller in application mode.
+
+  interrupts:
+    maxItems: 1
+
+  reset-gpios:
+    maxItems: 1
+    description: Active low reset line, deasserted while the controller runs.
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - reset-gpios
+
+allOf:
+  - $ref: touchscreen.yaml#
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        touchscreen@15 {
+            compatible = "hyn,7xx";
+            reg = <0x15>;
+            interrupt-parent = <&gpio4>;
+            interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+            reset-gpios = <&gpio4 4 GPIO_ACTIVE_LOW>;
+            touchscreen-size-x = <368>;
+            touchscreen-size-y = <552>;
+        };
+    };
+
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        touchscreen@5a {
+            compatible = "hynitron,hyn_ts", "hyn,3240";
+            reg = <0x5a>;
+            interrupt-parent = <&gpio4>;
+            interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+            reset-gpios = <&gpio4 4 GPIO_ACTIVE_LOW>;
+            touchscreen-size-x = <480>;
+            touchscreen-size-y = <640>;
+        };
+    };
+
+...

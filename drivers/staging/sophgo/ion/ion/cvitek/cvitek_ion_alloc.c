@@ -31,9 +31,9 @@ static int _cvi_ion_alloc(enum ion_heap_type type, size_t len, bool mmap_cache, 
 	memset(&query, 0, sizeof(struct ion_heap_query));
 	query.cnt = HEAP_QUERY_CNT;
 	heap_data = vzalloc(sizeof(*heap_data) * HEAP_QUERY_CNT);
-	query.heaps = (unsigned long)heap_data;
-	if (!query.heaps)
+	if (!heap_data)
 		return -ENOMEM;
+	query.heaps = (unsigned long)heap_data;
 
 	pr_debug("%s: len %zu looking for type %d and mmap it as %s\n",
 		 __func__, len, type,
@@ -43,8 +43,10 @@ static int _cvi_ion_alloc(enum ion_heap_type type, size_t len, bool mmap_cache, 
 	 * already tells ion_query_heaps() that query.heaps is a kernel pointer */
 	ret = ion_query_heaps(&query, true);
 
-	if (ret != 0)
+	if (ret != 0) {
+		vfree(heap_data);
 		return ret;
+	}
 
 	heap_id = HEAP_QUERY_CNT + 1;
 	/* here only return the 1st match

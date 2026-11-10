@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/dts-v1/;
+/plugin/;
+
+&{/soc/i2c@4040000/touchscreen@5a} {
+	status = "okay";
+};

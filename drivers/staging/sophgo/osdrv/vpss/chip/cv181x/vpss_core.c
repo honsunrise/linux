@@ -1558,6 +1558,12 @@ static int vpss_release(struct inode *inode, struct file *filep)
 		return 0;
 	}
 
+	/* mirror vpss_open(); the probe reference keeps the block clocked */
+	if (dev->clk_sc_top && __clk_is_enabled(dev->clk_sc_top))
+		clk_disable_unprepare(dev->clk_sc_top);
+	if (dev->clk_sys[1] && __clk_is_enabled(dev->clk_sys[1]))
+		clk_disable_unprepare(dev->clk_sys[1]);
+
 	return 0;
 }
 
@@ -1608,6 +1614,17 @@ static int cvi_vpss_probe(struct platform_device *pdev)
 		CVI_TRACE_VPSS(CVI_DBG_ERR, "Failed to init resource\n");
 		goto err_irq;
 	}
+
+	/* The SC register bank sits behind the VIP bus gates. Clock it before
+	 * the first register access (sclr_ctrl_init() below writes it) instead
+	 * of relying on whatever the boot loader left enabled - and keep it
+	 * clocked while this driver is bound, because vo, fb and vi reach the
+	 * same register bank through our callbacks, not through this device.
+	 */
+	if (dev->clk_sys[1])
+		clk_prepare_enable(dev->clk_sys[1]);
+	if (dev->clk_sc_top)
+		clk_prepare_enable(dev->clk_sc_top);
 
 	rc = register_vpss_dev(&pdev->dev, dev);
 	if (rc) {
@@ -1691,6 +1708,10 @@ err_img_reg:
 err_proc:
 	misc_deregister(&dev->miscdev);
 err_dev:
+	if (dev->clk_sc_top && __clk_is_enabled(dev->clk_sc_top))
+		clk_disable_unprepare(dev->clk_sc_top);
+	if (dev->clk_sys[1] && __clk_is_enabled(dev->clk_sys[1]))
+		clk_disable_unprepare(dev->clk_sys[1]);
 err_irq:
 	dev_set_drvdata(&pdev->dev, NULL);
 
@@ -1724,6 +1745,12 @@ static void cvi_vpss_remove(struct platform_device *pdev)	/* 7.2: void */
 	img_destroy_instance(pdev);
 	sc_destroy_instance(pdev);
 	vpss_proc_remove(dev);
+
+	/* drop the reference taken before the first register access */
+	if (dev->clk_sc_top && __clk_is_enabled(dev->clk_sc_top))
+		clk_disable_unprepare(dev->clk_sc_top);
+	if (dev->clk_sys[1] && __clk_is_enabled(dev->clk_sys[1]))
+		clk_disable_unprepare(dev->clk_sys[1]);
 
 	misc_deregister(&dev->miscdev);
 	dev_set_drvdata(&pdev->dev, NULL);

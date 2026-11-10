@@ -589,7 +589,8 @@ static inline int getmacaddr(uint8_t *vnd_local_bd_addr)
 #endif
 #else
 	struct file  *bdaddr_file;
-	mm_segment_t oldfs;
+	loff_t pos = 0;
+	ssize_t ret;
 	char buf[FACTORY_BT_BDADDR_STORAGE_LEN];
 	memset(buf, 0, FACTORY_BT_BDADDR_STORAGE_LEN);
 	bdaddr_file = filp_open(BDADDR_FILE, O_RDONLY, 0);
@@ -597,9 +598,12 @@ static inline int getmacaddr(uint8_t *vnd_local_bd_addr)
 		AICBT_INFO("No Mac Config for BT\n");
 		return -1;
 	}
-	oldfs = get_fs(); set_fs(KERNEL_DS);
-	bdaddr_file->f_op->llseek(bdaddr_file, 0, 0);
-	bdaddr_file->f_op->read(bdaddr_file, buf, FACTORY_BT_BDADDR_STORAGE_LEN, &bdaddr_file->f_pos);
+	ret = kernel_read(bdaddr_file, buf, sizeof(buf), &pos);
+	filp_close(bdaddr_file, NULL);
+	if (ret < 0)
+		return ret;
+	if (ret != sizeof(buf))
+		return -EINVAL;
 	for (i = 0; i < 6; i++) {
 		if (buf[3*i] > '9') {
 			if (buf[3*i] > 'Z')
@@ -613,8 +617,6 @@ static inline int getmacaddr(uint8_t *vnd_local_bd_addr)
 		}
 		mac_addr[i] = ((uint8_t)buf[3*i] - '0') * 16 + ((uint8_t)buf[3*i+1] - '0');
 	}
-	set_fs(oldfs);
-	filp_close(bdaddr_file, NULL);
 #endif
 
 	for (i = 0; i < 6; i++)

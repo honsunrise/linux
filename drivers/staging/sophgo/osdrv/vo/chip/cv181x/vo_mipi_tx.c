@@ -3,7 +3,8 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/of_reserved_mem.h>
-#include <linux/of_gpio.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio/legacy.h>	/* devm_gpio_request_one() for the gpio= override */
 #include <linux/platform_device.h>
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
@@ -41,14 +42,19 @@ int dump_reg = 1;
 #define CVI_VIP_MIPI_TX_ERR(fmt, arg...)								\
 		pr_err("%d:%s(): " fmt, __LINE__, __func__, ## arg)
 
+struct mipi_tx_gpio {
+	struct gpio_desc *desc;
+	int active;	/* raw line level that asserts the signal */
+};
+
 struct cvi_vip_mipi_tx_dev {
 	struct device *dev;
 	struct miscdevice miscdev;
 	struct combo_dev_cfg_s dev_cfg;
 	struct clk *clk_disp, *clk_dsi;
-	int reset_pin, reset_pin_active;
-	int pwm_pin, pwm_pin_active;
-	int power_ct_pin, power_ct_pin_active;
+	struct mipi_tx_gpio reset_gpio;
+	struct mipi_tx_gpio pwm_gpio;
+	struct mipi_tx_gpio power_ct_gpio;
 	int irq_vbat;
 	void *vbat_addr[2];
 	u8 lane_num;
@@ -71,6 +77,81 @@ static int n_gpio_para;
 module_param_array(gpio, int, &n_gpio_para, 0664);
 
 static int smooth;
+
+/*
+ * The panel GPIOs are either described in DT (reset-gpio, pwm-gpio,
+ * power-ct-gpio; the gpiod core also accepts the -gpios spelling) or, as a
+ * vendor compatibility override, given as a raw global GPIO number plus the
+ * raw asserted level through the gpio= module parameter.
+ *
+ * "smooth" means the display engine is already running: the vendor code then
+ * deliberately leaves the pins alone at probe (no direction/value change), so
+ * configure is false and the line is only requested as-is. A numeric gpio
+ * cannot be requested without configuring it, so, as before, it is left
+ * unrequested in that case.
+ */
+static void mipi_tx_gpio_get(struct device *dev, struct mipi_tx_gpio *gpio,
+			     const char *con_id, const char *label,
+			     int num, int active, bool configure)
+{
+	int rc;
+
+	gpio->desc = NULL;
+	gpio->active = 1;
+
+	if (n_gpio_para) {
+		gpio->active = !!active;
+		if (num < 0)
+			return;
+
+		gpio->desc = gpio_to_desc(num);
+		if (!gpio->desc) {
+			dev_err(dev, "%s: invalid gpio %d\n", label, num);
+			return;
+		}
+		if (!configure)
+			return;
+
+		rc = devm_gpio_request_one(dev, num,
+					   gpio->active ? GPIOF_OUT_INIT_HIGH :
+							  GPIOF_OUT_INIT_LOW,
+					   label);
+		if (rc) {
+			dev_err(dev, "%s: request gpio %d fail(%d)\n", label, num, rc);
+			gpio->desc = NULL;
+		}
+		return;
+	}
+
+	gpio->desc = devm_gpiod_get_optional(dev, con_id, GPIOD_ASIS);
+	if (IS_ERR(gpio->desc)) {
+		dev_err(dev, "invalid %s gpio: %ld\n", con_id, PTR_ERR(gpio->desc));
+		gpio->desc = NULL;
+		return;
+	}
+	if (!gpio->desc)
+		return;
+
+	gpio->active = gpiod_is_active_low(gpio->desc) ? 0 : 1;
+	if (configure)
+		gpiod_direction_output_raw(gpio->desc, gpio->active);
+}
+
+static void mipi_tx_gpio_set(const struct mipi_tx_gpio *gpio, bool assert)
+{
+	if (!gpio->desc)
+		return;
+
+	gpiod_set_raw_value(gpio->desc, assert ? gpio->active : !gpio->active);
+}
+
+static void mipi_tx_gpio_info(struct device *dev, const char *what,
+			      const struct mipi_tx_gpio *gpio)
+{
+	if (gpio->desc)
+		dev_info(dev, "%s gpio pin(%d) active(%s)\n", what,
+			 desc_to_gpio(gpio->desc), gpio->active ? "high" : "low");
+}
 
 static int debug = 1;
 
@@ -216,12 +297,12 @@ static int mipi_tx_set_combo_dev_cfg(struct cvi_vip_mipi_tx_dev *tdev, struct co
 	sclr_disp_tgen_enable(true);
 
 	// resx operate after LP-11.
-	if (gpio_is_valid(tdev->reset_pin)) {
-		gpio_set_value(tdev->reset_pin, !tdev->reset_pin_active);
+	if (tdev->reset_gpio.desc) {
+		mipi_tx_gpio_set(&tdev->reset_gpio, false);
 		usleep_range(5 * 1000, 10 * 1000);
-		gpio_set_value(tdev->reset_pin, tdev->reset_pin_active);
+		mipi_tx_gpio_set(&tdev->reset_gpio, true);
 		usleep_range(5 * 1000, 10 * 1000);
-		gpio_set_value(tdev->reset_pin, !tdev->reset_pin_active);
+		mipi_tx_gpio_set(&tdev->reset_gpio, false);
 		msleep(100);
 	}
 
@@ -604,7 +685,6 @@ static int _init_resources(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct cvi_vip_mipi_tx_dev *tdev;
-	enum of_gpio_flags flags;
 
 	tdev = dev_get_drvdata(&pdev->dev);
 	if (!tdev) {
@@ -633,77 +713,18 @@ static int _init_resources(struct platform_device *pdev)
 	if (tdev->clk_dsi)
 		clk_prepare_enable(tdev->clk_dsi);
 
-	if (n_gpio_para) {
-		tdev->reset_pin = gpio[0];
-		tdev->reset_pin_active = gpio[1];
-		if (n_gpio_para > 2) {
-			tdev->power_ct_pin = gpio[2];
-			tdev->power_ct_pin_active = gpio[3];
-		} else {
-			tdev->power_ct_pin = -EINVAL;
-			tdev->power_ct_pin_active = -EINVAL;
-		}
-		if (n_gpio_para > 4) {
-			tdev->pwm_pin = gpio[4];
-			tdev->pwm_pin_active = gpio[5];
-		} else {
-			tdev->pwm_pin = -EINVAL;
-			tdev->pwm_pin_active = -EINVAL;
-		}
-	} else {
-		// reset pin
-		tdev->reset_pin = of_get_named_gpio_flags(pdev->dev.of_node,
-					 "reset-gpio", 0, &flags);
-		tdev->reset_pin_active = (flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1;
-
-		// pwm pin
-		tdev->pwm_pin = of_get_named_gpio_flags(pdev->dev.of_node,
-					 "pwm-gpio", 0, &flags);
-		tdev->pwm_pin_active = (flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1;
-
-		// power ctrl pin
-		tdev->power_ct_pin = of_get_named_gpio_flags(pdev->dev.of_node,
-					 "power-ct-gpio", 0, &flags);
-		tdev->power_ct_pin_active = (flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1;
-	}
-
 	smooth = sclr_disp_check_tgen_enable();
-	if (!smooth) {
-		if (gpio_is_valid(tdev->reset_pin)) {
-			flags = GPIOF_DIR_OUT | (tdev->reset_pin_active ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW);
-			rc = devm_gpio_request_one(&pdev->dev, tdev->reset_pin, flags, "cvi_panel_reset");
-			if (rc) {
-				tdev->reset_pin = -EINVAL;
-				dev_err(&pdev->dev, "request reset-gpio fail!\n");
-			}
-		} else {
-			tdev->reset_pin = -EINVAL;
-			dev_err(&pdev->dev, "get reset-gpio fail!\n");
-		}
-
-		if (gpio_is_valid(tdev->pwm_pin)) {
-			flags = GPIOF_DIR_OUT | (tdev->pwm_pin_active ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW);
-			rc = devm_gpio_request_one(&pdev->dev, tdev->pwm_pin, flags, "cvi_pwm");
-			if (rc) {
-				tdev->pwm_pin = -EINVAL;
-				dev_err(&pdev->dev, "request&set pwm-gpio fail!\n");
-			}
-		}
-
-		if (gpio_is_valid(tdev->power_ct_pin)) {
-			flags = GPIOF_DIR_OUT | (tdev->power_ct_pin_active ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW);
-			rc = devm_gpio_request_one(&pdev->dev, tdev->power_ct_pin, flags, "cvi_power_ct");
-			if (rc) {
-				tdev->power_ct_pin = -EINVAL;
-				dev_err(&pdev->dev, "request&set power-ct-gpio fail!\n");
-			}
-		}
-	}
+	mipi_tx_gpio_get(&pdev->dev, &tdev->reset_gpio, "reset",
+			 "cvi_panel_reset", gpio[0], gpio[1], !smooth);
+	mipi_tx_gpio_get(&pdev->dev, &tdev->power_ct_gpio, "power-ct",
+			 "cvi_power_ct", gpio[2], gpio[3], !smooth);
+	mipi_tx_gpio_get(&pdev->dev, &tdev->pwm_gpio, "pwm",
+			 "cvi_pwm", gpio[4], gpio[5], !smooth);
 
 	dev_info(&pdev->dev, "vbat irq(%d)\n", tdev->irq_vbat);
-	dev_info(&pdev->dev, "reset gpio pin(%d) active(%d)\n", tdev->reset_pin, tdev->reset_pin_active);
-	dev_info(&pdev->dev, "power ctrl gpio pin(%d) active(%d)\n", tdev->power_ct_pin, tdev->power_ct_pin_active);
-	dev_info(&pdev->dev, "pwm gpio pin(%d) active(%d)\n", tdev->pwm_pin, tdev->pwm_pin_active);
+	mipi_tx_gpio_info(&pdev->dev, "reset", &tdev->reset_gpio);
+	mipi_tx_gpio_info(&pdev->dev, "power ctrl", &tdev->power_ct_gpio);
+	mipi_tx_gpio_info(&pdev->dev, "pwm", &tdev->pwm_gpio);
 
 	return rc;
 }
@@ -715,8 +736,8 @@ static void _power_off(struct cvi_vip_mipi_tx_dev *tdev)
 	// send mipi display off
 	sclr_dsi_dcs_write_buffer(0x05, &cmd, 1, debug & 0x01);
 
-	if (gpio_is_valid(tdev->reset_pin)) {
-		gpio_set_value(tdev->reset_pin, tdev->reset_pin_active);
+	if (tdev->reset_gpio.desc) {
+		mipi_tx_gpio_set(&tdev->reset_gpio, true);
 		usleep_range(1000, 2000);
 	}
 }

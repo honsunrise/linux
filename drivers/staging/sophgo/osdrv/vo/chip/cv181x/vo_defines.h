@@ -40,7 +40,6 @@ struct cvi_vo_dev {
 	struct clk			*clk_disp;
 	struct clk			*clk_bt;
 	struct clk			*clk_dsi;
-	struct clk			*clk_sc_top;
 	int				irq_num;
 
 	struct vo_dv_timings		dv_timings;
