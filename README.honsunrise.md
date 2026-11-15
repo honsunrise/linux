@@ -94,6 +94,29 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       be loaded into this kernel. A successful compile is not proof of
       sensor, display, codec, TPU or IVE operation on a physical board.
 
+  Q6A UFS host-pad supply
+    Schematic V1.21, printed sheet 11 (PDF page 9), connects QCS6490
+    VDD_PX10 / L23 (UFS pads) to PM7325 VREG_L9B_1P2. Sheet 21 also
+    identifies L9B as "PX10, UFS0_VCCQ". The board DTS describes this
+    shared 1.2 V rail as vdd-hba-supply = <&vreg_l9b_1p2>.
+
+    This is separate from the PHY rails on sheet 13: P24 UFS core uses
+    VREG_L10C_0P88 and P22 UFS 1.2 V circuits use VREG_L6B_1P2.
+    The board-wide VCC_1V8 powers peripheral level translators and is
+    not a substitute for the UFS host-pad rail.
+
+    Radxa linux-7.0.11 at c875d59793d5 leaves vdd-hba unspecified; the
+    generic UFS driver treats an absent property as always enabled and
+    emits an informational message. The new description follows the
+    schematic, not an attempt to hide that message. It does not change
+    PHY voltage policy, device VCC/VCCQ/VCCQ2 or the Rate-A limitation,
+    and it is not claimed to fix reported UFS hibernation/reset faults.
+
+    Schematic: https://dl.radxa.com/dragon/q6a/hw/radxa_dragon_q6a_schematic_v1.21.pdf
+    Pin definitions: QCS6490/QCS5430 Data Sheet 80-23889-1 Rev. AW, Table 2-4.
+    The same host-pad modelling pattern is used by upstream commit
+    2c20c75d8505 for SM8350 HDK; the Q6A connection was checked separately.
+
   Firmware and userspace
     Firmware, bootloaders, root filesystems and proprietary userspace are
     not bundled into this GPL kernel source tree. Install the appropriate

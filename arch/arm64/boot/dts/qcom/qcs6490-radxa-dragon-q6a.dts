@@ -1043,6 +1043,8 @@
 	vcc-max-microamp = <800000>;
 	vccq-supply = <&vreg_l9b_1p2>;
 	vccq-max-microamp = <900000>;
+	/* VDD_PX10 (L23), shared with UFS VCCQ on the Q6A schematic. */
+	vdd-hba-supply = <&vreg_l9b_1p2>;
 	vccq2-supply = <&vreg_l9b_1p2>;
 	vccq2-max-microamp = <1300000>;
 
