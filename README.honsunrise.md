@@ -46,6 +46,12 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
     features that their boards need. BSP_TOP=bsp/ and LICHEE_KERN_DIR=./
     now have defaults, including for non-Allwinner builds.
 
+    For a Q6A KVM host without audio, select
+    qcom/qcs6490-radxa-dragon-q6a-kvm-headless.dtb together with the
+    radxa_q6a_headless.config fragment. This optional DTB disables only
+    sound, wcd938x and q6apm nodes; the kernel fragment controls KMS.
+    Ordinary Q6A and KVM DTBs retain their existing audio/display policy.
+
     ZERO 3W has distinct rk3566-radxa-zero-3w-aic8800ds2.dtb and
     rk3566-radxa-zero-3w-ap6212.dtb variants. Select the one matching the
     physical module; the original rk3566-radxa-zero-3w.dtb is retained.
@@ -267,7 +273,12 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       qcom/qcs6490-radxa-dragon-q6a-kvm.dtb. The latter combines the base DTB
       with qcs6490-radxa-dragon-q6a-kvm.dtbo, retaining radxa,enable-kvm,
       EL2 GPU setup, remoteproc broken-reset and SCM shared-memory ownership.
-    - Validate the configured kernel/modules, both Q6A DTBs and the formerly
+    - The optional qcs6490-radxa-dragon-q6a-kvm-headless.dtb composes that
+      same base and KVM overlay with qcs6490-radxa-dragon-q6a-headless.dtbo.
+      It does not duplicate KVM/display flags or board regulator definitions.
+      All three DTBs were built and decoded for this follow-up; changed
+      regulator and headless-profile runtime behaviour is not yet validated.
+    - Validate the configured kernel/modules, all selected Q6A DTBs and the formerly
       skipped SC8280XP family in the consuming Nix configuration after each
       source update. Physical EFI boot, UFS I/O, Iris PM and KVM require
       separate hardware validation before deployment; compilation alone does

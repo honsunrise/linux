@@ -182,6 +182,8 @@ dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-cm-q64-rpi-cm5-io-kvm.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a.dtb
 qcs6490-radxa-dragon-q6a-kvm-dtbs	:= qcs6490-radxa-dragon-q6a.dtb qcs6490-radxa-dragon-q6a-kvm.dtbo
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a-kvm.dtb
+qcs6490-radxa-dragon-q6a-kvm-headless-dtbs := qcs6490-radxa-dragon-q6a.dtb qcs6490-radxa-dragon-q6a-kvm.dtbo qcs6490-radxa-dragon-q6a-headless.dtbo
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a-kvm-headless.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-rb3gen2.dtb
 
 qcs6490-rb3gen2-vision-mezzanine-dtbs := qcs6490-rb3gen2.dtb qcs6490-rb3gen2-vision-mezzanine.dtbo
