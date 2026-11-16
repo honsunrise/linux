@@ -508,6 +508,15 @@ config SPRD_THERMAL
 	  Support for the Spreadtrum thermal sensor driver in the Linux thermal
 	  framework.
 
+config CV181X_THERMAL
+	tristate "Sophgo CV181x/SG2002 temperature sensor"
+	depends on OF && (ARCH_SOPHGO || COMPILE_TEST)
+	depends on THERMAL_OF
+	help
+	  The SoC temperature sensor (tempsen) of the Sophgo CV181x/SG2002,
+	  as a thermal zone sensor. It also enables the DDR temperature
+	  controlled refresh rate. Ported from the Sophgo 5.10 kernel.
+
 config KHADAS_MCU_FAN_THERMAL
 	tristate "Khadas MCU controller FAN cooling support"
 	depends on OF

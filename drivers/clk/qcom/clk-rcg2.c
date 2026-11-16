@@ -111,9 +111,27 @@ static u8 clk_rcg2_get_parent(struct clk_hw *hw)
 	return __clk_rcg2_get_parent(hw, cfg);
 }
 
+static int get_update_timeout(const struct clk_rcg2 *rcg)
+{
+	int timeout = 0;
+	unsigned long current_freq;
+
+	/*
+	 * The time it takes an RCG to update is roughly 3 clock cycles of the
+	 * old and new clock rates.
+	 */
+	current_freq = clk_hw_get_rate(&rcg->clkr.hw);
+	if (current_freq)
+		timeout += 3 * (USEC_PER_SEC / current_freq);
+	if (rcg->configured_freq)
+		timeout += 3 * (USEC_PER_SEC / rcg->configured_freq);
+
+	return max(timeout, 500);
+}
+
 static int update_config(struct clk_rcg2 *rcg)
 {
-	int count, ret;
+	int timeout, count, ret;
 	u32 cmd;
 	struct clk_hw *hw = &rcg->clkr.hw;
 	const char *name = clk_hw_get_name(hw);
@@ -123,8 +141,10 @@ static int update_config(struct clk_rcg2 *rcg)
 	if (ret)
 		return ret;
 
+	timeout = get_update_timeout(rcg);
+
 	/* Wait for update to take effect */
-	for (count = 500; count > 0; count--) {
+	for (count = timeout; count > 0; count--) {
 		ret = regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + CMD_REG, &cmd);
 		if (ret)
 			return ret;
@@ -437,26 +457,34 @@ static void clk_rcg2_calc_mnd(u64 parent_rate, u64 rate, struct freq_tbl *f,
 	int i = 2;
 	unsigned int pre_div = 1;
 	unsigned long rates_gcd, scaled_parent_rate;
-	u16 m, n = 1, n_candidate = 1, n_max;
+	u32 n_max, n_candidate = 1;
+	u16 m, n = 1;
 
 	rates_gcd = gcd(parent_rate, rate);
 	m = div64_u64(rate, rates_gcd);
 	scaled_parent_rate = div64_u64(parent_rate, rates_gcd);
-	while (scaled_parent_rate > (mnd_max + m) * pre_div_max) {
+
+	/*
+	 * Limit n so that the D register can represent the full duty cycle
+	 * range. The D register stores values up to 2*(n-m) using mnd_width
+	 * bits. Since m >= 1, n <= (mnd_max + 1) / 2 guarantees
+	 * 2*(n-m) <= mnd_max - 1.
+	 */
+	n_max = (mnd_max + 1) / 2;
+
+	while (scaled_parent_rate > (unsigned long)n_max * pre_div_max) {
 		// we're exceeding divisor's range, trying lower scale.
 		if (m > 1) {
 			m--;
 			scaled_parent_rate = mult_frac(scaled_parent_rate, m, (m + 1));
 		} else {
 			// cannot lower scale, just set max divisor values.
-			f->n = mnd_max + m;
+			f->n = n_max;
 			f->pre_div = pre_div_max;
 			f->m = m;
 			return;
 		}
 	}
-
-	n_max = m + mnd_max;
 
 	while (scaled_parent_rate > 1) {
 		while (scaled_parent_rate % i == 0) {
@@ -475,7 +503,7 @@ static void clk_rcg2_calc_mnd(u64 parent_rate, u64 rate, struct freq_tbl *f,
 
 	f->m = m;
 	f->n = n;
-	f->pre_div = pre_div > 1 ? pre_div : 0;
+	f->pre_div = pre_div;
 }
 
 static int clk_rcg2_determine_gp_rate(struct clk_hw *hw,
@@ -594,6 +622,8 @@ static int clk_rcg2_configure(struct clk_rcg2 *rcg, const struct freq_tbl *f)
 	if (ret)
 		return ret;
 
+	rcg->configured_freq = f->freq;
+
 	return update_config(rcg);
 }
 
@@ -681,6 +711,7 @@ static int clk_rcg2_set_gp_rate(struct clk_hw *hw, unsigned long rate,
 
 	clk_rcg2_calc_mnd(parent_rate, rate, f, mnd_max, hid_max / 2);
 	convert_to_reg_val(f);
+	rcg->configured_freq = rate;
 	ret = clk_rcg2_configure_gp(rcg, f);
 
 	return ret;
@@ -775,7 +806,7 @@ static int clk_rcg2_set_duty_cycle(struct clk_hw *hw, struct clk_duty *duty)
 	n = (~(notn_m) + m) & mask;
 
 	/* Calculate 2d value */
-	d = DIV_ROUND_CLOSEST(n * duty->num * 2, duty->den);
+	d = DIV_ROUND_CLOSEST_ULL((u64)n * duty->num * 2, duty->den);
 
 	/*
 	 * Check bit widths of 2d. If D is too big reduce duty cycle.
@@ -783,9 +814,9 @@ static int clk_rcg2_set_duty_cycle(struct clk_hw *hw, struct clk_duty *duty)
 	 */
 	d = clamp_val(d, 1, mask);
 
-	if ((d / 2) > (n - m))
+	if (d > (n - m) * 2)
 		d = (n - m) * 2;
-	else if ((d / 2) < (m / 2))
+	else if (d < m)
 		d = m;
 
 	not2d = ~d & mask;

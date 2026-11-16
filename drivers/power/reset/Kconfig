@@ -86,6 +86,17 @@ config POWER_RESET_EP93XX
 	  Say Y here if you have a Cirrus EP93XX SoC and you wish
 	  to have restart support.
 
+config POWER_RESET_CVITEK
+	bool "Cvitek/Sophgo CV18xx (SG200x) restart and power-off driver"
+	depends on OF
+	depends on HAS_IOMEM
+	depends on ARCH_SOPHGO || COMPILE_TEST
+	help
+	  Restart and power-off through the RTC block of the Cvitek/Sophgo
+	  CV180x/CV181x/SG200x SoCs (warm reset and shutdown requests).
+	  This is the vendor BSP driver drivers/power/reset/cvi-reboot.c,
+	  which the vendor builds unconditionally (obj-y).
+
 config POWER_RESET_GEMINI_POWEROFF
 	bool "Cortina Gemini power-off driver"
 	depends on ARCH_GEMINI || COMPILE_TEST

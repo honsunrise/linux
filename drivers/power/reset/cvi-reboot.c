@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Restart and power-off for the Cvitek/Sophgo CV180x/CV181x/SG200x SoCs.
+ *
+ * Port of the vendor BSP driver drivers/power/reset/cvi-reboot.c
+ * (reCamera-OS linux_5.10), which the vendor builds with obj-y and which
+ * the mainline kernel lacks: without it the restart path has no handler
+ * (OpenSBI v0.9 on this board offers no SBI SRST either) and "reboot"
+ * stops at "reboot: Restarting system".
+ *
+ * The register sequence is the vendor's, unchanged.  Changes for the
+ * current kernel: sys-off handler API instead of register_restart_handler()
+ * and pm_power_off, devm mapping, and bounded waits instead of endless
+ * busy loops.
+ *
+ * The block at 0x05025000 is also described by the mainline rtc node as a
+ * syscon; the mapping here does not request the region, so both coexist.
+ */
+
+#include <linux/delay.h>
+#include <linux/io.h>
+#include <linux/iopoll.h>
+#include <linux/mod_devicetable.h>
+#include <linux/platform_device.h>
+#include <linux/reboot.h>
+
+/* RTC_CTRL block (base) */
+#define RTC_CTRL0_UNLOCKKEY	0x4
+#define RTC_CTRL0		0x8
+
+/* RTC core block (base + 0x1000) */
+#define RTC_CORE_OFFSET		0x1000
+#define RTC_PRDATA_SEL		0x3C	/* 1 = select prdata from 32K domain */
+#define RTC_EN_SHDN_REQ		0xC0
+#define RTC_EN_WARM_RST_REQ	0xCC
+#define RSM_STATE		0xD4
+#define ST_ON			0x3
+
+#define RTC_UNLOCK_KEY		0xAB18
+#define RTC_CTRL0_REQ(bit)	(0xFFFF0800 | BIT(bit))
+#define RTC_CTRL0_SHDN		0
+#define RTC_CTRL0_WARM_RST	4
+
+#define CVI_POLL_US		10
+#define CVI_TIMEOUT_US		100000
+
+struct cvi_reboot {
+	void __iomem *ctrl;
+	void __iomem *core;
+};
+
+static void cvi_reboot_request(struct cvi_reboot *cr, u32 en_reg)
+{
+	u32 val;
+
+	writel(0x1, cr->core + RTC_PRDATA_SEL);
+	writel(RTC_UNLOCK_KEY, cr->ctrl + RTC_CTRL0_UNLOCKKEY);
+	writel(0x1, cr->core + en_reg);
+	readl_poll_timeout_atomic(cr->core + en_reg, val, val == 0x1,
+				  CVI_POLL_US, CVI_TIMEOUT_US);
+}
+
+static int cvi_restart(struct sys_off_data *data)
+{
+	struct cvi_reboot *cr = data->cb_data;
+	u32 val;
+
+	cvi_reboot_request(cr, RTC_EN_WARM_RST_REQ);
+	readl_poll_timeout_atomic(cr->core + RSM_STATE, val, val == ST_ON,
+				  CVI_POLL_US, CVI_TIMEOUT_US);
+	writel(RTC_CTRL0_REQ(RTC_CTRL0_WARM_RST), cr->ctrl + RTC_CTRL0);
+
+	mdelay(1000);
+	pr_emerg("cvi-reboot: warm reset request did not take effect\n");
+
+	return NOTIFY_DONE;
+}
+
+static int cvi_power_off(struct sys_off_data *data)
+{
+	struct cvi_reboot *cr = data->cb_data;
+
+	cvi_reboot_request(cr, RTC_EN_SHDN_REQ);
+	writel(RTC_CTRL0_REQ(RTC_CTRL0_SHDN), cr->ctrl + RTC_CTRL0);
+
+	/* Wait some time until system down, otherwise, notice with a warn */
+	mdelay(1000);
+	WARN_ONCE(1, "Unable to power off system\n");
+
+	return NOTIFY_DONE;
+}
+
+static int cvi_reboot_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct cvi_reboot *cr;
+	struct resource *res;
+	int err;
+
+	cr = devm_kzalloc(dev, sizeof(*cr), GFP_KERNEL);
+	if (!cr)
+		return -ENOMEM;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res || resource_size(res) < RTC_CORE_OFFSET + 0x100)
+		return dev_err_probe(dev, -EINVAL, "missing or short reg\n");
+
+	/* No request_mem_region: the rtc syscon node covers the same block. */
+	cr->ctrl = devm_ioremap(dev, res->start, resource_size(res));
+	if (!cr->ctrl)
+		return -ENOMEM;
+	cr->core = cr->ctrl + RTC_CORE_OFFSET;
+
+	err = devm_register_sys_off_handler(dev, SYS_OFF_MODE_RESTART,
+					    SYS_OFF_PRIO_HIGH,
+					    cvi_restart, cr);
+	if (err)
+		return dev_err_probe(dev, err, "cannot register restart handler\n");
+
+	err = devm_register_sys_off_handler(dev, SYS_OFF_MODE_POWER_OFF,
+					    SYS_OFF_PRIO_DEFAULT,
+					    cvi_power_off, cr);
+	if (err)
+		return dev_err_probe(dev, err, "cannot register power-off handler\n");
+
+	dev_info(dev, "restart and power-off handlers registered\n");
+	return 0;
+}
+
+static const struct of_device_id cvi_reboot_of_match[] = {
+	{ .compatible = "cvitek,restart" },
+	{ }
+};
+
+static struct platform_driver cvi_reboot_driver = {
+	.probe = cvi_reboot_probe,
+	.driver = {
+		.name = "cvi-reboot",
+		.of_match_table = cvi_reboot_of_match,
+	},
+};
+builtin_platform_driver(cvi_reboot_driver);

@@ -223,6 +223,17 @@ config PWM_CRC
 	  Generic PWM framework driver for Crystalcove (CRC) PMIC based PWM
 	  control.
 
+config PWM_CV1800
+	tristate "Sophgo CV18xx/SG2002 PWM support"
+	depends on ARCH_SOPHGO || COMPILE_TEST
+	depends on COMMON_CLK && HAS_IOMEM
+	help
+	  PWM controller of the Sophgo CV18xx/SG2002 SoCs (four controllers
+	  of four channels).
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-cv1800.
+
 config PWM_CROS_EC
 	tristate "ChromeOS EC PWM driver"
 	depends on CROS_EC
