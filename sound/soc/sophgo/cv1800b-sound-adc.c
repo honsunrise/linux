@@ -14,6 +14,9 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/bitops.h>
+#include <linux/clk.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 
 #define CV1800B_RXADC_WORD_LEN 16
 #define CV1800B_RXADC_CHANNELS 2
@@ -94,7 +97,61 @@ struct cv1800b_priv {
 	void __iomem *regs;
 	struct device *dev;
 	unsigned int mclk_rate;
+	void __iomem *mclk_src;		/* I2S block that feeds MCLK in */
+	struct clk *mclk_src_clk;	/* its CCF clock (CLK_SDMA_AUDx) */
+	bool mclk_src_on;
 };
+
+/* Registers of the I2S block named by "sophgo,mclk-source" (cv1800b-tdm). */
+#define CV1800B_I2S_CLK_CTRL0	0x060
+#define CV1800B_I2S_CLK_CTRL1	0x064
+#define CV1800B_I2S_MCLK_OUT_EN	BIT(7)
+#define CV1800B_I2S_AUD_EN	BIT(8)
+#define CV1800B_I2S_MCLK_DIV	GENMASK(15, 0)
+
+/*
+ * The internal ADC has no clock of its own: it runs from the MCLK output of
+ * another I2S block (I2S3 on SG2002, the one wired to the internal DAC). The
+ * vendor driver (cv181xadc.c, "clk_source") switches that MCLK output on
+ * before capturing and sets its divider; without it the ADC produces random
+ * data unless a playback stream happens to be running on that I2S.
+ * Here: enable the source clock, program MCLK = target, turn the MCLK output
+ * on, and leave it on (as the vendor does).
+ */
+static int cv1800b_adc_mclk_source_on(struct cv1800b_priv *priv,
+				      unsigned int target)
+{
+	unsigned long parent;
+	u32 div, val;
+	int ret;
+
+	if (!priv->mclk_src || !target)
+		return 0;
+
+	if (!priv->mclk_src_on) {
+		ret = clk_prepare_enable(priv->mclk_src_clk);
+		if (ret)
+			return ret;
+		priv->mclk_src_on = true;
+	}
+
+	parent = clk_get_rate(priv->mclk_src_clk);
+	div = DIV_ROUND_CLOSEST(parent, target);
+	if (!div || div > 0xffff)
+		return -EINVAL;
+
+	val = readl(priv->mclk_src + CV1800B_I2S_CLK_CTRL1);
+	val = u32_replace_bits(val, div, CV1800B_I2S_MCLK_DIV);
+	writel(val, priv->mclk_src + CV1800B_I2S_CLK_CTRL1);
+
+	val = readl(priv->mclk_src + CV1800B_I2S_CLK_CTRL0);
+	val |= CV1800B_I2S_AUD_EN | CV1800B_I2S_MCLK_OUT_EN;
+	writel(val, priv->mclk_src + CV1800B_I2S_CLK_CTRL0);
+
+	dev_dbg(priv->dev, "mclk source: parent %lu Hz / %u = %lu Hz\n",
+		parent, div, parent / div);
+	return 0;
+}
 
 static int cv1800b_adc_setbclk_div(struct cv1800b_priv *priv, unsigned int rate)
 {
@@ -163,6 +220,14 @@ static int cv1800b_adc_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rate = params_rate(params);
 	u32 val;
 	int ret;
+
+	if (!priv->mclk_rate)
+		priv->mclk_rate = 256 * rate;
+	ret = cv1800b_adc_mclk_source_on(priv, priv->mclk_rate);
+	if (ret) {
+		dev_err(priv->dev, "could not start the MCLK source: %d\n", ret);
+		return ret;
+	}
 
 	ret = cv1800b_adc_setbclk_div(priv, rate);
 	if (ret) {
@@ -271,10 +336,49 @@ static int cv1800b_adc_volume_set(struct snd_kcontrol *kcontrol,
 
 static DECLARE_TLV_DB_SCALE(cv1800b_volume_tlv, 0, 200, 0);
 
+/*
+ * Capture switch on the RX PGA mute bits (ANA2 bit 0 = left, bit 1 = right).
+ * Volume 0 is 0 dB of gain, not silence, so a real mute needs these bits.
+ * ALSA convention: switch on = sound passes, off = muted.
+ */
+static int cv1800b_adc_switch_get(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct cv1800b_priv *priv = snd_soc_component_get_drvdata(component);
+	u32 ana2 = readl(priv->regs + CV1800B_RXADC_ANA2);
+
+	ucontrol->value.integer.value[0] = !FIELD_GET(REG_MUTEL_RXPGA, ana2);
+	ucontrol->value.integer.value[1] = !FIELD_GET(REG_MUTER_RXPGA, ana2);
+	return 0;
+}
+
+static int cv1800b_adc_switch_set(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct cv1800b_priv *priv = snd_soc_component_get_drvdata(component);
+	u32 val, old_val;
+
+	val = readl(priv->regs + CV1800B_RXADC_ANA2);
+	old_val = val;
+	val = u32_replace_bits(val, !ucontrol->value.integer.value[0],
+			       REG_MUTEL_RXPGA);
+	val = u32_replace_bits(val, !ucontrol->value.integer.value[1],
+			       REG_MUTER_RXPGA);
+	if (val == old_val)
+		return 0;
+
+	writel(val, priv->regs + CV1800B_RXADC_ANA2);
+	return 1;
+}
+
 static const struct snd_kcontrol_new cv1800b_adc_controls[] = {
 	SOC_DOUBLE_EXT_TLV("Internal I2S Capture Volume", SND_SOC_NOPM, 0, 16, 24, false,
 			   cv1800b_adc_volume_get, cv1800b_adc_volume_set,
 			   cv1800b_volume_tlv),
+	SOC_DOUBLE_EXT("Internal I2S Capture Switch", SND_SOC_NOPM, 0, 1, 1, false,
+		       cv1800b_adc_switch_get, cv1800b_adc_switch_set),
 };
 
 static const struct snd_soc_component_driver cv1800b_adc_component = {
@@ -287,6 +391,7 @@ static int cv1800b_adc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct cv1800b_priv *priv;
+	struct device_node *np;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -296,6 +401,29 @@ static int cv1800b_adc_probe(struct platform_device *pdev)
 	priv->regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(priv->regs))
 		return PTR_ERR(priv->regs);
+
+	np = of_parse_phandle(dev->of_node, "sophgo,mclk-source", 0);
+	if (np) {
+		struct resource res;
+		int err = of_address_to_resource(np, 0, &res);
+
+		of_node_put(np);
+		if (err)
+			return dev_err_probe(dev, err, "bad MCLK source reg\n");
+		/* No request: the I2S driver owns this region. */
+		priv->mclk_src = devm_ioremap(dev, res.start, resource_size(&res));
+		if (!priv->mclk_src)
+			return -ENOMEM;
+		priv->mclk_src_clk = devm_clk_get(dev, "mclk");
+		if (IS_ERR(priv->mclk_src_clk))
+			return dev_err_probe(dev, PTR_ERR(priv->mclk_src_clk),
+					     "MCLK source needs clock \"mclk\"\n");
+	}
+
+	/* The microphone starts muted; userspace switches it on when needed. */
+	writel(readl(priv->regs + CV1800B_RXADC_ANA2) |
+	       REG_MUTEL_RXPGA | REG_MUTER_RXPGA,
+	       priv->regs + CV1800B_RXADC_ANA2);
 
 	platform_set_drvdata(pdev, priv);
 	return devm_snd_soc_register_component(&pdev->dev,

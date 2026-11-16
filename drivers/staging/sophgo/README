@@ -1,0 +1,115 @@
+Sophgo SG200x (cv181x) vendor drivers, imported in-tree
+======================================================
+
+Provenance
+----------
+
+  osdrv/  sophgo/osdrv @ f35ca075cc022aac97f5d22238c1e46caf8276bd, interdrv/
+          (GPL-2.0). Includes include/, cif, vi, vpss, vo, fb, ive, dwa,
+          rgn, mon, snsr_i2c, sys, base, tpu, vcodec, jpeg, cvi_vc_drv,
+          rtos_cmdqu, fast_image, wiegand, clock_cooling, plus the vendor
+          pinctrl headers (kernel-5.10-headers/, GPL-2.0) which cif and vo
+          include.
+
+          The Linux 7.2 port of sys/base/snsr_i2c/cif/vi/vpss/vcodec/
+          jpeg/cvi_vc_drv/tpu was taken from djairjr/recamera-linux-kernel7
+          @ 240adcc6164d7ff50995c0119f29a1ba570ea57d,
+          external/package/sophgo-osdrv/000{1,2,3}-*.patch and is already
+          applied to the files here (marked "7.2 port"), not at build time.
+          The other modules were ported the same way: void platform remove,
+          one-argument class_create, pde_data, the gpiod descriptor API, the
+          5-argument thermal_of_cooling_device_register, the descriptor
+          IRQ-less probe paths and the DMA-buf namespace. That is the
+          compile baseline; 7.3.3-specific fixes are marked "7.3".
+
+  ion/    The vendor ION allocator: sophgo/linux_5.10 @ d0486a96,
+          drivers/staging/android/ion (GPL-2.0), with the cvitek carveout
+          heap and /dev/ion glue, 7.2/7.3 ported in place (no build-time
+          patch). CONFIG_ION, CONFIG_ION_CVITEK and
+          CONFIG_ION_CARVEOUT_HEAP are defined once for this directory and
+          all of osdrv/ by the subdir-ccflags-y in Makefile: they change
+          struct ion_buffer, so ion.ko and every osdrv module must see the
+          same values.
+
+Vendor modules superseded by mainline drivers (not imported)
+------------------------------------------------------------
+
+  rtc/   -> drivers/rtc/rtc-cv1800.c                        (sophgo,cv1800b-rtc)
+  saradc/-> drivers/iio/adc/sophgo-cv1800b-adc.c            (sophgo,cv1800b-saradc)
+  pwm/   -> drivers/pwm/pwm-cv1800.c                        (sophgo,cv1800-pwm)
+  wdt/   -> drivers/watchdog/dw_wdt.c + sophgo,cv1800-wdt   (chip reset bits)
+
+Device tree
+-----------
+
+  Multimedia nodes: arch/riscv/boot/dts/sophgo/sg2002-multimedia.dtsi
+  Board:            arch/riscv/boot/dts/sophgo/sg2002-licheerv-nano-b.dts
+
+  The nodes keep the vendor compatibles and the clock/reset/reg/interrupt
+  names the drivers request; the interrupt numbers are the vendor PLIC
+  numbers converted with SOC_PERIPHERAL_IRQ(). The DT bindings in
+  Documentation/devicetree/bindings are only written for the drivers that
+  were brought to mainline style (pwm, thermal, restart, dw-wdt); the
+  staging drivers keep the vendor ABI documented by this file.
+
+Userspace and firmware dependencies (not kernel side)
+-----------------------------------------------------
+
+  * sophgo/cvi_mpi @ 6dbbbb8bed877cd3a08f76ce4aed61645c38bbe1 -- the MPI
+    library the applications link against (ion_fd based). Without it the
+    /dev/cvi-* nodes are unusable.
+  * cviruntime @ 3f4938648950a7f3bf9a19c320ca9fae7c52de20, cvikernel @
+    9f1f57a19c3c281a931dfc71b318494487193d56, cvibuilder @
+    4309f2a649fc7cfe7160389d52a81c469dbdd7bc -- NPU model runtime.
+  * sophgo/ramdisk @ f855ea377c886aae094e224f4dffebcffaedc4ad
+    usr/share/fw_vcodec/{coda980.bin,monet.bin} -- codec MCU firmware read
+    by cvi_vc_driver when the first H.264/H.265 channel is created.
+  * 3A/ISP tuning bins and the sensor drivers live in the sensor support
+    list and in the MPI (SensorSupportList @
+    86b0708e0101dfd4b60abafe98fef28c92773dbb), not in the kernel.
+  * CV_MPI needs the fip's pinmux (the Sipeed U-Boot sets the display,
+    touch, camera and SDIO pads), and the C906L FreeRTOS image for
+    rtos_cmdqu/fast_image.
+  * C906 + fence.tso: userspace must be built with -mno-fence-tso or against
+    an OpenSBI >= 1.7, else any __atomic_thread_fence(ACQ_REL) SIGILLs.
+
+Clocks, resets and MMIO (audited for 7.3)
+----------------------------------------
+
+  * The VIP/SC register bank is shared by vi, vpss, dwa, vo, fb and ive.
+    vpss now enables CLK_SRC_VIP_SYS_1 and CLK_SC_TOP_VIP before its first
+    register access and holds them while bound; vo/fb reach the same bank
+    through vpss callbacks and must not be probed before vpss (the Makefile
+    and Kconfig order guarantees this).
+  * vo owns only CLK_DISP_VIP (plus CLK_DSI_MAC_VIP/CLK_BT_VIP for the
+    matching interfaces); the dead clk_sc_top member and the swapped
+    enable/disable pair in vo_release() were removed.
+  * dwa clocks CLK_DWA_VIP around the probe-time interrupt-mask write; the
+    per-job path keeps enabling/disabling it.
+  * ive needs CLK_IVE_VIP before any register access: the node MUST provide
+    clocks = <&clk CLK_IVE_VIP>; clock-names = "clk_ive"; (the driver now
+    fails probe without it). The sg2002-multimedia.dtsi ive node does not
+    have it yet.
+  * jpeg/vcodec keep their vendor "clock gating disabled" policy
+    (VCODEC_MASK_DISABLE_CLK_GATING path), but only after enabling the gate
+    before the first register write.
+  * rtos_cmdqu (C906 mailbox) and mon (DDR/AXI monitor) have no CCF gate in
+    clk-cv1800, so they need no clock reference.
+  * cvifb publishes the non-coherent framebuffer with
+    dma_sync_single_for_device() instead of the unexported
+    arch_sync_dma_for_device().
+
+Not yet ported / owned elsewhere
+--------------------------------
+
+  * Hynitron touch (vendor hyn_ts, "hyn,7xx"): ported by HynitronPort, not
+    here. The GT911 panels work through drivers/input/touchscreen/goodix.c.
+  * The vendor dwc2 fork interface /proc/cviusb/otg_role and the
+    "cvitek,wifi-pin"/"cvitek,bt-pin" power-sequencing drivers are not
+    ported; the USB role is set through the DT dr_mode, and the wireless
+    power sequence is done by the fip.
+  * rtl8733bs: GPL-2.0 source exists (briansune/rtl8733BS_WiFi_linux and
+    other vendor drops) and is being ported by Rtl8733Port; it is not part
+    of this directory. AIC8800 (deepin-community/aic8800) is the other
+    LicheeRV Nano wireless variant.
+  * Board DTS (B/E/W/WE) is owned by LicheeBoardCoverage.

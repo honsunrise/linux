@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * LicheeRV Nano W/WE: SDIO WiFi6 + UART Bluetooth.
+ *
+ * The radio module is an AIC8800D (44-pin) on the 70415 board; the
+ * Fn-Link N240 / RTL8733BS option is wired identically.  From the Sipeed
+ * LicheeRV Nano 70415 schematic ("Wi-Fi & BT" page):
+ *
+ *  - SDIO1 (CLK/CMD/D0..D3) is the WiFi bus on the dedicated SD1 pads,
+ *    VDDIO_SD1 supplied from VDD3V3_SYS, so 3.3V signalling only;
+ *  - WL_PWR (module pin 13) is the module power enable.  It is the
+ *    WF_PWR_EN net, pulled up to VDD3V3_SYS by R53 and driven from
+ *    GPIOA_26 through the 0R R60.  U-Boot's cvi_board_init() power-cycles
+ *    exactly this line (low, wait, high) before Linux starts; model it
+ *    with mmc-pwrseq-simple instead of leaving the module to chance;
+ *  - Bluetooth is the module UART1: SoC TX/RX on GPIOA_28/29 (function 1),
+ *    RTS/CTS on GPIOA_19/18 (function 4), as muxed by the fip.  There is
+ *    no separate BT_REG_ON: WL_PWR powers the whole module, and the BT
+ *    firmware is loaded over this UART by hciattach.
+ *
+ * The fip already muxes SDIO1, the UART and GPIOA_26; the pinctrl states
+ * below make the kernel independent of that.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		/*
+		 * Active-high module enable driven through the pwrseq logic:
+		 * pwrseq asserts the line before power-up and deasserts it
+		 * after, i.e. physical low then high, like the fip does.
+		 */
+		reset-gpios = <&porta 26 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <100>;
+		pinctrl-0 = <&wifi_pwr_pins>;
+		pinctrl-names = "default";
+	};
+};
+
+&pinctrl {
+	/* WF_PWR_EN as GPIO: EMMC_DAT2/XGPIOA[26], VDDIO_SD0_EMMC (3.3V). */
+	wifi_pwr_pins: wifi-pwr-pins {
+		wifi-pwr-pin {
+			pinmux = <PINMUX(PIN_EMMC_DAT2, 3)>;
+			power-source = <3300>;
+		};
+	};
+
+	sdhci1_cfg: sdhci1-cfg {
+		sdhci1-clk-pins {
+			pinmux = <PINMUX(PIN_SD1_CLK, 0)>;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+
+		sdhci1-cmd-pins {
+			pinmux = <PINMUX(PIN_SD1_CMD, 0)>;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+
+		sdhci1-data-pins {
+			pinmux = <PINMUX(PIN_SD1_D0, 0)>,
+				 <PINMUX(PIN_SD1_D1, 0)>,
+				 <PINMUX(PIN_SD1_D2, 0)>,
+				 <PINMUX(PIN_SD1_D3, 0)>;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+
+	uart1_cfg: uart1-cfg {
+		uart1-tx-rx-pins {
+			pinmux = <PINMUX(PIN_IIC0_SCL, 1)>,
+				 <PINMUX(PIN_IIC0_SDA, 1)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+
+		uart1-cts-rts-pins {
+			pinmux = <PINMUX(PIN_JTAG_CPU_TMS, 4)>,
+				 <PINMUX(PIN_JTAG_CPU_TCK, 4)>;
+			bias-pull-up;
+			drive-strength-microamp = <10800>;
+			power-source = <3300>;
+		};
+	};
+};
+
+&sdhci1 {
+	pinctrl-0 = <&sdhci1_cfg>;
+	pinctrl-names = "default";
+	status = "okay";
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	no-mmc;
+	no-sd;
+	disable-wp;
+	max-frequency = <25000000>;
+	keep-power-in-suspend;
+	mmc-pwrseq = <&wifi_pwrseq>;
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_cfg>;
+	pinctrl-names = "default";
+	uart-has-rtscts;
+	status = "okay";
+};

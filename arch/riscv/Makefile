@@ -89,6 +89,11 @@ CC_FLAGS_FPU  := -march=$(shell echo $(riscv-march-y) | sed -E 's/(rv32ima|rv64i
 
 KBUILD_CFLAGS += -mno-save-restore
 
+# C906 traps on fence.tso, which GCC can emit even without Ztso in -march.
+ifeq ($(CONFIG_ERRATA_THEAD),y)
+KBUILD_CFLAGS += $(call cc-option,-mno-fence-tso)
+endif
+
 ifeq ($(CONFIG_CMODEL_MEDLOW),y)
 	KBUILD_CFLAGS += -mcmodel=medlow
 endif
