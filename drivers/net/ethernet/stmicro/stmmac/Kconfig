@@ -57,6 +57,16 @@ config DWMAC_GENERIC
 	  platform specific code to function or is using platform
 	  data for setup.
 
+config DWMAC_CVITEK
+	tristate "CVITEK (Sophgo SG200x) DWMAC glue"
+	default ARCH_SOPHGO
+	depends on OF && (ARCH_SOPHGO || COMPILE_TEST)
+	help
+	  Support for the CVITEK ethernet glue found on Sophgo SG200x SoCs.
+
+	  This brings up the internal ePHY before the stmmac MDIO scan and
+	  keeps the MAC clocks enabled. Say Y if the board uses the internal
+	  ePHY of a SG200x (CV1800B/CV181x family).
 config DWMAC_ANARION
 	tristate "Adaptrum Anarion GMAC support"
 	default ARC
@@ -403,6 +413,20 @@ config DWMAC_MOTORCOMM
 	help
 	  This enables glue driver for Motorcomm DWMAC-based PCI Ethernet
 	  controllers. Currently only YT6801 is supported.
+
+config DWMAC_TC956X
+	tristate "Toshiba TC956X DWMAC support"
+	depends on PCI
+	depends on COMMON_CLK
+	depends on TOSHIBA_TC956X_PCI
+	default m if TOSHIBA_TC956X_PCI
+	select GENERIC_IRQ_CHIP
+	help
+	  This selects the Toshiba TC956X (and Qualcomm QPS615) support in the
+	  stmmac driver.
+
+	  This provides support for the ethernet controllers found on these
+	  devices.
 
 config STMMAC_PCI
 	tristate "STMMAC PCI bus support"

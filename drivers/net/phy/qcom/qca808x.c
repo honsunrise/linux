@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0+
 
-#include <linux/phy.h>
+#include <linux/gpio/consumer.h>
+#include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/phy.h>
+#include <linux/pm_wakeup.h>
+#include <linux/property.h>
 
 #include "qcom.h"
 
@@ -86,15 +90,129 @@
 #define QCA8081_PHY_FIFO_RSTN			BIT(11)
 
 #define QCA8081_PHY_ID				0x004dd101
+#define QCA808X_LED_MODE_MAX			3
 
 MODULE_DESCRIPTION("Qualcomm Atheros QCA808X PHY driver");
 MODULE_AUTHOR("Matus Ujhelyi");
 MODULE_LICENSE("GPL");
 
+struct qca808x_led_mode_cfg {
+	u16 led_ctrl[3];
+};
+
 struct qca808x_priv {
+	int led_mode;
 	int led_polarity_mode;
+	int wake_irq;
+	u32 wolopts;
+	bool wake_irq_enabled;
 	struct qcom_phy_hw_stats hw_stats;
 };
+
+static const struct qca808x_led_mode_cfg qca808x_led_mode_cfg[] = {
+	[1] = {
+		.led_ctrl = { 0x8000, 0x8670, 0x0040 },
+	},
+	[2] = {
+		.led_ctrl = { 0x8040, 0x8670, 0x0020 },
+	},
+	[3] = {
+		.led_ctrl = { 0x8670, 0x0000, 0x0000 },
+	},
+};
+
+static irqreturn_t qca808x_wake_irq(int irq, void *dev_id)
+{
+	return IRQ_HANDLED;
+}
+
+static bool qca808x_can_wakeup(struct phy_device *phydev)
+{
+	struct qca808x_priv *priv = phydev->priv;
+
+	/* QCA8081 signals WoL on either INTn or the dedicated INTn_WOL pin. */
+	return priv->wake_irq >= 0 || phy_interrupt_is_valid(phydev);
+}
+
+static int qca808x_wake_irq_number(struct phy_device *phydev)
+{
+	struct qca808x_priv *priv = phydev->priv;
+
+	if (priv->wake_irq >= 0)
+		return priv->wake_irq;
+
+	if (phy_interrupt_is_valid(phydev))
+		return phydev->irq;
+
+	return -ENXIO;
+}
+
+static int qca808x_set_wake_irq(struct phy_device *phydev, bool enable)
+{
+	struct qca808x_priv *priv = phydev->priv;
+	int irq;
+	int ret;
+
+	if (priv->wake_irq_enabled == enable)
+		return 0;
+
+	irq = qca808x_wake_irq_number(phydev);
+	if (irq < 0)
+		return 0;
+
+	if (enable)
+		ret = enable_irq_wake(irq);
+	else
+		ret = disable_irq_wake(irq);
+	if (ret)
+		return ret;
+
+	priv->wake_irq_enabled = enable;
+
+	return 0;
+}
+
+static void qca808x_parse_dt(struct phy_device *phydev)
+{
+	struct device *dev = &phydev->mdio.dev;
+	struct qca808x_priv *priv = phydev->priv;
+	u32 led_mode;
+	int ret;
+
+	ret = device_property_read_u32(dev, "qca,led-mode", &led_mode);
+	if (ret)
+		return;
+
+	if (!led_mode || led_mode > QCA808X_LED_MODE_MAX) {
+		phydev_warn(phydev, "ignoring invalid qca,led-mode %u\n",
+			    led_mode);
+		return;
+	}
+
+	priv->led_mode = led_mode;
+}
+
+static int qca808x_apply_led_mode(struct phy_device *phydev)
+{
+	const struct qca808x_led_mode_cfg *cfg;
+	struct qca808x_priv *priv = phydev->priv;
+	int i, ret;
+
+	if (priv->led_mode < 0)
+		return 0;
+
+	cfg = &qca808x_led_mode_cfg[priv->led_mode];
+
+	for (i = 0; i < ARRAY_SIZE(cfg->led_ctrl); i++) {
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN,
+				    QCA808X_MMD7_LED_CTRL(i),
+				    cfg->led_ctrl[i]);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
 
 static int qca808x_phy_fast_retrain_config(struct phy_device *phydev)
 {
@@ -181,18 +299,52 @@ static void qca808x_fill_possible_interfaces(struct phy_device *phydev)
 static int qca808x_probe(struct phy_device *phydev)
 {
 	struct device *dev = &phydev->mdio.dev;
+	struct gpio_desc *wakeup_gpio;
 	struct qca808x_priv *priv;
+	int ret;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
+	priv->wake_irq = -ENXIO;
+	/* Keep LED preset mode disabled unless configured in firmware. */
+	priv->led_mode = -1;
 	/* Init LED polarity mode to -1 */
 	priv->led_polarity_mode = -1;
 
 	phydev->priv = priv;
+	qca808x_parse_dt(phydev);
+
+	wakeup_gpio = devm_gpiod_get_optional(dev, "wakeup", GPIOD_IN);
+	if (IS_ERR(wakeup_gpio))
+		return dev_err_probe(dev, PTR_ERR(wakeup_gpio),
+				     "failed to get wakeup GPIO\n");
+
+	if (wakeup_gpio) {
+		priv->wake_irq = gpiod_to_irq(wakeup_gpio);
+		if (priv->wake_irq < 0)
+			return dev_err_probe(dev, priv->wake_irq,
+					     "failed to map wakeup GPIO\n");
+
+		ret = devm_request_irq(dev, priv->wake_irq, qca808x_wake_irq,
+				       IRQF_TRIGGER_FALLING | IRQF_NO_AUTOEN,
+				       dev_name(dev), phydev);
+		if (ret)
+			return dev_err_probe(dev, ret,
+					     "failed to request wakeup IRQ\n");
+	}
+
+	if (qca808x_can_wakeup(phydev))
+		device_set_wakeup_capable(dev, true);
 
 	return 0;
+}
+
+static void qca808x_remove(struct phy_device *phydev)
+{
+	device_set_wakeup_enable(&phydev->mdio.dev, false);
+	qca808x_set_wake_irq(phydev, false);
 }
 
 static int qca808x_config_init(struct phy_device *phydev)
@@ -208,6 +360,10 @@ static int qca808x_config_init(struct phy_device *phydev)
 		if (ret)
 			return ret;
 	}
+
+	ret = qca808x_apply_led_mode(phydev);
+	if (ret)
+		return ret;
 
 	/* Active adc&vga on 802.3az for the link 1000M and 100M */
 	ret = phy_modify_mmd(phydev, MDIO_MMD_PCS, QCA808X_PHY_MMD3_ADDR_CLD_CTRL7,
@@ -408,6 +564,61 @@ static int qca808x_config_aneg(struct phy_device *phydev)
 		return ret;
 
 	return __genphy_config_aneg(phydev, ret);
+}
+
+static void qca808x_get_wol(struct phy_device *phydev,
+			    struct ethtool_wolinfo *wol)
+{
+	if (!qca808x_can_wakeup(phydev)) {
+		wol->supported = 0;
+		wol->wolopts = 0;
+		return;
+	}
+
+	at803x_get_wol(phydev, wol);
+}
+
+static int qca808x_set_wol(struct phy_device *phydev,
+			   struct ethtool_wolinfo *wol)
+{
+	struct device *dev = &phydev->mdio.dev;
+	struct qca808x_priv *priv = phydev->priv;
+	bool enable = wol->wolopts & WAKE_MAGIC;
+	int ret;
+
+	if (!qca808x_can_wakeup(phydev))
+		return -EOPNOTSUPP;
+
+	ret = at8031_set_wol(phydev, wol);
+	if (ret)
+		return ret;
+
+	ret = qca808x_set_wake_irq(phydev, enable);
+	if (ret)
+		return ret;
+
+	ret = device_set_wakeup_enable(dev, enable);
+	if (ret)
+		return ret;
+
+	priv->wolopts = wol->wolopts & WAKE_MAGIC;
+
+	return 0;
+}
+
+static int qca808x_resume(struct phy_device *phydev)
+{
+	struct qca808x_priv *priv = phydev->priv;
+	struct ethtool_wolinfo wol = {
+		.wolopts = priv->wolopts,
+	};
+	int ret;
+
+	ret = genphy_resume(phydev);
+	if (ret || !(priv->wolopts & WAKE_MAGIC))
+		return ret;
+
+	return at8031_set_wol(phydev, &wol);
 }
 
 static void qca808x_link_change_notify(struct phy_device *phydev)
@@ -650,16 +861,17 @@ static struct phy_driver qca808x_driver[] = {
 	.name			= "Qualcomm QCA8081",
 	.flags			= PHY_POLL_CABLE_TEST,
 	.probe			= qca808x_probe,
+	.remove			= qca808x_remove,
 	.config_intr		= at803x_config_intr,
 	.handle_interrupt	= at803x_handle_interrupt,
 	.get_tunable		= at803x_get_tunable,
 	.set_tunable		= at803x_set_tunable,
-	.set_wol		= at8031_set_wol,
-	.get_wol		= at803x_get_wol,
+	.set_wol		= qca808x_set_wol,
+	.get_wol		= qca808x_get_wol,
 	.get_features		= qca808x_get_features,
 	.config_aneg		= qca808x_config_aneg,
 	.suspend		= genphy_suspend,
-	.resume			= genphy_resume,
+	.resume			= qca808x_resume,
 	.read_status		= qca808x_read_status,
 	.config_init		= qca808x_config_init,
 	.soft_reset		= qca808x_soft_reset,
