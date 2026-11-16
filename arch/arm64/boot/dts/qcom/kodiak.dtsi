@@ -57,6 +57,10 @@
 		i2c13 = &i2c13;
 		i2c14 = &i2c14;
 		i2c15 = &i2c15;
+		i2c16 = &cci0_i2c0;
+		i2c17 = &cci0_i2c1;
+		i2c18 = &cci1_i2c0;
+		i2c19 = &cci1_i2c0;
 		mmc1 = &sdhc_1;
 		mmc2 = &sdhc_2;
 		spi0 = &spi0;
@@ -2230,6 +2234,8 @@
 			ranges = <0x01000000 0x0 0x00000000 0x0 0x60200000 0x0 0x100000>,
 				 <0x02000000 0x0 0x60300000 0x0 0x60300000 0x0 0x3d00000>;
 
+			msi-map = <0x0 &intc 0x0 0x1000>;
+
 			interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>,
@@ -2294,7 +2300,40 @@
 			pinctrl-0 = <&pcie0_clkreq_n>;
 			dma-coherent;
 
+			interconnects = <&aggre1_noc MASTER_PCIE_0 QCOM_ICC_TAG_ALWAYS
+					 &mc_virt SLAVE_EBI1 QCOM_ICC_TAG_ALWAYS>,
+					<&gem_noc MASTER_APPSS_PROC QCOM_ICC_TAG_ACTIVE_ONLY
+					 &cnoc2 SLAVE_PCIE_0 QCOM_ICC_TAG_ACTIVE_ONLY>;
+			interconnect-names = "pcie-mem", "cpu-pcie";
+
+			operating-points-v2 = <&pcie0_opp_table>;
+
 			status = "disabled";
+
+			pcie0_opp_table: opp-table {
+				compatible = "operating-points-v2";
+
+				/* GEN 1 x1 */
+				opp-2500000 {
+					opp-hz = /bits/ 64 <2500000>;
+					required-opps = <&rpmhpd_opp_low_svs>;
+					opp-peak-kBps = <250000 1>;
+				};
+
+				/* GEN 2 x1 */
+				opp-5000000 {
+					opp-hz = /bits/ 64 <5000000>;
+					required-opps = <&rpmhpd_opp_low_svs>;
+					opp-peak-kBps = <500000 1>;
+				};
+
+				/* GEN 3 x1 */
+				opp-8000000 {
+					opp-hz = /bits/ 64 <8000000>;
+					required-opps = <&rpmhpd_opp_nom>;
+					opp-peak-kBps = <984500 1>;
+				};
+			};
 
 			pcie0_port: pcie@0 {
 				device_type = "pci";
@@ -2358,6 +2397,8 @@
 			ranges = <0x01000000 0x0 0x00000000 0x0 0x40200000 0x0 0x100000>,
 				 <0x02000000 0x0 0x40300000 0x0 0x40300000 0x0 0x1fd00000>;
 
+			msi-map = <0x0 &intc 0x0 0x1000>;
+
 			interrupts = <GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>,
@@ -2417,7 +2458,15 @@
 			resets = <&gcc GCC_PCIE_1_BCR>;
 			reset-names = "pci";
 
+			interconnects = <&aggre1_noc MASTER_PCIE_1 QCOM_ICC_TAG_ALWAYS
+					 &mc_virt SLAVE_EBI1 QCOM_ICC_TAG_ALWAYS>,
+					<&gem_noc MASTER_APPSS_PROC QCOM_ICC_TAG_ACTIVE_ONLY
+					 &cnoc2 SLAVE_PCIE_1 QCOM_ICC_TAG_ACTIVE_ONLY>;
+			interconnect-names = "pcie-mem", "cpu-pcie";
+
 			power-domains = <&gcc GCC_PCIE_1_GDSC>;
+
+			operating-points-v2 = <&pcie1_opp_table>;
 
 			pinctrl-names = "default";
 			pinctrl-0 = <&pcie1_clkreq_n>;
@@ -2428,6 +2477,45 @@
 				    <0x100 &apps_smmu 0x1c81 0x0 0x1>;
 
 			status = "disabled";
+
+			pcie1_opp_table: opp-table {
+				compatible = "operating-points-v2";
+
+				/* GEN 1 x1 */
+				opp-2500000 {
+					opp-hz = /bits/ 64 <2500000>;
+					required-opps = <&rpmhpd_opp_low_svs>;
+					opp-peak-kBps = <250000 1>;
+				};
+
+				/* GEN 1 x2 and GEN 2 x1 */
+				opp-5000000 {
+					opp-hz = /bits/ 64 <5000000>;
+					required-opps = <&rpmhpd_opp_low_svs>;
+					opp-peak-kBps = <500000 1>;
+				};
+
+				/* GEN 2 x2 */
+				opp-10000000 {
+					opp-hz = /bits/ 64 <10000000>;
+					required-opps = <&rpmhpd_opp_low_svs>;
+					opp-peak-kBps = <1000000 1>;
+				};
+
+				/* GEN 3 x1 */
+				opp-8000000 {
+					opp-hz = /bits/ 64 <8000000>;
+					required-opps = <&rpmhpd_opp_nom>;
+					opp-peak-kBps = <984500 1>;
+				};
+
+				/* GEN 3 x2 */
+				opp-16000000 {
+					opp-hz = /bits/ 64 <16000000>;
+					required-opps = <&rpmhpd_opp_nom>;
+					opp-peak-kBps = <1969000 1>;
+				};
+			};
 
 			pcie1_port0: pcie@0 {
 				device_type = "pci";
@@ -4421,6 +4509,7 @@
 			phy-names = "usb2-phy";
 			maximum-speed = "high-speed";
 			usb-role-switch;
+			wakeup-source;
 
 			port {
 				usb2_role_switch: endpoint {
@@ -5027,6 +5116,8 @@
 
 			iommus = <&apps_smmu 0x2180 0x20>;
 			memory-region = <&video_mem>;
+
+			dma-coherent;
 
 			status = "disabled";
 
@@ -6900,6 +6991,9 @@
 			reg = <0 0x17a00000 0 0x10000>,     /* GICD */
 			      <0 0x17a60000 0 0x100000>;    /* GICR * 8 */
 			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_LOW>;
+			mbi-alias = <0x0 0x17a10000>;
+			mbi-ranges = <832 128>;
+			msi-controller;
 			#interrupt-cells = <3>;
 			interrupt-controller;
 			#address-cells = <2>;
@@ -7694,6 +7788,18 @@
 					type = "passive";
 				};
 
+				gpuss0_alert1: trip-point1 {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				gpuss0_alert2: trip-point2 {
+					temperature = <105000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpuss0_crit: gpuss0-crit {
 					temperature = <110000>;
 					hysteresis = <0>;
@@ -7704,6 +7810,16 @@
 			cooling-maps {
 				map0 {
 					trip = <&gpuss0_alert0>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map1 {
+					trip = <&gpuss0_alert1>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map2 {
+					trip = <&gpuss0_alert2>;
 					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
@@ -7721,6 +7837,18 @@
 					type = "passive";
 				};
 
+				gpuss1_alert1: trip-point1 {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				gpuss1_alert2: trip-point2 {
+					temperature = <105000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
 				gpuss1_crit: gpuss1-crit {
 					temperature = <110000>;
 					hysteresis = <0>;
@@ -7731,6 +7859,16 @@
 			cooling-maps {
 				map0 {
 					trip = <&gpuss1_alert0>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map1 {
+					trip = <&gpuss1_alert1>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+
+				map2 {
+					trip = <&gpuss1_alert2>;
 					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};

@@ -22,7 +22,9 @@
 #include "qcs6490-audioreach.dtsi"
 
 /delete-node/ &adsp_mem;
+/delete-node/ &adsp_rpc_remote_heap_mem;
 /delete-node/ &cdsp_mem;
+/delete-node/ &gpu_zap_mem;
 /delete-node/ &ipa_fw_mem;
 /delete-node/ &mpss_mem;
 /delete-node/ &remoteproc_mpss;
@@ -33,7 +35,6 @@
 /delete-node/ &wlan_ce_mem;
 /delete-node/ &wlan_fw_mem;
 /delete-node/ &wpss_mem;
-/delete-node/ &xbl_mem;
 
 / {
 	model = "Radxa Dragon Q6A";
@@ -111,6 +112,71 @@
 		};
 	};
 
+	usb3_con: connector {
+		compatible = "usb-a-connector";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				usb3_con_hs_in: endpoint {
+					remote-endpoint = <&usb_1_dwc3_hs>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				usb3_con_ss_in: endpoint {
+					remote-endpoint = <&usb_1_qmpphy_out_usb>;
+				};
+			};
+		};
+	};
+
+	hdmi-bridge {
+		compatible = "radxa,ra620";
+
+		pinctrl-0 = <&dp_hot_plug_det>;
+		pinctrl-names = "default";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				hdmi_bridge_in: endpoint {
+					remote-endpoint = <&usb_1_qmpphy_out_dp>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				hdmi_bridge_out: endpoint {
+					remote-endpoint = <&hdmi_connector_in>;
+				};
+			};
+		};
+	};
+
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "a";
+
+		port {
+			hdmi_connector_in: endpoint {
+				remote-endpoint = <&hdmi_bridge_out>;
+			};
+		};
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
@@ -119,52 +185,40 @@
 
 		user-led {
 			color = <LED_COLOR_ID_BLUE>;
-			function = LED_FUNCTION_INDICATOR;
+			function = LED_FUNCTION_STATUS;
 			gpios = <&tlmm 42 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "none";
-			default-state = "off";
-			panic-indicator;
+			linux,default-trigger = "heartbeat";
 		};
 	};
 
 	reserved-memory {
-		xbl_mem: xbl@80700000 {
-			reg = <0x0 0x80700000 0x0 0x100000>;
+		lpass_ml_mem: lpass-ml@81800000 {
+			reg = <0x0 0x81800000 0x0 0xf00000>;
 			no-map;
 		};
 
-		cdsp_secure_heap_mem: cdsp-secure-heap@81800000 {
-			reg = <0x0 0x81800000 0x0 0x1e00000>;
+		cdsp_secure_heap_mem: cdsp-secure-heap@82700000 {
+			reg = <0x0 0x82700000 0x0 0x10000>;
 			no-map;
 		};
 
-		camera_mem: camera@84300000 {
-			reg = <0x0 0x84300000 0x0 0x500000>;
+		video_mem: video@85b00000 {
+			reg = <0x0 0x85b00000 0x0 0x700000>;
 			no-map;
 		};
 
-		adsp_mem: adsp@84800000 {
-			reg = <0x0 0x84800000 0x0 0x2800000>;
+		adsp_mem: adsp@8b800000 {
+			reg = <0x0 0x8b800000 0x0 0x2800000>;
 			no-map;
 		};
 
-		cdsp_mem: cdsp@87000000 {
-			reg = <0x0 0x87000000 0x0 0x1e00000>;
+		cdsp_mem: cdsp@8e000000 {
+			reg = <0x0 0x8e000000 0x0 0x1e00000>;
 			no-map;
 		};
 
-		video_mem: video@88e00000 {
-			reg = <0x0 0x88e00000 0x0 0x700000>;
-			no-map;
-		};
-
-		cvp_mem: cvp@89500000 {
-			reg = <0x0 0x89500000 0x0 0x500000>;
-			no-map;
-		};
-
-		gpu_microcode_mem: gpu-microcode@89a00000 {
-			reg = <0x0 0x89a00000 0x0 0x2000>;
+		gpu_zap_mem: zap@90300000 {
+			reg = <0x0 0x90300000 0x0 0x5000>;
 			no-map;
 		};
 
@@ -184,12 +238,12 @@
 		};
 
 		trusted_apps_mem: trusted-apps@c1800000 {
-			reg = <0x0 0xc1800000 0x0 0x1c00000>;
+			reg = <0x0 0xc1800000 0x0 0x2200000>;
 			no-map;
 		};
 
-		debug_vm_mem: debug-vm@d0600000 {
-			reg = <0x0 0xd0600000 0x0 0x100000>;
+		adsp_rpc_remote_heap_mem: adsp-rpc-remote-heap@c6500000 {
+			reg = <0x0 0xc6500000 0x0 0x800000>;
 			no-map;
 		};
 	};
@@ -448,6 +502,9 @@
 			   <GCC_MSS_Q6SS_BOOT_CLK_SRC>,
 			   <GCC_MSS_Q6_MEMNOC_AXI_CLK>,
 			   <GCC_MSS_SNOC_AXI_CLK>,
+			   <GCC_QSPI_CNOC_PERIPH_AHB_CLK>,
+			   <GCC_QSPI_CORE_CLK>,
+			   <GCC_QSPI_CORE_CLK_SRC>,
 			   <GCC_SEC_CTRL_CLK_SRC>,
 			   <GCC_WPSS_AHB_BDG_MST_CLK>,
 			   <GCC_WPSS_AHB_CLK>,
@@ -468,24 +525,6 @@
 
 &gpu_zap_shader {
 	firmware-name = "qcom/qcs6490/a660_zap.mbn";
-};
-
-/* Pin 13, 15 in GPIO header */
-&i2c0 {
-	qcom,enable-gsi-dma;
-	status = "okay";
-};
-
-/* Pin 27, 28 in GPIO header */
-&i2c2 {
-	qcom,enable-gsi-dma;
-	status = "okay";
-};
-
-/* Pin 3, 5 in GPIO header */
-&i2c6 {
-	qcom,enable-gsi-dma;
-	status = "okay";
 };
 
 &i2c10 {
@@ -525,6 +564,21 @@
 	status = "okay";
 };
 
+&mdss {
+	status = "okay";
+};
+
+&mdss_dp {
+	sound-name-prefix = "Display Port0";
+
+	status = "okay";
+};
+
+&mdss_dp_out {
+	data-lanes = <0 1>;
+	remote-endpoint = <&usb_dp_qmpphy_dp_in>;
+};
+
 &pcie0 {
 	pinctrl-0 = <&pcie0_clkreq_n>, <&pcie0_reset_n>, <&pcie0_wake_n>;
 	pinctrl-names = "default";
@@ -548,16 +602,36 @@
 	pinctrl-0 = <&pcie1_clkreq_n>, <&pcie1_reset_n>, <&pcie1_wake_n>;
 	pinctrl-names = "default";
 
-	/* Support for QPS615 PCIe switch */
+	/*
+	* Support for many different bus topologies
+	* Tested devices:
+	* - QPS615 PCIe switch
+	* - ASM1182e PCIe switch
+	* - ASM2824 PCIe switch
+	* - NVIDIA dGPU
+	* - Chelsio T520-CR
+	*/
 	iommu-map = <0x0 &apps_smmu 0x1c80 0x0 0x1>,
-		    <0x100 &apps_smmu 0x1c81 0x0 0x1>,
-		    <0x208 &apps_smmu 0x1c84 0x0 0x1>,
-		    <0x210 &apps_smmu 0x1c85 0x0 0x1>,
-		    <0x218 &apps_smmu 0x1c86 0x0 0x1>,
-		    <0x300 &apps_smmu 0x1c87 0x0 0x1>,
-		    <0x400 &apps_smmu 0x1c88 0x0 0x1>,
-		    <0x500 &apps_smmu 0x1c89 0x0 0x1>,
-		    <0x501 &apps_smmu 0x1c90 0x0 0x1>;
+			<0x100 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x101 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x102 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x103 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x104 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x105 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x106 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x200 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x208 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x210 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x218 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x220 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x238 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x240 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x260 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x300 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x400 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x500 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x501 &apps_smmu 0x1c80 0x0 0x1>,
+			<0x600 &apps_smmu 0x1c80 0x0 0x1>;
 
 	status = "okay";
 };
@@ -575,10 +649,24 @@
 };
 
 &pm7325_gpios {
-	pm7325_adc_default: adc-default-state {
-		pins = "gpio2";
+	pinctrl-0 = <&hardware_version_sel>;
+	pinctrl-names = "default";
+	gpio-line-names = "",	/* GPIO_01 */
+			  "UFS_THERM",
+			  "Version_ADC",
+			  "",
+			  "",
+			  "KYPD_VOL_UP_N",
+			  "Version_SEL",
+			  "",
+			  "MICRO USB DET",
+			  "";
+
+	hardware_version_sel: hardware-version-sel-state {
+		pins = "gpio7";
 		function = PMIC_GPIO_FUNC_NORMAL;
 		bias-high-impedance;
+		power-source = <1>;
 	};
 };
 
@@ -620,9 +708,6 @@
 };
 
 &pmk8350_vadc {
-	pinctrl-0 = <&pm7325_adc_default>;
-	pinctrl-names = "default";
-
 	channel@3 {
 		reg = <PMK8350_ADC7_DIE_TEMP>;
 		label = "pmk7325_die_temp";
@@ -641,6 +726,13 @@
 		reg = <PM7325_ADC7_DIE_TEMP>;
 		label = "pm7325_die_temp";
 		qcom,pre-scaling = <1 1>;
+	};
+
+	channel@10b {
+		reg = <PM7325_ADC7_GPIO2>;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+		label = "hardware_version_adc";
 	};
 
 	channel@144 {
@@ -673,28 +765,6 @@
 	status = "okay";
 };
 
-&qspi {
-	/* It's not possible to use QSPI with iommu */
-	/* due to an error in qcom_smmu_write_s2cr */
-	/delete-property/ iommus;
-
-	pinctrl-0 = <&qspi_clk>, <&qspi_cs0>, <&qspi_data0>,
-				<&qspi_data1>, <&qspi_data23>;
-	pinctrl-1 = <&qspi_sleep>;
-	pinctrl-names = "default", "sleep";
-
-	status = "okay";
-
-	spi_flash: flash@0 {
-		compatible = "winbond,w25q256", "jedec,spi-nor";
-		reg = <0>;
-
-		spi-max-frequency = <104000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
-	};
-};
-
 &qupv3_id_0 {
 	firmware-name = "qcom/qcm6490/qupv3fw.elf";
 	status = "okay";
@@ -711,7 +781,7 @@
 };
 
 &remoteproc_cdsp {
-	firmware-name = "qcom/qcs6490/cdsp.mbn";
+	firmware-name = "qcom/qcs6490/radxa/dragon-q6a/cdsp.mbn";
 	status = "okay";
 };
 
@@ -746,6 +816,22 @@
 			"AMIC2", "MIC BIAS2",
 			"TX SWR_ADC1", "ADC2_OUTPUT";
 
+	dp0-dai-link {
+		link-name = "DP0 Playback";
+
+		codec {
+			sound-dai = <&mdss_dp>;
+		};
+
+		cpu {
+			sound-dai = <&q6apmbedai DISPLAY_PORT_RX_0>;
+		};
+
+		platform {
+			sound-dai = <&q6apm>;
+		};
+	};
+
 	wcd-playback-dai-link {
 		link-name = "WCD Playback";
 
@@ -779,24 +865,6 @@
 	};
 };
 
-/* Pin 11, 29, 31, 32 in GPIO header */
-&spi7 {
-	qcom,enable-gsi-dma;
-	status = "okay";
-};
-
-/* Pin 19, 21, 23, 24, 26 in GPIO header */
-&spi12 {
-	qcom,enable-gsi-dma;
-	status = "okay";
-};
-
-/* Pin 22, 33, 36, 37 in GPIO header */
-&spi14 {
-	qcom,enable-gsi-dma;
-	status = "okay";
-};
-
 &swr0 {
 	status = "okay";
 
@@ -818,6 +886,10 @@
 };
 
 &tlmm {
+	/*
+	 * 12-17: reserved for QSPI flash
+	 */
+	gpio-reserved-ranges = <12 6>;
 	gpio-line-names =
 		/* GPIO_0 ~ GPIO_3 */
 		"PIN_13", "PIN_15", "", "",
@@ -832,7 +904,7 @@
 		/* GPIO_20 ~ GPIO_23 */
 		"", "", "PIN_8", "PIN_10",
 		/* GPIO_24 ~ GPIO_27 */
-		"PIN_3", "PIN_5", "PIN_16", "PIN_27",
+		"PIN_3", "PIN_5", "PIN_16", "PIN_18",
 		/* GPIO_28 ~ GPIO_31 */
 		"PIN_31", "PIN_11", "PIN_32", "PIN_29",
 		/* GPIO_32 ~ GPIO_35 */
@@ -936,12 +1008,6 @@
 		bias-pull-up;
 	};
 
-	qspi_sleep: qspi-sleep-state {
-		pins = "gpio12", "gpio13", "gpio14", "gpio15", "gpio16", "gpio17";
-		function = "gpio";
-		output-disable;
-	};
-
 	sd_cd: sd-cd-state {
 		pins = "gpio91";
 		function = "gpio";
@@ -965,6 +1031,83 @@
 
 &uart5 {
 	status = "okay";
+};
+
+&ufs_mem_hc {
+	reset-gpios = <&tlmm 175 GPIO_ACTIVE_LOW>;
+	vcc-supply = <&vreg_l7b_2p96>;
+	vcc-max-microamp = <800000>;
+	vccq-supply = <&vreg_l9b_1p2>;
+	vccq-max-microamp = <900000>;
+	/* VDD_PX10 (L23), shared with UFS VCCQ on the Q6A schematic. */
+	vdd-hba-supply = <&vreg_l9b_1p2>;
+	vccq2-supply = <&vreg_l9b_1p2>;
+	vccq2-max-microamp = <1300000>;
+
+	/* Gear-4 Rate-B is unstable due to board */
+	/* and UFS module design limitations */
+	limit-gear-rate = "rate-a";
+
+	status = "okay";
+};
+
+&ufs_mem_phy {
+	vdda-phy-supply = <&vreg_l10c_0p88>;
+	vdda-pll-supply = <&vreg_l6b_1p2>;
+
+	status = "okay";
+};
+
+&usb_1 {
+	dr_mode = "host";
+
+	status = "okay";
+};
+
+&usb_1_dwc3_hs {
+	remote-endpoint = <&usb3_con_hs_in>;
+};
+
+&usb_1_hsphy {
+	vdda-pll-supply = <&vreg_l10c_0p88>;
+	vdda33-supply = <&vreg_l2b_3p072>;
+	vdda18-supply = <&vreg_l1c_1p8>;
+
+	status = "okay";
+};
+
+&usb_1_qmpphy {
+	vdda-phy-supply = <&vreg_l6b_1p2>;
+	vdda-pll-supply = <&vreg_l1b_0p912>;
+
+	/delete-property/ orientation-switch;
+
+	status = "okay";
+
+	ports {
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/delete-node/ endpoint;
+
+			/* RX0/TX0 is statically connected to RA620 bridge */
+			usb_1_qmpphy_out_dp: endpoint@0 {
+				reg = <0>;
+
+				data-lanes = <0 1>;
+				remote-endpoint = <&hdmi_bridge_in>;
+			};
+
+			/* RX1/TX1 is statically connected to USB-A port */
+			usb_1_qmpphy_out_usb: endpoint@1 {
+				reg = <1>;
+
+				data-lanes = <2 3>;
+				remote-endpoint = <&usb3_con_ss_in>;
+			};
+		};
+	};
 };
 
 &usb_2 {
@@ -1029,10 +1172,17 @@
 };
 
 &venus {
+	firmware-name = "qcom/vpu/vpu20_p1_gen2_s6.mbn";
+	memory-region = <&video_mem>;
+
 	status = "okay";
 };
 
 /* PINCTRL - additions to nodes defined in sc7280.dtsi */
+&dp_hot_plug_det {
+	bias-disable;
+};
+
 &pcie0_clkreq_n {
 	bias-pull-up;
 	drive-strength = <2>;
@@ -1041,31 +1191,6 @@
 &pcie1_clkreq_n {
 	bias-pull-up;
 	drive-strength = <2>;
-};
-
-&qspi_clk {
-	bias-disable;
-	drive-strength = <16>;
-};
-
-&qspi_cs0 {
-	bias-disable;
-	drive-strength = <8>;
-};
-
-&qspi_data0 {
-	bias-disable;
-	drive-strength = <8>;
-};
-
-&qspi_data1 {
-	bias-disable;
-	drive-strength = <8>;
-};
-
-&qspi_data23 {
-	bias-disable;
-	drive-strength = <8>;
 };
 
 &sdc1_clk {

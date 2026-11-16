@@ -280,6 +280,11 @@
 	};
 
 	reserved-memory {
+		pil_video_mem: video-region@86700000 {
+			reg = <0 0x86700000 0 0x500000>;
+			no-map;
+		};
+
 		linux,cma {
 			compatible = "shared-dma-pool";
 			size = <0x0 0x8000000>;
@@ -935,7 +940,7 @@
 
 &iris {
 	firmware-name = "qcom/sc8280xp/LENOVO/21BX/qcvss8280.mbn";
-
+	memory-region = <&pil_video_mem>;
 	status = "okay";
 };
 
@@ -1327,9 +1332,6 @@
 };
 
 &uart2 {
-	pinctrl-0 = <&uart2_default>;
-	pinctrl-names = "default";
-
 	status = "okay";
 
 	bluetooth {
@@ -1755,34 +1757,6 @@
 		reset-n-pins {
 			pins = "gpio99";
 			function = "gpio";
-			drive-strength = <2>;
-			bias-disable;
-		};
-	};
-
-	uart2_default: uart2-default-state {
-		cts-pins {
-			pins = "gpio121";
-			function = "qup2";
-			bias-bus-hold;
-		};
-
-		rts-pins {
-			pins = "gpio122";
-			function = "qup2";
-			drive-strength = <2>;
-			bias-disable;
-		};
-
-		rx-pins {
-			pins = "gpio124";
-			function = "qup2";
-			bias-pull-up;
-		};
-
-		tx-pins {
-			pins = "gpio123";
-			function = "qup2";
 			drive-strength = <2>;
 			bias-disable;
 		};

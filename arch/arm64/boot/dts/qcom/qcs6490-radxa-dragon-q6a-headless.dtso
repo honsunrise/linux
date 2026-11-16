@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Optional headless Q6A policy: do not probe unused audio components.
+ * Pair with radxa_q6a_headless.config for the GPU-only MSM kernel profile.
+ * Keep the generic board's display, KVM and power-supply descriptions intact.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "radxa,dragon-q6a", "qcom,qcm6490";
+};
+
+&sound {
+	status = "disabled";
+};
+
+&wcd938x {
+	status = "disabled";
+};
+
+&q6apm {
+	status = "disabled";
+};

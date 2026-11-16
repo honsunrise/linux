@@ -176,7 +176,14 @@ dtb-$(CONFIG_ARCH_QCOM)	+= qcs615-ride.dtb
 qcs615-ride-el2-dtbs := qcs615-ride.dtb talos-el2.dtbo
 
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs615-ride-el2.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-cm-q64-rpi-cm5-io.dtb
+qcs6490-radxa-cm-q64-rpi-cm5-io-kvm-dtbs	:= qcs6490-radxa-cm-q64-rpi-cm5-io.dtb qcs6490-radxa-cm-q64-rpi-cm5-io-kvm.dtbo
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-cm-q64-rpi-cm5-io-kvm.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a.dtb
+qcs6490-radxa-dragon-q6a-kvm-dtbs	:= qcs6490-radxa-dragon-q6a.dtb qcs6490-radxa-dragon-q6a-kvm.dtbo
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a-kvm.dtb
+qcs6490-radxa-dragon-q6a-kvm-headless-dtbs := qcs6490-radxa-dragon-q6a.dtb qcs6490-radxa-dragon-q6a-kvm.dtbo qcs6490-radxa-dragon-q6a-headless.dtbo
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-radxa-dragon-q6a-kvm-headless.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs6490-rb3gen2.dtb
 
 qcs6490-rb3gen2-vision-mezzanine-dtbs := qcs6490-rb3gen2.dtb qcs6490-rb3gen2-vision-mezzanine.dtbo
@@ -299,6 +306,8 @@ sc8280xp-microsoft-arcata-el2-dtbs	:= sc8280xp-microsoft-arcata.dtb sc8280xp-el2
 dtb-$(CONFIG_ARCH_QCOM)	+= sc8280xp-microsoft-arcata.dtb sc8280xp-microsoft-arcata-el2.dtb
 sc8280xp-microsoft-blackrock-el2-dtbs	:= sc8280xp-microsoft-blackrock.dtb sc8280xp-el2.dtbo
 dtb-$(CONFIG_ARCH_QCOM)	+= sc8280xp-microsoft-blackrock.dtb sc8280xp-microsoft-blackrock-el2.dtb
+sc8280xp-radxa-dragon-q8b-el2-dtbs	:= sc8280xp-radxa-dragon-q8b.dtb sc8280xp-el2.dtbo
+dtb-$(CONFIG_ARCH_QCOM)	+= sc8280xp-radxa-dragon-q8b.dtb sc8280xp-radxa-dragon-q8b-el2.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sda660-inforce-ifc6560.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sdm450-lenovo-tbx605f.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sdm450-motorola-ali.dtb
