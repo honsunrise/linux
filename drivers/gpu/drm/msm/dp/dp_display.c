@@ -234,6 +234,7 @@ static void msm_dp_display_unbind(struct device *dev, struct device *master,
 
 	of_dp_aux_depopulate_bus(dp->aux);
 
+	drm_dp_cec_unregister_connector(dp->aux);
 	msm_dp_aux_unregister(dp->aux);
 	dp->drm_dev = NULL;
 	dp->aux->drm_dev = NULL;
@@ -283,7 +284,10 @@ static int msm_dp_display_process_hpd_high(struct msm_dp_display_private *dp)
 	drm_edid = drm_edid_read_ddc(connector, &dp->aux->ddc);
 	drm_edid_connector_update(connector, drm_edid);
 
-	if (!drm_edid) {
+	if (drm_edid) {
+		drm_dp_cec_attach(dp->aux, info->source_physical_address);
+	} else {
+		drm_dp_cec_unset_edid(dp->aux);
 		DRM_ERROR("panel edid read failed\n");
 		/* check edid read fail is due to unplug */
 		if (!msm_dp_aux_is_link_connected(dp->aux))
@@ -450,6 +454,7 @@ static int msm_dp_hpd_unplug_handle(struct msm_dp_display_private *dp)
 {
 	struct platform_device *pdev = dp->msm_dp_display.pdev;
 
+	drm_dp_cec_unset_edid(dp->aux);
 	dp->panel->video_test = false;
 
 	msm_dp_aux_enable_xfers(dp->aux, false);
@@ -515,6 +520,7 @@ static int msm_dp_irq_hpd_handle(struct msm_dp_display_private *dp)
 		else
 			rc = msm_dp_display_handle_irq_hpd(dp);
 	}
+	drm_dp_cec_irq(dp->aux);
 
 	drm_dbg_dp(dp->drm_dev, "After, type=%d, sink_count=%d\n",
 			dp->msm_dp_display.connector_type,
@@ -740,6 +746,48 @@ static int msm_dp_display_disable(struct msm_dp_display_private *dp,
 	return 0;
 }
 
+static const struct msm_dp_bridge_mode_filter {
+	const char *compatible;
+	u32 max_pixels;
+	u32 max_vrefresh;
+} msm_dp_bridge_mode_filters[] = {
+	{ "radxa,dragon-q6a", 3440 * 1440, 30 },
+	{}
+};
+
+static bool msm_dp_bridge_mode_filter_valid(const struct drm_display_mode *mode)
+{
+	const struct msm_dp_bridge_mode_filter *filter;
+	struct device_node *np;
+	int vrefresh;
+	u32 pixels;
+
+	np = of_find_node_by_path("/");
+	if (!np)
+		return true;
+
+	pixels = mode->hdisplay * mode->vdisplay;
+	vrefresh = drm_mode_vrefresh(mode);
+
+	for (filter = msm_dp_bridge_mode_filters; filter->compatible; filter++) {
+		if (!of_device_is_compatible(np, filter->compatible))
+			continue;
+
+		if (pixels <= filter->max_pixels ||
+		    vrefresh <= filter->max_vrefresh)
+			continue;
+
+		DRM_INFO("mode filtered by %s: %ux%u@%u\n",
+			 filter->compatible, mode->hdisplay,
+			 mode->vdisplay, vrefresh);
+		of_node_put(np);
+		return false;
+	}
+
+	of_node_put(np);
+	return true;
+}
+
 /**
  * msm_dp_display_mode_valid - callback to determine if specified mode is valid
  * @dp: Pointer to dp display structure
@@ -795,6 +843,9 @@ enum drm_mode_status msm_dp_display_mode_valid(struct msm_dp *dp,
 	supported_rate_khz = link_info->num_lanes * link_info->rate * 8;
 
 	if (mode_rate_khz > supported_rate_khz)
+		return MODE_BAD;
+
+	if (!msm_dp_bridge_mode_filter_valid(mode))
 		return MODE_BAD;
 
 	return MODE_OK;
@@ -1325,6 +1376,8 @@ static struct platform_driver msm_dp_display_driver = {
 		.suppress_bind_attrs = true,
 		.pm = &msm_dp_pm_ops,
 	},
+	/* Apply clock parents after PHY is fully initialized */
+	.driver_managed_clk_defaults = true,
 };
 
 int __init msm_dp_register(void)
@@ -1402,6 +1455,7 @@ int msm_dp_modeset_init(struct msm_dp *msm_dp_display, struct drm_device *dev,
 	}
 
 	msm_dp_priv->panel->connector = msm_dp_display->connector;
+	drm_dp_cec_register_connector(msm_dp_priv->aux, msm_dp_display->connector);
 
 	return 0;
 }

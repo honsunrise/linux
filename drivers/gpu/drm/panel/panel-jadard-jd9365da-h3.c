@@ -93,6 +93,21 @@ static int jadard_disable(struct drm_panel *panel)
 	return dsi_ctx.accum_err;
 }
 
+static int jadard_enable(struct drm_panel *panel)
+{
+	struct jadard *jadard = panel_to_jadard(panel);
+	int ret;
+
+	msleep(10);
+
+	ret = jadard->desc->init(jadard);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+
 static int jadard_prepare(struct drm_panel *panel)
 {
 	struct jadard *jadard = panel_to_jadard(panel);
@@ -126,10 +141,6 @@ static int jadard_prepare(struct drm_panel *panel)
 
 	gpiod_set_value_cansleep(jadard->reset, 0);
 	msleep(130);
-
-	ret = jadard->desc->init(jadard);
-	if (ret)
-		return ret;
 
 	return 0;
 }
@@ -175,6 +186,7 @@ static const struct drm_panel_funcs jadard_funcs = {
 	.disable = jadard_disable,
 	.unprepare = jadard_unprepare,
 	.prepare = jadard_prepare,
+	.enable = jadard_enable,
 	.get_modes = jadard_get_modes,
 	.get_orientation = jadard_panel_get_orientation,
 };
@@ -365,17 +377,17 @@ static int radxa_display_8hd_ad002_init_cmds(struct jadard *jadard)
 
 static const struct jadard_panel_desc radxa_display_8hd_ad002_desc = {
 	.mode_4ln = &(const struct drm_display_mode) {
-		.clock		= 70000,
+		.clock		= 71804,
 
 		.hdisplay	= 800,
 		.hsync_start	= 800 + 40,
 		.hsync_end	= 800 + 40 + 18,
-		.htotal		= 800 + 40 + 18 + 20,
+		.htotal		= 800 + 40 + 18 + 40,
 
 		.vdisplay	= 1280,
 		.vsync_start	= 1280 + 20,
 		.vsync_end	= 1280 + 20 + 4,
-		.vtotal		= 1280 + 20 + 4 + 20,
+		.vtotal		= 1280 + 20 + 4 + 30,
 
 		.width_mm	= 127,
 		.height_mm	= 199,

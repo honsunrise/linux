@@ -59,7 +59,7 @@ u8 msm_dp_utils_calculate_parity(u32 data)
 	u8 iData = 0;
 	u8 i = 0;
 	u8 parity_byte;
-	u8 num_byte = (data & 0xFF00) > 0 ? 8 : 2;
+	u8 num_byte = data > 0xFF ? 8 : 2;
 
 	for (i = 0; i < num_byte; i++) {
 		iData = (data >> i * 4) & 0xF;
@@ -74,7 +74,8 @@ u8 msm_dp_utils_calculate_parity(u32 data)
 	return parity_byte;
 }
 
-void msm_dp_utils_pack_sdp_header(struct dp_sdp_header *sdp_header, u32 header_buff[2])
+void msm_dp_utils_pack_sdp_header(const struct dp_sdp_header *sdp_header,
+				  u32 header_buff[2])
 {
 	header_buff[0] = FIELD_PREP(HEADER_0_MASK, sdp_header->HB0) |
 		FIELD_PREP(PARITY_0_MASK, msm_dp_utils_calculate_parity(sdp_header->HB0)) |
