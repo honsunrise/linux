@@ -245,6 +245,7 @@ struct plat_stmmacenet_data {
 	struct stmmac_mdio_bus_data *mdio_bus_data;
 	struct device_node *phy_node;
 	struct device_node *mdio_node;
+	struct device *dma_device;
 	struct stmmac_dma_cfg *dma_cfg;
 	struct stmmac_safety_feature_cfg *safety_feat_cfg;
 	int clk_csr;
@@ -263,6 +264,8 @@ struct plat_stmmacenet_data {
 	int unicast_filter_entries;
 	int tx_fifo_size;
 	int rx_fifo_size;
+	/* Minimum free RX FIFO space when hardware flow control is asserted. */
+	unsigned int rx_fifo_flow_ctrl_headroom;
 	u8 host_dma_width;
 	u8 rx_queues_to_use;
 	u8 tx_queues_to_use;

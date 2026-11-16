@@ -3,6 +3,8 @@
 
 obj-y				+= media/
 obj-$(CONFIG_RTL8723BS)		+= rtl8723bs/
+obj-$(CONFIG_RTL8733BS)		+= rtl8733bs/
+obj-$(CONFIG_RTK_BTSDIO)		+= rtk-btsdio/
 obj-$(CONFIG_OCTEON_ETHERNET)	+= octeon/
 obj-$(CONFIG_VME_BUS)		+= vme_user/
 obj-$(CONFIG_IIO)		+= iio/
@@ -13,3 +15,4 @@ obj-$(CONFIG_MOST)		+= most/
 obj-$(CONFIG_GREYBUS)		+= greybus/
 obj-$(CONFIG_BCM2835_VCHIQ)	+= vc04_services/
 obj-$(CONFIG_XIL_AXIS_FIFO)	+= axis-fifo/
+obj-y				+= sophgo/
