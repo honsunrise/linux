@@ -931,6 +931,21 @@ int pwrseq_enable(struct pwrseq_desc *desc)
 EXPORT_SYMBOL_GPL(pwrseq_enable);
 
 /**
+ * pwrseq_get_state() - Query the last requested state of the power sequencer.
+ * @desc: Descriptor referencing the power sequencer.
+ *
+ * Return: PWRSEQ_STATE_ON or PWRSEQ_STATE_OFF, or -EINVAL without a descriptor.
+ */
+int pwrseq_get_state(struct pwrseq_desc *desc)
+{
+	if (!desc)
+		return -EINVAL;
+
+	return desc->powered_on ? PWRSEQ_STATE_ON : PWRSEQ_STATE_OFF;
+}
+EXPORT_SYMBOL_GPL(pwrseq_get_state);
+
+/**
  * pwrseq_disable() - Issue a power-off request on behalf of the consumer
  *                      device.
  * @desc: Descriptor referencing the power sequencer.

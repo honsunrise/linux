@@ -225,7 +225,8 @@ static void dwc2_set_cv1800_params(struct dwc2_hsotg *hsotg)
 	p->otg_caps.hnp_support = false;
 	p->otg_caps.srp_support = false;
 	p->host_dma = false;
-	p->g_dma = false;
+	p->g_dma = true;
+	p->g_dma_desc = false;	/* descriptor DMA stalls dev->host NCM TCP */
 	p->speed = DWC2_SPEED_PARAM_HIGH;
 	p->phy_type = DWC2_PHY_TYPE_PARAM_UTMI;
 	p->phy_utmi_width = 16;
