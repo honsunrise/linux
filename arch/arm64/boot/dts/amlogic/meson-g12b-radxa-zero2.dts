@@ -14,6 +14,7 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/gpio/meson-g12a-gpio.h>
 #include <dt-bindings/sound/meson-g12a-tohdmitx.h>
+#include <dt-bindings/usb/pd.h>
 
 / {
 	compatible = "radxa,zero2", "amlogic,a311d", "amlogic,g12b";
@@ -63,7 +64,7 @@
 
 	hdmi-connector {
 		compatible = "hdmi-connector";
-		type = "a";
+		type = "d";
 
 		port {
 			hdmi_connector_in: endpoint {
@@ -167,6 +168,19 @@
 		regulator-always-on;
 	};
 
+	ao_5v_b: regulator-ao-5v-b {
+		compatible = "regulator-fixed";
+		regulator-name = "AO_5V_B";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-0 = <&typec_vbus_en>;
+		pinctrl-names = "default";
+		vin-supply = <&ao_5v>;
+
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		enable-active-high;
+	};
+
 	sound {
 		compatible = "amlogic,axg-sound-card";
 		model = "RADXA-ZERO2";
@@ -220,6 +234,20 @@
 
 			codec {
 				sound-dai = <&hdmi_tx>;
+			};
+		};
+	};
+
+	usb-sbu-mux {
+		compatible = "gpio-sbu-mux";
+		select-gpios = <&gpio GPIOC_7 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		pinctrl-0 = <&usb_sbu_default>;
+		pinctrl-names = "default";
+		orientation-switch;
+
+		port {
+			usb0_sbu_mux: endpoint {
+				remote-endpoint = <&ucsi0_sbu>;
 			};
 		};
 	};
@@ -281,7 +309,7 @@
 &cpu_thermal {
 	trips {
 		cpu_active: cpu-active {
-			temperature = <70000>; /* millicelsius */
+			temperature = <60000>; /* millicelsius */
 			hysteresis = <2000>; /* millicelsius */
 			type = "active";
 		};
@@ -311,7 +339,7 @@
 	gpio-line-names =
 		/* GPIOZ */
 		"PIN_27", "PIN_28", "PIN_7", "PIN_11", "PIN_13", "PIN_15", "PIN_18", "PIN_40",
-		"", "", "", "", "", "", "", "",
+		"PIN_16", "PIN_22", "", "", "", "", "", "",
 		/* GPIOH */
 		"", "", "", "", "PIN_19", "PIN_21", "PIN_24", "PIN_23",
 		"",
@@ -319,10 +347,10 @@
 		"", "", "", "", "", "", "", "",
 		"", "", "", "", "EMMC_PWRSEQ", "", "", "",
 		/* GPIOC */
-		"", "", "", "", "", "", "SD_CD", "PIN_36",
+		"", "", "", "", "", "", "SD_CD", "",
 		/* GPIOA */
-		"PIN_32", "PIN_12", "PIN_35", "", "", "PIN_38", "", "",
-		"", "", "", "", "LED_GREEN", "PIN_31", "PIN_3", "PIN_5",
+		"PIN_32", "PIN_12", "PIN_35", "PIN_36", "PIN_31", "PIN_38", "", "",
+		"", "", "", "", "LED_GREEN", "", "PIN_3", "PIN_5",
 		/* GPIOX */
 		"", "", "", "", "", "", "SDIO_PWRSEQ", "",
 		"", "", "", "", "", "", "", "",
@@ -351,25 +379,75 @@
 	};
 };
 
-/* Also exposed on the 40-pin header: SDA pin 3, SCL pin 5 */
+&dwc3 {
+	port {
+		usb_dwc2_out: endpoint@0 {
+			remote-endpoint = <&ucsi0_hs_in>;
+		};
+
+		usb_dwc3_out: endpoint@1 {
+			remote-endpoint = <&ucsi0_ss_in>;
+		};
+	};
+};
+
 &i2c3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&i2c3_sda_a_pins>, <&i2c3_sck_a_pins>;
 	pinctrl-names = "default";
 	status = "okay";
 
-	fusb0: typec-portc@22 {
+	fusb302@22 {
 		compatible = "fcs,fusb302";
 		reg = <0x22>;
 
 		pinctrl-0 = <&fusb302_irq_pins>;
 		pinctrl-names = "default";
 		interrupt-parent = <&gpio_intc>;
-		interrupts = <74 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <IRQID_GPIOA_13 IRQ_TYPE_LEVEL_LOW>;
 
-		vbus-supply = <&ao_5v>;
+		vbus-supply = <&ao_5v_b>;
 
-		connector {
+		status = "okay";
+
+		usb_con: connector {
 			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "host";
+			/* fusb302 supports PD Rev 2.0 Ver 1.2 */
+			pd-revision = /bits/ 8 <0x2 0x0 0x1 0x2>;
+			power-role = "source";
+			source-pdos = <PDO_FIXED(5000, 1500, PDO_FIXED_USB_COMM)>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					ucsi0_hs_in: endpoint {
+						remote-endpoint = <&usb_dwc2_out>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					ucsi0_ss_in: endpoint {
+						remote-endpoint = <&usb_dwc3_out>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+
+					ucsi0_sbu: endpoint {
+						remote-endpoint = <&usb0_sbu_mux>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -378,17 +456,6 @@
 	status = "disabled";
 	pinctrl-0 = <&remote_input_ao_pins>;
 	pinctrl-names = "default";
-};
-
-&periphs_pinctrl {
-	fusb302_irq_pins: fusb302-irq {
-		mux {
-			groups = "GPIOA_13";
-			function = "gpio_periphs";
-			bias-pull-up;
-			output-disable;
-		};
-	};
 };
 
 &pwm_ab {
@@ -435,7 +502,8 @@
 
 	bus-width = <4>;
 	cap-sd-highspeed;
-	max-frequency = <100000000>;
+	sd-uhs-sdr104;
+	max-frequency = <200000000>;
 
 	non-removable;
 	disable-wp;
@@ -525,4 +593,35 @@
 
 &usb {
 	status = "okay";
+};
+
+&periphs_pinctrl {
+	/*
+	 * Make sure the irq pin of the TYPE C controller is not driven
+	 * by the SoC.
+	 */
+	fusb302_irq_pins: fusb302_irq {
+		mux {
+			groups = "GPIOA_13";
+			function = "gpio_periphs";
+			bias-pull-up;
+			output-disable;
+		};
+	};
+
+	usb_sbu_default: usb0-sbu-state {
+		mux {
+			groups = "GPIOC_7";
+			function = "gpio_periphs";
+			bias-disable;
+		};
+	};
+
+	typec_vbus_en: typec-vbus-en {
+		mux {
+			groups = "GPIOH_8";
+			function = "gpio_periphs";
+			bias-disable;
+		};
+	};
 };

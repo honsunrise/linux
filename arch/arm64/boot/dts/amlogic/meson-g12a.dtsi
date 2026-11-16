@@ -27,6 +27,7 @@
 			#cooling-cells = <2>;
 			operating-points-v2 = <&cpu_opp_table>;
 			clocks = <&clkc CLKID_CPU_CLK>;
+			dynamic-power-coefficient = <140>;
 		};
 
 		cpu1: cpu@1 {
@@ -44,6 +45,7 @@
 			#cooling-cells = <2>;
 			operating-points-v2 = <&cpu_opp_table>;
 			clocks = <&clkc CLKID_CPU_CLK>;
+			dynamic-power-coefficient = <140>;
 		};
 
 		cpu2: cpu@2 {
@@ -61,6 +63,7 @@
 			#cooling-cells = <2>;
 			operating-points-v2 = <&cpu_opp_table>;
 			clocks = <&clkc CLKID_CPU_CLK>;
+			dynamic-power-coefficient = <140>;
 		};
 
 		cpu3: cpu@3 {
@@ -78,6 +81,7 @@
 			#cooling-cells = <2>;
 			operating-points-v2 = <&cpu_opp_table>;
 			clocks = <&clkc CLKID_CPU_CLK>;
+			dynamic-power-coefficient = <140>;
 		};
 
 		l2: l2-cache0 {
@@ -102,27 +106,27 @@
 
 		opp-1200000000 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <761000>;
 		};
 
 		opp-1398000000 {
 			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <761000>;
+			opp-microvolt = <791000>;
 		};
 
 		opp-1512000000 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <791000>;
+			opp-microvolt = <831000>;
 		};
 
 		opp-1608000000 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <831000>;
+			opp-microvolt = <871000>;
 		};
 
 		opp-1704000000 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <861000>;
+			opp-microvolt = <921000>;
 		};
 
 		opp-1800000000 {
