@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/power/reset/cvitek,restart.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Cvitek/Sophgo CV18xx restart and power-off
+
+maintainers:
+  - Djair Guilherme <djair.jr@gmail.com>
+
+description: |
+  Warm reset and shutdown of the CV180x/CV181x/SG200x SoCs through the RTC
+  control block. The block overlaps the mainline RTC node (which describes it
+  as a syscon), so this node only needs the register window.
+
+properties:
+  compatible:
+    const: cvitek,restart
+
+  reg:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    restart@5025000 {
+        compatible = "cvitek,restart";
+        reg = <0x05025000 0x2000>;
+    };

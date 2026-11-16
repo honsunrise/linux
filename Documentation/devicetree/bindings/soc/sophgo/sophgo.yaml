@@ -42,6 +42,9 @@ properties:
       - items:
           - enum:
               - sipeed,licheerv-nano-b
+              - sipeed,licheerv-nano-e
+              - sipeed,licheerv-nano-w
+              - sipeed,licheerv-nano-we
           - const: sipeed,licheerv-nano
           - const: sophgo,sg2002
       - items:

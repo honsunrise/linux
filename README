@@ -4,6 +4,13 @@ Linux kernel
 The Linux kernel is the core of any Linux operating system. It manages hardware,
 system resources, and provides the fundamental services for all other software.
 
+SBC fork maintenance
+--------------------
+
+This fork is maintained on the single sbc branch, based on Linux 7.3.3.
+See README.honsunrise.md for board-specific build configurations, source
+provenance, firmware requirements and hardware-validation boundaries.
+
 Quick Start
 -----------
 
