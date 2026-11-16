@@ -91,6 +91,8 @@ struct qcom_pas {
 	int crash_reason_smem;
 	unsigned int smem_host_id;
 	bool decrypt_shutdown;
+	bool preloaded;
+	bool attached;
 	const char *info_name;
 
 	const struct firmware *firmware;
@@ -232,6 +234,11 @@ static int qcom_pas_load(struct rproc *rproc, const struct firmware *fw)
 {
 	struct qcom_pas *pas = rproc->priv;
 	int ret;
+
+	if (pas->preloaded) {
+		dev_err(pas->dev, "remoteproc is externally managed\n");
+		return -EPERM;
+	}
 
 	/* Store firmware handle to be used in qcom_pas_start() */
 	pas->firmware = fw;
@@ -412,29 +419,46 @@ static int qcom_pas_stop(struct rproc *rproc)
 	if (ret == -ETIMEDOUT)
 		dev_err(pas->dev, "timed out on wait\n");
 
-	ret = qcom_pas_shutdown(pas->pas_id);
-	if (ret && pas->decrypt_shutdown)
-		ret = qcom_pas_shutdown_poll_decrypt(pas);
+	if (pas->preloaded) {
+		ret = 0;
+	} else {
+		ret = qcom_pas_shutdown(pas->pas_id);
+		if (ret && pas->decrypt_shutdown)
+			ret = qcom_pas_shutdown_poll_decrypt(pas);
 
-	if (ret)
-		dev_err(pas->dev, "failed to shutdown: %d\n", ret);
+		if (ret)
+			dev_err(pas->dev, "failed to shutdown: %d\n", ret);
+	}
 
 	if (pas->dtb_pas_id) {
-		dtb_ret = qcom_pas_shutdown(pas->dtb_pas_id);
-		if (dtb_ret)
-			dev_err(pas->dev, "failed to shutdown dtb: %d\n", dtb_ret);
+		if (!pas->preloaded) {
+			dtb_ret = qcom_pas_shutdown(pas->dtb_pas_id);
+			if (dtb_ret)
+				dev_err(pas->dev, "failed to shutdown dtb: %d\n", dtb_ret);
 
-		if (!ret && dtb_ret)
-			ret = dtb_ret;
+			if (!ret && dtb_ret)
+				ret = dtb_ret;
+		}
 
 		qcom_pas_unmap_carveout(rproc, pas->dtb_mem_phys, pas->dtb_mem_size);
 	}
 
 	qcom_pas_unmap_carveout(rproc, pas->mem_phys, pas->mem_size);
 
-	handover = qcom_q6v5_unprepare(&pas->q6v5);
-	if (handover)
-		qcom_pas_handover(&pas->q6v5);
+	/*
+	 * Attach does not prepare load state or interconnect votes, and leaves
+	 * the handover IRQ to the q6v5 core (requested with IRQF_NO_AUTOEN and
+	 * only enabled by qcom_q6v5_prepare()). Track the resource lifecycle
+	 * rather than the rproc state, which can still be DETACHED on
+	 * subdevice-start failure or CRASHED during recovery.
+	 */
+	if (!pas->attached) {
+		handover = qcom_q6v5_unprepare(&pas->q6v5);
+		if (handover)
+			qcom_pas_handover(&pas->q6v5);
+	}
+
+	pas->attached = false;
 
 	if (pas->smem_host_id)
 		ret = qcom_smem_bust_hwspin_lock_by_host(pas->smem_host_id);
@@ -519,19 +543,69 @@ static unsigned long qcom_pas_panic(struct rproc *rproc)
 	return qcom_q6v5_panic(&pas->q6v5);
 }
 
+static int qcom_pas_get_boot_state_from_smp2p(struct qcom_pas *pas,
+					      bool *ready_state,
+					      bool *crash_state)
+{
+	bool handover = false;
+	bool ready = false;
+	bool fatal = false;
+	bool stop = false;
+	int ret;
+
+	ret = irq_get_irqchip_state(pas->q6v5.handover_irq,
+				    IRQCHIP_STATE_LINE_LEVEL, &handover);
+	if (ret)
+		return ret;
+
+	ret = irq_get_irqchip_state(pas->q6v5.ready_irq,
+				    IRQCHIP_STATE_LINE_LEVEL, &ready);
+	if (ret)
+		return ret;
+
+	ret = irq_get_irqchip_state(pas->q6v5.fatal_irq,
+				    IRQCHIP_STATE_LINE_LEVEL, &fatal);
+	if (ret)
+		return ret;
+
+	ret = irq_get_irqchip_state(pas->q6v5.stop_irq,
+				    IRQCHIP_STATE_LINE_LEVEL, &stop);
+	if (ret)
+		return ret;
+
+	*crash_state = fatal;
+	*ready_state = ready && handover && !stop && !fatal;
+
+	return 0;
+}
+
 static int qcom_pas_attach(struct rproc *rproc)
 {
-	struct qcom_pas *pas = rproc->priv;
-	bool ready_state;
-	bool crash_state;
-	bool stop_state;
 	int ret;
+	struct qcom_pas *pas = rproc->priv;
+	bool ready_state = false;
+	bool crash_state = false;
+	bool stop_state;
 
 	pas->q6v5.handover_issued = true;
 
 	pas->q6v5.running = true;
-	ret = irq_get_irqchip_state(pas->q6v5.fatal_irq,
-				    IRQCHIP_STATE_LINE_LEVEL, &crash_state);
+
+	if (pas->preloaded) {
+		ret = qcom_pas_get_boot_state_from_smp2p(pas,
+						      &ready_state,
+						      &crash_state);
+	} else {
+		ret = irq_get_irqchip_state(pas->q6v5.fatal_irq,
+					    IRQCHIP_STATE_LINE_LEVEL,
+					    &crash_state);
+
+		if (!ret && !crash_state)
+			ret = irq_get_irqchip_state(pas->q6v5.ready_irq,
+						    IRQCHIP_STATE_LINE_LEVEL,
+						    &ready_state);
+	}
+
 	if (ret)
 		goto disable_running;
 
@@ -549,13 +623,10 @@ static int qcom_pas_attach(struct rproc *rproc)
 
 	if (stop_state || qcom_sysmon_shutdown_irq_state(pas->sysmon)) {
 		dev_info(pas->dev, "Subsystem found stop state set. Falling back to start.\n");
-		goto unroll_attach;
-	}
-
-	ret = irq_get_irqchip_state(pas->q6v5.ready_irq,
-				    IRQCHIP_STATE_LINE_LEVEL, &ready_state);
-	if (ret)
+		pas->rproc->state = RPROC_OFFLINE;
+		ret = -EINVAL;
 		goto disable_running;
+	}
 
 	if (unlikely(!ready_state)) {
 		/*
@@ -563,15 +634,28 @@ static int qcom_pas_attach(struct rproc *rproc)
 		 * RPROC_OFFLINE so that the PAS driver can load the firmware and
 		 * start the remoteproc.
 		 */
-		dev_err(pas->dev, "Failed to get subsystem ready interrupt\n");
-		goto unroll_attach;
+		dev_err(pas->dev, pas->preloaded ?
+			"Failed to detect already running subsystem\n" :
+			"Failed to get subsystem ready interrupt\n");
+		pas->rproc->state = RPROC_OFFLINE;
+		ret = -EINVAL;
+		goto disable_running;
 	}
+
+	if (!pas->preloaded) {
+		ret = qcom_q6v5_ping_subsystem(&pas->q6v5);
+
+		if (ret) {
+			dev_err(pas->dev, "Failed to ping subsystem, assuming device crashed\n");
+			rproc_report_crash(rproc, RPROC_FATAL_ERROR);
+			goto disable_running;
+		}
+	}
+
+	pas->attached = true;
 
 	return 0;
 
-unroll_attach:
-	pas->rproc->state = RPROC_OFFLINE;
-	ret = -EINVAL;
 disable_running:
 	pas->q6v5.running = false;
 
@@ -826,6 +910,8 @@ static int qcom_pas_probe(struct platform_device *pdev)
 	struct device_node *node;
 	const char *fw_name, *dtb_fw_name = NULL;
 	const struct rproc_ops *ops = &qcom_pas_ops;
+	bool ready_state;
+	bool crash_state;
 	int ret;
 
 	desc = of_device_get_match_data(&pdev->dev);
@@ -873,6 +959,7 @@ static int qcom_pas_probe(struct platform_device *pdev)
 	pas->info_name = desc->sysmon_name;
 	pas->smem_host_id = desc->smem_host_id;
 	pas->decrypt_shutdown = desc->decrypt_shutdown;
+	pas->preloaded = false;
 	pas->region_assign_idx = desc->region_assign_idx;
 	pas->region_assign_count = min_t(int, MAX_ASSIGN_COUNT, desc->region_assign_count);
 	pas->region_assign_vmid = desc->region_assign_vmid;
@@ -928,8 +1015,24 @@ static int qcom_pas_probe(struct platform_device *pdev)
 	if (pas->dtb_pas_id)
 		pas->dtb_pas_ctx->use_tzmem = desc->needs_tzmem || rproc->has_iommu;
 
-	if (desc->early_boot)
-		pas->rproc->state = RPROC_DETACHED;
+	if (desc->early_boot) {
+		ret = qcom_q6v5_ping_subsystem_init(&pas->q6v5, pdev);
+		if (ret)
+			dev_warn(&pdev->dev, "Falling back to firmware load\n");
+		else
+			pas->rproc->state = RPROC_DETACHED;
+	} else {
+		ret = qcom_pas_get_boot_state_from_smp2p(pas,
+						      &ready_state,
+						      &crash_state);
+		if (ret) {
+			dev_warn(&pdev->dev, "Failed to read SMP2P state; falling back to firmware load\n");
+		} else if (ready_state) {
+			pas->preloaded = true;
+			pas->rproc->state = RPROC_DETACHED;
+			rproc_set_feature(pas->rproc, RPROC_FEAT_ATTACH_ON_RECOVERY);
+		}
+	}
 
 	ret = rproc_add(rproc);
 	if (ret)
