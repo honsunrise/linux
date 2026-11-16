@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0
+config RTL8733BS
+	tristate "Realtek RTL8733BS SDIO WiFi support"
+	depends on WLAN && CFG80211 && MMC && m
+	select FW_LOADER
+	help
+	  Driver for the Realtek RTL8733BS 802.11ac SDIO wireless
+	  network adapter.  This is the SDIO variant of the RTL8733B
+	  (SDIO IDs 0x024c:0xb733 and 0x024c:0xb73a); the USB variant
+	  RTL8733BU is not supported by this driver.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called rtl8733bs.

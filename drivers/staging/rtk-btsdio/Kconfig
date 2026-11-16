@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0
+config RTK_BTSDIO
+	tristate "Realtek RTL8733BS SDIO Bluetooth support"
+	depends on BT && MMC && m && RTL8733BS
+	select FW_LOADER
+	help
+	  Bluetooth HCI transport for the Realtek RTL8733BS combo radio,
+	  using the SDIO interface exported by the rtl8733bs WiFi driver
+	  (SDIO ID 0x024c:0xb73a).  The Bluetooth firmware is loaded from
+	  userspace through the Bluetooth subsystem.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called btrtksdio.
