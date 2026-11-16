@@ -1,0 +1,69 @@
+config AIC_WLAN_SUPPORT
+	tristate "AIC wireless Support"
+	depends on CFG80211
+	depends on MMC || USB
+	help
+	  Support for AIC8800/AIC8801 wireless chips.  This single driver
+	  tree is shared between the Allwinner BSP, Rockchip boards and
+	  RISC-V boards; it does not require CONFIG_AW_BSP.
+
+	  The BSP part of the driver loads the firmware with
+	  request_firmware() from these paths below /lib/firmware:
+
+	    aic8800d80/fw_adid_8800d80_u02.bin
+	    aic8800d80/fw_patch_8800d80_u02.bin
+	    aic8800d80/fw_patch_table_8800d80_u02.bin
+	    aic8800d80/fmacfw_8800d80_u02.bin
+	    aic8800dc/... (AIC8800DC/DW variants)
+
+	  The firmware is a vendor binary and is not part of this source
+	  tree.  Distributions that install the files as
+	  /lib/firmware/aic8800_fw/SDIO/aic8800D80/ can provide a symlink
+	  /lib/firmware/aic8800d80 -> aic8800_fw/SDIO/aic8800D80.
+
+choice
+	prompt "Enable Chip Interface"
+	depends on AIC_WLAN_SUPPORT
+	help
+		Enable Chip Interface.
+config AIC_INTF_SDIO
+		bool "SDIO interface support"
+		depends on MMC && (MMC = y || AIC_WLAN_SUPPORT = m)
+config AIC_INTF_USB
+		bool "USB interface support"
+		depends on USB && (USB = y || AIC_WLAN_SUPPORT = m)
+endchoice
+
+choice
+	prompt "Choice host wake IRQ type"
+	depends on AIC_WLAN_SUPPORT
+	default AIC_IRQ_ACTIVE_UNSET
+	help
+		Choice host wake IRQ type.
+config AIC_IRQ_ACTIVE_UNSET
+		bool "UNSET IRQ type use default config"
+config AIC_IRQ_ACTIVE_HIGH
+		bool "host wake High level trigger"
+config AIC_IRQ_ACTIVE_RISING
+		bool "host wake RISING trigger"
+config AIC_IRQ_ACTIVE_LOW
+		bool "host wake Low level trigger"
+config AIC_IRQ_ACTIVE_FALLING
+		bool "host wake FALLING trigger"
+endchoice
+
+config USB_MSG_EP
+	bool "Enable usb message endpoint"
+	default y if AIC_INTF_USB
+	depends on AIC_INTF_USB
+	help
+	  This would enable usb message endpoint
+
+if AIC_WLAN_SUPPORT
+source "$(BSP_TOP)drivers/net/wireless/aic8800/aic8800_fdrv/Kconfig"
+source "$(BSP_TOP)drivers/net/wireless/aic8800/aic8800_btlpm/Kconfig"
+endif
+
+if AIC_INTF_USB
+source "$(BSP_TOP)drivers/net/wireless/aic8800/aic8800_btusb/Kconfig"
+endif
