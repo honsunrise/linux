@@ -1,9 +1,9 @@
 This repository is an UNOFFICIAL fork of the Linux kernel.
 
-  Upstream base : Linux stable v7.3.3
+  Upstream base : Linux stable v7.3.4 (7595a62d45ee1a2297eafa5f2ef5d0a45142d84d)
   Vendor source : https://github.com/radxa/kernel, linux-7.0.11 at c3e71bed930b
                   (selected board fixes, not a wholesale vendor merge)
-  Maintenance   : sbc, shared by Qualcomm, Allwinner, Rockchip and Sophgo
+  Maintenance   : sbc-7.3.4; shared board support, one active release branch
 
   Pipeline      : Radxa  (309 vendor commits on stable v7.0.11)
                   → drop noise   (-3 historical wip, -1 pmic-glink HACK, -2 PKGBUILD)
@@ -15,14 +15,64 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
                   → combine Qualcomm and A733 BSP, including d7fedd983a2b
                   → port the net fork delta from official v7.2.10 to v7.3.3
                     while retaining both parent histories
+                  → freeze that history as sbc-7.3.3 at 9cf00fc47d8a
+                  → reconstruct 16 functional downstream commits on v7.3.3
+                  → cherry-pick that series onto official v7.3.4
 
-  Attribution   : Existing author, license and DCO trailers are preserved.
+  Attribution   : Original author and DCO history is retained on sbc-7.3.3.
+                  Consolidated commits identify their source commit/base;
+                  existing copyright notices and SPDX identifiers are unchanged.
                   AI-assisted changes do not add a human Signed-off-by.
 
   Branch policy
-    sbc is the only maintenance branch. Upstream/stable/vendor remotes are
-    source references, not separate board releases. Do not split fixes into
-    board-specific branches; use the configurations below instead.
+    Each release has an sbc-<kernel-version> branch based directly on the
+    corresponding official stable tag. Only the latest release is actively
+    maintained; previous version branches are frozen for reproducibility and
+    rollback. sbc-7.3.3 preserves commit 9cf00fc47d8a without rewriting it.
+    There is no rolling sbc alias and no separate branch for each board.
+
+    To upgrade, verify the official tag, create the new version branch at
+    that tag, then cherry-pick the previous release's downstream-only commits
+    in order. After this initial normalization, that range is
+    v<old-version>..sbc-<old-version>. Use cherry-pick -x for provenance.
+    Include carried vendor/community prerequisites, not just commits by the
+    fork maintainer. Drop a patch only after confirming upstream supplies its
+    behaviour; resolve conflicts against the new APIs, never by copying old
+    files wholesale over upstream. Do not merge the previous release branch.
+
+    Update release/module versions and these notes, compare the patch series,
+    and validate the board profiles before publishing and moving the GitHub
+    default branch. Upstream/stable/vendor remotes remain source references.
+    Consumer Nix revisions/hashes and deployed systems are separate changes.
+
+  Initial patch-stack normalization and v7.3.4 replay
+    The old mixed ancestry is not a cherry-pick range: it includes thousands
+    of historical stable/vendor commits. Its net delta was partitioned into
+    BSP/AIC, shared core/build APIs, Sophgo, controllers, Ethernet, PCI and
+    firmware, display, media, connectivity, Realtek, input, Qualcomm boards,
+    Rockchip boards, Allwinner boards, retained Amlogic boards and documentation.
+    Reconstructing these 16 commits on v7.3.3 reproduced the frozen source tree
+    exactly: 16eed3f02a24f5849fae59ac7d85bbf6a0579c93 (including file modes
+    and deletions). This preserves the Q6A host-pad and headless-DTB follow-ups.
+
+    The initial replay matched an independent three-way integration tree after
+    resolving the sole conflicting file, pcie-qcom.c. Retain the downstream
+    bridge predicate (PCI node type plus bus-range or bridge class), which
+    already includes upstream's PCI-node-type guard, and use upstream's
+    updated comment. Iris IOVA reservation/power sequencing, PCI link-speed
+    initialization and GENI firmware validation fixes from v7.3.4 are retained.
+    Final range-diff additionally records removal of the superseded Iris DT
+    workaround below; other differences are PCIe reconciliation and Makefile
+    version context.
+
+    Upstream 190082e89a42 reserves [0, 0x25800000) in the Iris driver. The old
+    Q8B, Q6A and CM-Q64 iris-iova DT nodes reserve that same range in the IOMMU
+    domain before probe, making dma_iova_try_alloc fail under the driver's
+    temporary bus DMA limit. These DT nodes and their memory-region references
+    are therefore removed from the replayed Qualcomm board patch. Physical
+    firmware carveouts and firmware names are retained. IOVA ownership now
+    belongs to the driver; the DT workaround mentioned in historical notes
+    below applies only to the older release.
 
   Board configuration (all commands also take ARCH and CROSS_COMPILE)
 
@@ -163,7 +213,38 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
     consumer configuration and its measured boot arguments; a standalone
     source-tree Image is not a replacement for the complete Nix boot image.
 
-  Verification of this integration
+  v7.3.4 verification
+    Code revision: 6c89b2f5596eacf64484b56470ac6ec8e36c871d.
+    Q8B: Image, all selected modules and Qualcomm DTBs built with GCC 16.2;
+    affected DTBs were rebuilt after removing the duplicate IOVA reservations.
+    ZERO 3W: Image, all selected modules and the original/AP6212/AIC8800DS2
+    DTBs built. A733: Image, all selected modules and A7A/A7S/A7Z DTBs built.
+    LicheeRV: Image, all selected modules, B/E/W/WE DTBs and all three
+    precomposed touchscreen DTBs built with GCC 16.2.
+    Q6A/CM-Q64: ordinary/KVM DTBs and the optional Q6A headless DTB built.
+    The Q6A GPU-only MSM and USB AIC driver objects also built successfully.
+    NanoPC-T4: base DTB, HD702E overlay and composed DTB built.
+    All six configurations report kernel.release 7.3.4. ELF architecture checks
+    passed for the four vmlinux files; six representative TC956x, AIC, Btrfs,
+    Sophgo ION and Realtek modules have matching 7.3.4 vermagic. olddefconfig
+    retained boot-storage, Q8B power sequencing/TC956x, Q6A KMS-off, wireless
+    variant and Sophgo multimedia selections.
+
+    Compiled-DTB comparisons show that Q6A headless changes only sound,
+    wcd938x and q6apm status relative to the KVM DTB. Each LicheeRV touch
+    variant enables exactly its selected controller and changes no other
+    property relative to the WE base DTB.
+    All seven Q8B/Q6A/CM-Q64 ordinary, EL2, KVM and headless DTBs were checked
+    for removal of the duplicate Iris IOVA reservation, retaining exactly the
+    previous firmware name, physical carveout range and no-map attribute.
+    For multiple top-level DTB goals sharing a base, use -j1; alternatively
+    use the single dtbs goal with parallel jobs. Separate recursive top-level
+    goals can otherwise race over the same generated dependency file.
+
+    Hardware boot and peripheral operation remain unvalidated. Existing
+    vendor/staging warnings are not suppressed or treated as hardware proof.
+
+  Previous v7.3.3 verification (not a v7.3.4 build result)
     GCC 16.2 cross-builds, with kernel.release checked as 7.3.3:
       Q8B profile       Image, modules and Qualcomm DTBs passed
       ZERO 3W profile   Image, modules and three ZERO 3W DTBs passed
@@ -256,8 +337,8 @@ This repository is an UNOFFICIAL fork of the Linux kernel.
       preloaded firmware remains externally owned.
 
   Build / downstream interface
-    - Source release is 7.3.3 (EXTRAVERSION empty). Downstream source-archive
-      builds must use version/modDirVersion 7.3.3, CONFIG_LOCALVERSION=""
+    - Source release is 7.3.4 (EXTRAVERSION empty). Downstream source-archive
+      builds must use version/modDirVersion 7.3.4, CONFIG_LOCALVERSION=""
       and CONFIG_LOCALVERSION_AUTO=n; update the source revision/hash and
       remove skip-sc8280xp-dtbs.patch.
     - Existing Q6A deployments must retain their headless configuration:
